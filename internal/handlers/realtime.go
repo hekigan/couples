@@ -1,0 +1,83 @@
+package handlers
+
+import (
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
+	"github.com/yourusername/couple-card-game/internal/services"
+)
+
+// RealtimeHandler handles real-time connections
+type RealtimeHandler struct {
+	handler         *Handler
+	realtimeService *services.RealtimeService
+}
+
+// NewRealtimeHandler creates a new realtime handler
+func NewRealtimeHandler(h *Handler, realtimeService *services.RealtimeService) *RealtimeHandler {
+	return &RealtimeHandler{
+		handler:         h,
+		realtimeService: realtimeService,
+	}
+}
+
+// StreamRoomEvents streams room events via SSE
+func (h *RealtimeHandler) StreamRoomEvents(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	roomID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid room ID", http.StatusBadRequest)
+		return
+	}
+
+	userID := r.Context().Value("user_id").(uuid.UUID)
+
+	// Set SSE headers
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	// Subscribe to room events
+	client := h.realtimeService.Subscribe(roomID, userID)
+	defer h.realtimeService.Unsubscribe(client.ID)
+
+	// Stream events
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
+		return
+	}
+
+	// Send initial connection message
+	fmt.Fprintf(w, "data: {\"type\":\"connected\"}\n\n")
+	flusher.Flush()
+
+	// Stream events until client disconnects
+	for {
+		select {
+		case event := <-client.Channel:
+			fmt.Fprint(w, services.EventToSSE(event))
+			flusher.Flush()
+		case <-r.Context().Done():
+			return
+		case <-time.After(30 * time.Second):
+			// Send keepalive ping
+			fmt.Fprintf(w, ": ping\n\n")
+			flusher.Flush()
+		}
+	}
+}
+
+// GetRoomPlayers gets current room players
+func (h *RealtimeHandler) GetRoomPlayers(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "Not yet implemented", http.StatusNotImplemented)
+}
+
+// GetRoomState gets current room state
+func (h *RealtimeHandler) GetRoomState(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "Not yet implemented", http.StatusNotImplemented)
+}
+

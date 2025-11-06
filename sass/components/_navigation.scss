@@ -1,0 +1,63 @@
+// Navigation
+.main-header {
+  background-color: $bg-primary;
+  box-shadow: $shadow-sm;
+  padding: $spacing-md 0;
+  position: sticky;
+  top: 0;
+  z-index: $z-sticky;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $text-primary;
+  text-decoration: none;
+  
+  &:hover {
+    color: $primary-color;
+  }
+}
+
+.logo-icon {
+  font-size: $font-size-xxl;
+}
+
+.main-nav {
+  display: flex;
+  align-items: center;
+  gap: $spacing-lg;
+}
+
+.nav-link {
+  color: $text-secondary;
+  text-decoration: none;
+  font-weight: $font-weight-medium;
+  transition: color $transition-fast;
+  
+  &:hover {
+    color: $primary-color;
+  }
+  
+  &.active {
+    color: $primary-color;
+  }
+}
+
+.main-footer {
+  background-color: $text-primary;
+  color: white;
+  text-align: center;
+  padding: $spacing-xxl 0;
+  margin-top: $spacing-xxl;
+}
+

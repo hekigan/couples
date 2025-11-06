@@ -1,0 +1,129 @@
+// Game pages
+.game-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: $spacing-xl;
+}
+
+.game-header {
+  text-align: center;
+  margin-bottom: $spacing-xxl;
+}
+
+.game-progress {
+  font-size: $font-size-sm;
+  color: $text-muted;
+  margin-top: $spacing-sm;
+}
+
+.question-card {
+  background: linear-gradient(135deg, $primary-color, $secondary-color);
+  color: white;
+  padding: $spacing-xxl;
+  border-radius: $border-radius-lg;
+  box-shadow: $shadow-lg;
+  margin-bottom: $spacing-xl;
+  text-align: center;
+}
+
+.question-text {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-medium;
+  line-height: 1.4;
+}
+
+.answer-form {
+  textarea {
+    min-height: 150px;
+  }
+}
+
+.room-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: $spacing-xl;
+}
+
+.room-status {
+  text-align: center;
+  margin-bottom: $spacing-lg;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: $spacing-sm $spacing-lg;
+  border-radius: $border-radius-full;
+  font-weight: $font-weight-medium;
+  
+  &.status-waiting {
+    background-color: $warning-color;
+    color: white;
+  }
+  
+  &.status-ready {
+    background-color: $success-color;
+    color: white;
+  }
+  
+  &.status-playing {
+    background-color: $info-color;
+    color: white;
+  }
+  
+  &.status-finished {
+    background-color: $text-muted;
+    color: white;
+  }
+}
+
+.room-players {
+  margin-bottom: $spacing-xl;
+}
+
+.player-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-md;
+}
+
+.player-card {
+  background-color: $bg-primary;
+  border: 2px solid $primary-color;
+  border-radius: $border-radius-md;
+  padding: $spacing-lg;
+  text-align: center;
+  
+  &.empty {
+    border-style: dashed;
+    color: $text-muted;
+  }
+}
+
+.room-actions {
+  display: flex;
+  gap: $spacing-md;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.finished-container {
+  text-align: center;
+  padding: $spacing-xxl;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.game-stats {
+  background-color: $bg-accent;
+  border-radius: $border-radius-lg;
+  padding: $spacing-xl;
+  margin: $spacing-xl 0;
+}
+
+.finished-actions {
+  display: flex;
+  gap: $spacing-md;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+

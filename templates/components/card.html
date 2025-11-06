@@ -1,0 +1,157 @@
+{{define "card"}}
+{{/*
+  Reusable card component
+  Usage: {{template "card" (dict "Title" "Card Title" "Content" .CardContent "Footer" .CardFooter "Class" "highlight")}}
+  Classes: default, highlight, bordered, hoverable
+*/}}
+<div class="card {{.Class}}">
+    {{if .Title}}
+    <div class="card-header">
+        {{if .Icon}}<span class="card-icon">{{.Icon}}</span>{{end}}
+        <h3 class="card-title">{{.Title}}</h3>
+        {{if .Badge}}
+        <span class="card-badge card-badge-{{if .BadgeType}}{{.BadgeType}}{{else}}default{{end}}">{{.Badge}}</span>
+        {{end}}
+    </div>
+    {{end}}
+    <div class="card-body">
+        {{.Content}}
+    </div>
+    {{if .Footer}}
+    <div class="card-footer">
+        {{.Footer}}
+    </div>
+    {{end}}
+</div>
+
+<style>
+.card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.card-icon {
+    font-size: 1.5rem;
+}
+
+.card-title {
+    flex: 1;
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.card-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.card-badge-default {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.card-badge-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.card-badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.card-badge-error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.card-badge-info {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.card-body {
+    padding: 24px;
+}
+
+.card-footer {
+    padding: 16px 24px;
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* Card Variants */
+.card.highlight {
+    border: 2px solid #6B4CE6;
+    box-shadow: 0 4px 12px rgba(107, 76, 230, 0.15);
+}
+
+.card.bordered {
+    border: 1px solid #e5e7eb;
+    box-shadow: none;
+}
+
+.card.hoverable {
+    cursor: pointer;
+}
+
+.card.hoverable:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Compact Card */
+.card.compact .card-header {
+    padding: 12px 16px;
+}
+
+.card.compact .card-body {
+    padding: 16px;
+}
+
+.card.compact .card-footer {
+    padding: 12px 16px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .card-header {
+        padding: 16px;
+    }
+    
+    .card-body {
+        padding: 16px;
+    }
+    
+    .card-footer {
+        padding: 12px 16px;
+        flex-direction: column;
+    }
+    
+    .card-footer .btn {
+        width: 100%;
+    }
+}
+</style>
+{{end}}
+
+

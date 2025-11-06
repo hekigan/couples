@@ -1,0 +1,40 @@
+{{define "content"}}
+<div class="room-container" data-room-id="{{.Data.ID}}">
+    <h1>Room: {{.Data.Name}}</h1>
+    
+    <div class="room-status">
+        <span class="status-badge status-{{.Data.Status}}">{{.Data.Status}}</span>
+    </div>
+    
+    <div class="room-players" id="player-list">
+        <h2>Players</h2>
+        <div class="player-grid">
+            <div class="player-card">
+                <span>Owner</span>
+            </div>
+            {{if .Data.GuestID}}
+            <div class="player-card">
+                <span>Guest</span>
+            </div>
+            {{else}}
+            <div class="player-card empty">
+                <span>Waiting for guest...</span>
+            </div>
+            {{end}}
+        </div>
+    </div>
+    
+    <div class="room-actions">
+        {{if .Data.Status}}{{if eq .Data.Status "ready"}}
+        <form action="/api/rooms/{{.Data.ID}}/start" method="POST">
+            <button type="submit" class="btn btn-primary btn-lg">Start Game</button>
+        </form>
+        {{end}}{{end}}
+        
+        <form action="/game/room/{{.Data.ID}}/delete" method="POST" onsubmit="return confirm('Delete this room?');">
+            <button type="submit" class="btn btn-danger">Delete Room</button>
+        </form>
+    </div>
+</div>
+{{end}}
+

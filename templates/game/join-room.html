@@ -1,0 +1,174 @@
+{{define "content"}}
+<div class="room-setup">
+    <div class="room-card">
+        <h1>Join a Room</h1>
+        <p class="room-subtitle">Enter the room ID to join or request access</p>
+
+        <!-- Join Method Toggle -->
+        <div class="join-method-toggle">
+            <button class="method-btn active" onclick="showDirectJoin()" id="direct-btn">
+                🎮 Direct Join
+            </button>
+            <button class="method-btn" onclick="showRequestJoin()" id="request-btn">
+                📬 Request to Join
+            </button>
+        </div>
+
+        <!-- Direct Join Form (Default) -->
+        <div id="direct-join-form">
+            <form action="/game/join-room" method="POST">
+                <div class="form-group">
+                    <label class="form-label" for="room_id">Room ID:</label>
+                    <input 
+                        type="text" 
+                        id="room_id" 
+                        name="room_id" 
+                        class="form-input" 
+                        placeholder="Enter room ID"
+                        required
+                    >
+                    <span class="form-help">Join instantly if the room is open</span>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    Join Room Directly
+                </button>
+            </form>
+        </div>
+
+        <!-- Request to Join Form (Hidden by default) -->
+        <div id="request-join-form" style="display: none;">
+            <form action="/api/room/join-request" method="POST">
+                <div class="form-group">
+                    <label class="form-label" for="request_room_id">Room ID:</label>
+                    <input 
+                        type="text" 
+                        id="request_room_id" 
+                        name="room_id" 
+                        class="form-input" 
+                        placeholder="Enter room ID"
+                        required
+                    >
+                    <span class="form-help">Send a request to the room owner</span>
+                </div>
+
+                <div class="info-box">
+                    <p><strong>Request to Join:</strong></p>
+                    <ul>
+                        <li>Send a request to the room owner</li>
+                        <li>Wait for them to accept your request</li>
+                        <li>You'll be notified when they respond</li>
+                    </ul>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    Send Join Request
+                </button>
+            </form>
+        </div>
+
+        <a href="/" class="btn btn-secondary btn-block" style="margin-top: 16px;">Cancel</a>
+
+        {{if .AvailableRooms}}
+        <div class="available-rooms">
+            <h2>Available Rooms</h2>
+            <div class="rooms-list">
+                {{range .AvailableRooms}}
+                <div class="room-item">
+                    <div class="room-info">
+                        <strong>Room {{.ID}}</strong>
+                        <span class="room-owner">by {{.OwnerName}}</span>
+                    </div>
+                    <a href="/game/join-room?id={{.ID}}" class="btn btn-sm btn-primary">
+                        Join
+                    </a>
+                </div>
+                {{end}}
+            </div>
+        </div>
+        {{end}}
+    </div>
+</div>
+
+<style>
+.join-method-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    background: #f3f4f6;
+    padding: 4px;
+    border-radius: 8px;
+}
+
+.method-btn {
+    flex: 1;
+    padding: 12px 16px;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.method-btn:hover {
+    background: white;
+    color: #374151;
+}
+
+.method-btn.active {
+    background: white;
+    color: #6B4CE6;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.info-box {
+    background: #dbeafe;
+    border-left: 4px solid #3b82f6;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.info-box p {
+    margin: 0 0 8px 0;
+    color: #1e40af;
+    font-weight: 600;
+}
+
+.info-box ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #1e40af;
+}
+
+.info-box li {
+    margin: 4px 0;
+}
+
+.form-help {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+</style>
+
+<script>
+function showDirectJoin() {
+    document.getElementById('direct-join-form').style.display = 'block';
+    document.getElementById('request-join-form').style.display = 'none';
+    document.getElementById('direct-btn').classList.add('active');
+    document.getElementById('request-btn').classList.remove('active');
+}
+
+function showRequestJoin() {
+    document.getElementById('direct-join-form').style.display = 'none';
+    document.getElementById('request-join-form').style.display = 'block';
+    document.getElementById('direct-btn').classList.remove('active');
+    document.getElementById('request-btn').classList.add('active');
+}
+</script>
+{{end}}
+

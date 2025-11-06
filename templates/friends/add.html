@@ -1,0 +1,188 @@
+{{template "layout.html" .}}
+
+{{define "content"}}
+<div class="container" style="padding: 2rem 1rem;">
+    <div class="page-header">
+        <h1>Add Friend</h1>
+        <a href="/friends" class="btn btn-secondary">← Back to Friends</a>
+    </div>
+
+    {{if .Success}}
+    <div class="alert alert-success">
+        {{.Success}}
+    </div>
+    {{end}}
+
+    {{if .Error}}
+    <div class="alert alert-error">
+        {{.Error}}
+    </div>
+    {{end}}
+
+    <div class="card" style="max-width: 600px; margin: 0 auto;">
+        <h2>Send Friend Invitation</h2>
+        
+        <form method="POST" action="/friends/add" class="form">
+            <div class="form-group">
+                <label for="friend_identifier">Friend's Email or User ID</label>
+                <input 
+                    type="text" 
+                    id="friend_identifier" 
+                    name="friend_identifier" 
+                    placeholder="Enter email or user ID"
+                    class="form-input"
+                    required
+                />
+                <p class="form-help">
+                    Enter your friend's email address or their User ID to send a friend request.
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+                Send Friend Request
+            </button>
+        </form>
+    </div>
+
+    <div class="card" style="max-width: 600px; margin: 2rem auto 0;">
+        <h3>Your User ID</h3>
+        <p>Share this ID with friends so they can add you:</p>
+        
+        {{if .Data}}
+        {{$currentUserID := index .Data "CurrentUserID"}}
+        <div style="display: flex; align-items: center; gap: 1rem; margin-top: 1rem;">
+            <input 
+                type="text" 
+                id="user-id-display" 
+                value="{{$currentUserID}}"
+                readonly
+                class="form-input"
+                style="flex: 1; font-family: monospace; font-size: 0.9rem;"
+            />
+            <button 
+                onclick="copyUserID()"
+                class="btn btn-secondary"
+                style="white-space: nowrap;"
+            >
+                📋 Copy
+            </button>
+        </div>
+        {{end}}
+    </div>
+
+    <div class="card" style="max-width: 600px; margin: 2rem auto 0; background: #f8f9fa;">
+        <h3>💡 How to Add Friends</h3>
+        <ol style="margin: 1rem 0; padding-left: 1.5rem; line-height: 1.8;">
+            <li>Ask your friend for their email or User ID</li>
+            <li>Enter it in the form above and click "Send Friend Request"</li>
+            <li>Your friend will receive the invitation</li>
+            <li>Once they accept, you can play games together!</li>
+        </ol>
+        
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #dee2e6;">
+            <p style="margin: 0; font-weight: 500;">📤 Share Your User ID:</p>
+            <p style="margin: 0.5rem 0 0; color: #6c757d;">
+                Copy your User ID above and share it with friends so they can add you!
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyUserID() {
+    const input = document.getElementById('user-id-display');
+    input.select();
+    input.setSelectionRange(0, 99999); // For mobile devices
+    
+    try {
+        document.execCommand('copy');
+        
+        // Show feedback
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '✅ Copied!';
+        btn.style.backgroundColor = '#28a745';
+        
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.style.backgroundColor = '';
+        }, 2000);
+    } catch (err) {
+        alert('Failed to copy. Please copy manually.');
+    }
+}
+</script>
+
+<style>
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.alert {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #333;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.form-help {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+</style>
+{{end}}
+

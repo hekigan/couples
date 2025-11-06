@@ -1,0 +1,24 @@
+{{define "content"}}
+<div class="game-container" data-room-id="{{.Data.ID}}">
+    <div class="game-header">
+        <h1>{{.Data.Name}}</h1>
+        <div class="game-progress">
+            Question {{.Data.CurrentQuestion}} of {{.Data.MaxQuestions}}
+        </div>
+    </div>
+    
+    <div id="game-content" class="game-content">
+        <div class="question-card">
+            <p class="question-text">Loading question...</p>
+        </div>
+        
+        <div class="answer-form">
+            <form method="POST" action="/api/rooms/{{.Data.ID}}/answer">
+                <textarea name="answer" placeholder="Your answer..." rows="4" required></textarea>
+                <button type="submit" class="btn btn-primary">Submit Answer</button>
+            </form>
+        </div>
+    </div>
+</div>
+{{end}}
+

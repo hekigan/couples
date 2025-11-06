@@ -1,0 +1,89 @@
+// Auth pages
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh;
+  padding: $spacing-xl;
+}
+
+.auth-card {
+  background-color: $bg-primary;
+  border-radius: $border-radius-lg;
+  box-shadow: $shadow-lg;
+  padding: $spacing-xxl;
+  max-width: 400px;
+  width: 100%;
+  
+  h1 {
+    text-align: center;
+    margin-bottom: $spacing-xl;
+    color: $primary-color;
+  }
+}
+
+.auth-options {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.btn-oauth {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-md;
+  padding: $spacing-md $spacing-lg;
+  border: $border-width solid $border-color;
+  border-radius: $border-radius-md;
+  background-color: $bg-primary;
+  color: $text-primary;
+  transition: all $transition-base;
+  
+  &:hover {
+    background-color: $bg-secondary;
+    box-shadow: $shadow-md;
+  }
+}
+
+.btn-google {
+  &:hover {
+    border-color: #DB4437;
+    color: #DB4437;
+  }
+}
+
+.btn-facebook {
+  &:hover {
+    border-color: #4267B2;
+    color: #4267B2;
+  }
+}
+
+.divider {
+  text-align: center;
+  position: relative;
+  margin: $spacing-lg 0;
+  color: $text-muted;
+  
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: $border-width;
+    background-color: $border-color;
+  }
+  
+  &::before { left: 0; }
+  &::after { right: 0; }
+}
+
+.help-text {
+  text-align: center;
+  font-size: $font-size-sm;
+  color: $text-muted;
+  margin-top: $spacing-sm;
+}
+

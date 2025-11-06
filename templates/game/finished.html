@@ -1,0 +1,16 @@
+{{define "content"}}
+<div class="finished-container">
+    <h1>🎉 Game Finished!</h1>
+    
+    <div class="game-stats">
+        <h2>Statistics</h2>
+        <p>Questions answered: {{.Data.CurrentQuestion}}</p>
+    </div>
+    
+    <div class="finished-actions">
+        <a href="/game/create-room" class="btn btn-primary">Play Again</a>
+        <a href="/" class="btn btn-secondary">Go Home</a>
+    </div>
+</div>
+{{end}}
+

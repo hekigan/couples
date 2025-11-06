@@ -1,0 +1,71 @@
+{{define "layout.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{if .Title}}{{.Title}}{{else}}Couple Card Game{{end}}</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Realtime Client -->
+    <script src="/static/js/realtime.js" defer></script>
+    
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+</head>
+<body>
+    <header class="main-header">
+        <div class="container">
+            <div class="header-content">
+                <a href="/" class="logo">
+                    <span class="logo-icon">💕</span>
+                    <span class="logo-text">Couple Card Game</span>
+                </a>
+                
+                <nav class="main-nav">
+                    {{if .User}}
+                        <a href="/friends" class="nav-link">Friends</a>
+                        <a href="/game/rooms" class="nav-link">My Rooms</a>
+                        <a href="/profile" class="nav-link">Profile</a>
+                        <form action="/auth/logout" method="POST" style="display: inline;">
+                            <button type="submit" class="btn btn-secondary btn-sm">Logout</button>
+                        </form>
+                    {{else}}
+                        <a href="/auth/login" class="btn btn-primary btn-sm">Login</a>
+                    {{end}}
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        {{if .Error}}
+        <div class="alert alert-error">
+            <span class="alert-icon">⚠️</span>
+            <span class="alert-message">{{.Error}}</span>
+        </div>
+        {{end}}
+
+        {{if .Success}}
+        <div class="alert alert-success">
+            <span class="alert-icon">✅</span>
+            <span class="alert-message">{{.Success}}</span>
+        </div>
+        {{end}}
+
+        {{template "content" .}}
+    </main>
+
+    <footer class="main-footer">
+        <div class="container">
+            <p>&copy; 2025 Couple Card Game. Made with ❤️ for couples everywhere.</p>
+        </div>
+    </footer>
+</body>
+</html>
+{{end}}
+

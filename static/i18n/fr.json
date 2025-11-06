@@ -1,0 +1,116 @@
+{
+  "app": {
+    "title": "Jeu de Cartes pour Couples",
+    "tagline": "Apprenez à mieux vous connaître"
+  },
+  "nav": {
+    "home": "Accueil",
+    "play": "Jouer",
+    "friends": "Amis",
+    "admin": "Administration",
+    "logout": "Déconnexion"
+  },
+  "home": {
+    "welcome": "Bienvenue",
+    "subtitle": "Un jeu pour approfondir votre relation",
+    "playAsGuest": "Jouer en tant qu'invité",
+    "login": "Se connecter",
+    "features": {
+      "title": "Caractéristiques",
+      "questions": "Questions sur mesure",
+      "questionsDesc": "Des centaines de questions pour vous connaître",
+      "private": "Privé et sécurisé",
+      "privateDesc": "Vos réponses restent entre vous deux",
+      "fun": "Amusant et engageant",
+      "funDesc": "Transformez la conversation en jeu"
+    }
+  },
+  "auth": {
+    "login": "Se connecter",
+    "loginWith": "Se connecter avec",
+    "continueWith": "Continuer avec",
+    "google": "Google",
+    "facebook": "Facebook",
+    "github": "GitHub",
+    "or": "OU",
+    "playAsGuest": "Jouer en tant qu'invité",
+    "guestNote": "Aucun compte requis pour commencer à jouer"
+  },
+  "game": {
+    "createRoom": "Créer une salle",
+    "joinRoom": "Rejoindre une salle",
+    "roomCode": "Code de la salle",
+    "roomName": "Nom de la salle",
+    "category": "Catégorie",
+    "selectCategory": "Sélectionner une catégorie",
+    "language": "Langue",
+    "create": "Créer",
+    "join": "Rejoindre",
+    "waiting": "En attente",
+    "ready": "Prêt",
+    "playing": "En cours",
+    "finished": "Terminé",
+    "yourTurn": "Votre tour",
+    "theirTurn": "Leur tour",
+    "submitAnswer": "Soumettre la réponse",
+    "nextQuestion": "Question suivante",
+    "viewAnswers": "Voir les réponses",
+    "playAgain": "Rejouer",
+    "leaveRoom": "Quitter la salle"
+  },
+  "friends": {
+    "title": "Amis",
+    "addFriend": "Ajouter un ami",
+    "friendsList": "Liste d'amis",
+    "pending": "Invitations en attente",
+    "received": "Reçues",
+    "sent": "Envoyées",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "remove": "Retirer",
+    "playTogether": "Jouer ensemble",
+    "noFriends": "Aucun ami pour le moment",
+    "noRequests": "Aucune demande en attente",
+    "sendInvitation": "Envoyer une invitation",
+    "friendId": "ID de l'ami",
+    "send": "Envoyer"
+  },
+  "admin": {
+    "dashboard": "Tableau de bord",
+    "users": "Utilisateurs",
+    "questions": "Questions",
+    "categories": "Catégories",
+    "rooms": "Salles",
+    "translations": "Traductions",
+    "stats": {
+      "totalUsers": "Utilisateurs totaux",
+      "activeRooms": "Salles actives",
+      "totalQuestions": "Questions totales",
+      "gamesPlayed": "Parties jouées"
+    }
+  },
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "confirm": "Confirmer",
+    "yes": "Oui",
+    "no": "Non"
+  },
+  "categories": {
+    "getting_to_know": "Apprendre à se connaître",
+    "deep_talk": "Conversation profonde",
+    "fun_light": "Amusant et léger",
+    "future_dreams": "Rêves d'avenir",
+    "past_memories": "Souvenirs du passé",
+    "relationship": "Relation"
+  }
+}
+

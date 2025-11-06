@@ -1,0 +1,76 @@
+// Friends pages
+.friends-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: $spacing-xl;
+}
+
+.friends-section,
+.requests-section {
+  margin-bottom: $spacing-xxl;
+}
+
+.friends-list,
+.requests-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.friend-card,
+.request-card {
+  background-color: $bg-primary;
+  border-radius: $border-radius-lg;
+  padding: $spacing-lg;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: $shadow-sm;
+  
+  &:hover {
+    box-shadow: $shadow-md;
+  }
+}
+
+.friend-info,
+.request-info {
+  flex: 1;
+}
+
+.friend-name,
+.request-name {
+  font-weight: $font-weight-medium;
+  color: $text-primary;
+  margin-bottom: $spacing-xs;
+}
+
+.friend-email,
+.request-email {
+  font-size: $font-size-sm;
+  color: $text-muted;
+}
+
+.friend-actions,
+.request-actions {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.add-friend-form {
+  background-color: $bg-accent;
+  border-radius: $border-radius-lg;
+  padding: $spacing-xl;
+  margin-bottom: $spacing-xl;
+}
+
+.empty-state {
+  text-align: center;
+  padding: $spacing-xxl;
+  color: $text-muted;
+  
+  .empty-icon {
+    font-size: 4rem;
+    margin-bottom: $spacing-md;
+  }
+}
+

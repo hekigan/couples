@@ -1,0 +1,25 @@
+// Couple Card Game - Main SASS File
+// Compile with: npx sass sass/main.scss static/css/main.css
+
+// Base styles
+@import 'base/variables';
+@import 'base/reset';
+@import 'base/typography';
+@import 'base/utilities';
+
+// Component styles
+@import 'components/buttons';
+@import 'components/cards';
+@import 'components/forms';
+@import 'components/modals';
+@import 'components/navigation';
+@import 'components/alerts';
+@import 'components/badges';
+
+// Page-specific styles
+@import 'pages/home';
+@import 'pages/auth';
+@import 'pages/game';
+@import 'pages/admin';
+@import 'pages/friends';
+

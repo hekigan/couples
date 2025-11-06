@@ -1,0 +1,25 @@
+{{define "content"}}
+<div class="auth-container">
+    <div class="auth-card">
+        <h1>Login to Couple Card Game</h1>
+        
+        <div class="auth-options">
+            <a href="/auth/oauth/google" class="btn btn-oauth btn-google">
+                <span>Continue with Google</span>
+            </a>
+            
+            <a href="/auth/oauth/facebook" class="btn btn-oauth btn-facebook">
+                <span>Continue with Facebook</span>
+            </a>
+            
+            <div class="divider">OR</div>
+            
+            <form action="/auth/anonymous" method="POST">
+                <button type="submit" class="btn btn-secondary btn-block">Play as Guest</button>
+                <p class="help-text">No account needed, jump right in!</p>
+            </form>
+        </div>
+    </div>
+</div>
+{{end}}
+

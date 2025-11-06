@@ -1,0 +1,45 @@
+// Cards
+.card {
+  background-color: $bg-primary;
+  border-radius: $border-radius-lg;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
+  transition: box-shadow $transition-base;
+  
+  &:hover {
+    box-shadow: $shadow-md;
+  }
+}
+
+.card-header {
+  padding: $spacing-lg;
+  border-bottom: $border-width solid $border-color;
+  background-color: $bg-accent;
+}
+
+.card-body {
+  padding: $spacing-lg;
+}
+
+.card-footer {
+  padding: $spacing-lg;
+  border-top: $border-width solid $border-color;
+  background-color: $bg-secondary;
+}
+
+.card-title {
+  margin-bottom: $spacing-sm;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+}
+
+.card-text {
+  color: $text-secondary;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: $spacing-lg;
+}
+

@@ -1,0 +1,46 @@
+// Badges
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xs $spacing-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  line-height: 1;
+  border-radius: $border-radius-full;
+  
+  &.badge-primary {
+    background-color: $primary-color;
+    color: white;
+  }
+  
+  &.badge-secondary {
+    background-color: $secondary-color;
+    color: white;
+  }
+  
+  &.badge-success {
+    background-color: $success-color;
+    color: white;
+  }
+  
+  &.badge-danger {
+    background-color: $danger-color;
+    color: white;
+  }
+  
+  &.badge-warning {
+    background-color: $warning-color;
+    color: white;
+  }
+}
+
+.badge-pill {
+  border-radius: $border-radius-full;
+}
+
+.badge-outline {
+  background-color: transparent;
+  border: $border-width solid currentColor;
+}
+

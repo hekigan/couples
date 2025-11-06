@@ -1,0 +1,78 @@
+// Admin pages
+.admin-container {
+  padding: $spacing-xl;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-xl;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: $spacing-lg;
+}
+
+.admin-card {
+  background-color: $bg-primary;
+  padding: $spacing-xl;
+  border-radius: $border-radius-lg;
+  box-shadow: $shadow-md;
+  text-align: center;
+  text-decoration: none;
+  color: $text-primary;
+  transition: all $transition-base;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: $shadow-lg;
+    color: $primary-color;
+  }
+  
+  h3 {
+    color: $primary-color;
+    margin-bottom: $spacing-sm;
+  }
+}
+
+.admin-table {
+  background-color: $bg-primary;
+  border-radius: $border-radius-lg;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  thead {
+    background-color: $bg-accent;
+  }
+  
+  th {
+    padding: $spacing-md;
+    text-align: left;
+    font-weight: $font-weight-medium;
+    color: $text-primary;
+  }
+  
+  td {
+    padding: $spacing-md;
+    border-top: $border-width solid $border-color;
+  }
+  
+  tr:hover {
+    background-color: $bg-secondary;
+  }
+}
+
+.admin-actions {
+  display: flex;
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
