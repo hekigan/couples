@@ -1,133 +1,167 @@
-# SQL Files
+# Database Schema Files
 
-This folder contains all SQL scripts for the Couple Card Game database.
+This directory contains the SQL files needed to set up the Couple Card Game database.
 
-## 📁 Files Overview
+## 📦 Quick Start (Fresh Install)
 
-### Core Database Files
+For a brand new installation, run these commands in order:
 
-#### `schema.sql` (11 KB)
-**Purpose:** Complete database schema definition  
-**When to run:** Initial setup or fresh database creation  
-**Contains:**
-- Table definitions (users, categories, questions, rooms, etc.)
-- Indexes for performance
-- Row Level Security (RLS) policies
-- Triggers for automatic timestamps
+```bash
+# Step 1: Create the complete database schema
+psql -U your_username -d your_database -f schema.sql
 
-**Usage:**
-```sql
--- Run in Supabase SQL Editor
--- Creates all tables and relationships
+# Step 2: (Optional) Add sample data for testing
+psql -U your_username -d your_database -f seed.sql
 ```
 
-#### `seed.sql` (7.6 KB)
-**Purpose:** Sample data for development and testing  
-**When to run:** After running schema.sql  
-**Contains:**
-- Sample categories (Relationship, Fun, Deep, etc.)
-- ~30 sample questions in 3 languages (EN, FR, ES)
+That's it! 🎉
 
-**Usage:**
-```sql
--- Run in Supabase SQL Editor after schema.sql
--- Provides initial content for testing
+## 📄 Files
+
+### Essential Files
+
+| File | Purpose | When to Use |
+|------|---------|-------------|
+| **schema.sql** | Complete database schema with all tables, indexes, triggers, and RLS policies | **Always** - First step of fresh install |
+| **seed.sql** | Sample data for testing (categories, questions in 3 languages) | Optional - For development/testing |
+| **drop_all.sql** | Drops all tables and extensions (⚠️ DELETES ALL DATA) | When you need to reset the database |
+
+### Documentation
+
+| File | Purpose |
+|------|---------|
+| **README.md** | This file - installation instructions |
+
+## 🗄️ Database Structure
+
+The `schema.sql` file creates **11 tables**:
+
+### Core Tables
+- **users** - User accounts (authenticated and anonymous)
+- **friends** - Friend relationships and requests
+- **categories** - Question categories (romance, dreams, etc.)
+- **questions** - Game questions in multiple languages
+- **translations** - UI text translations (i18n)
+
+### Game Tables
+- **rooms** - Game rooms where two players play
+- **room_join_requests** - Requests to join rooms
+- **room_invitations** - Invitations sent by room owners
+- **answers** - User answers to questions
+- **question_history** - Tracks asked questions per room
+
+### Notification System
+- **notifications** - User notifications for events
+
+## ✨ Features Included
+
+The consolidated schema includes:
+
+✅ **Anonymous User Support** - Play without registration  
+✅ **Username System** - All users have unique usernames  
+✅ **Room Join Requests** - Request to join private rooms  
+✅ **Room Invitations** - Invite friends to your room  
+✅ **Real-Time Notifications** - Get instant updates  
+✅ **Multi-Language Support** - Questions in EN, FR, JA  
+✅ **Auto-Updating Timestamps** - Automatic `updated_at` triggers  
+✅ **Row Level Security** - Properly configured for anonymous users  
+
+## 🔄 Reset Database
+
+If you need to start fresh (⚠️ **WARNING: DELETES ALL DATA**):
+
+```bash
+# Drop all tables
+psql -U your_username -d your_database -f drop_all.sql
+
+# Recreate everything
+psql -U your_username -d your_database -f schema.sql
+psql -U your_username -d your_database -f seed.sql
 ```
 
----
+## 🔧 Supabase Setup
 
-### Migration Files
+If you're using Supabase:
 
-#### `migration_v2.sql` (3 KB)
-**Purpose:** Updates existing database with new features  
-**When to run:** When upgrading from v1 to v2  
-**Contains:**
-- Creates `room_join_requests` table
-- Adds indexes and RLS policies
-- Safe to run multiple times (uses IF NOT EXISTS)
+1. Go to your Supabase project dashboard
+2. Navigate to **SQL Editor**
+3. Copy and paste the contents of `schema.sql`
+4. Click **Run**
+5. (Optional) Run `seed.sql` for sample data
 
-**Usage:**
-```sql
--- Run if you already have a database and need to add:
--- - Room join request functionality
+You should see a success message indicating all tables were created!
+
+## 📊 Schema Details
+
+### Users Table
+- Supports both authenticated and anonymous users
+- Every user has a unique username (3-20 characters)
+- Anonymous users can be promoted to authenticated users
+
+### Rooms Table
+Statuses:
+- `waiting` - Room created, waiting for guest
+- `ready` - Guest joined, ready to play
+- `playing` - Game in progress
+- `finished` - Game completed
+
+### Notifications
+Types:
+- `room_invitation` - Someone invited you to a room
+- `friend_request` - Someone sent you a friend request
+- `game_start` - A game has started
+- `message` - Generic message notification
+
+## 🔒 Security
+
+**Row Level Security (RLS):**
+- **Disabled** on tables requiring anonymous access (users, rooms, etc.)
+- **Enabled** on tables requiring authentication (friends, answers)
+- For production, consider using Supabase Service Role keys
+
+**Note:** The current setup prioritizes ease of development. For production:
+1. Review and enable RLS on sensitive tables
+2. Use service role keys in your backend
+3. Implement proper authentication checks
+4. Add rate limiting
+
+## 📝 Maintenance
+
+### Adding New Tables
+1. Add table definition to `schema.sql` in the appropriate section
+2. Add indexes as needed
+3. Add to `drop_all.sql` for cleanup
+4. Update this README
+
+### Modifying Tables
+For existing installations, create migration scripts separately.  
+For fresh installs, just update `schema.sql`.
+
+## 🆘 Troubleshooting
+
+### "relation already exists" errors
+You're trying to run `schema.sql` on a database that already has tables.  
+Solution: Run `drop_all.sql` first, then `schema.sql`
+
+### "permission denied" errors
+Make sure you're using a user with sufficient privileges:
+```bash
+psql -U postgres -d your_database -f schema.sql
 ```
 
----
+### Foreign key constraint errors
+The schema creates tables in the correct order.  
+If you get FK errors, you may have old data. Run `drop_all.sql` first.
 
-### Fix Scripts
+## 📚 Additional Resources
 
-#### `fix_rls_policies.sql` (1 KB)
-**Purpose:** Fixes Row Level Security infinite recursion  
-**When to run:** If getting "infinite recursion detected" errors  
-**Contains:**
-- Removes problematic RLS policies
-- Disables RLS on users table for development
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [Supabase Documentation](https://supabase.com/docs)
+- [Project Documentation](../docs/)
 
-**Usage:**
-```sql
--- Run if anonymous user creation fails
--- Allows API access without authentication issues
-```
+## 🎯 Summary
 
-#### `fix_anonymous_users.sql` (1.3 KB)
-**Purpose:** Allows public creation of anonymous users  
-**When to run:** If "Play as Guest" functionality doesn't work  
-**Contains:**
-- Updated RLS policies for anonymous user support
-- Allows unauthenticated user creation
+**Before this consolidation:** 11 SQL files with confusing order  
+**After this consolidation:** 3 essential files (+ this README)
 
-**Note:** If this doesn't work, use `fix_rls_policies.sql` instead
-
----
-
-### Utility Scripts
-
-#### `drop_all.sql` (746 B)
-**Purpose:** Complete database reset  
-**When to run:** ⚠️ **WARNING** - Only for complete fresh start  
-**Contains:**
-- DROP TABLE commands for all tables
-- Removes all data
-
-**⚠️ DANGER:**
-```sql
--- This will DELETE ALL DATA
--- Only run if you want to start completely fresh
--- Then run schema.sql and seed.sql again
-```
-
----
-
-## 🚀 Setup Order
-
-### For New Database:
-1. `schema.sql` - Create all tables
-2. `seed.sql` - Add sample data
-3. Done! ✅
-
-### For Existing Database (Upgrade):
-1. `migration_v2.sql` - Add new features
-2. `fix_rls_policies.sql` - Fix authentication issues (if needed)
-
-### For Complete Reset:
-1. `drop_all.sql` - ⚠️ Delete everything
-2. `schema.sql` - Recreate tables
-3. `seed.sql` - Add sample data
-
----
-
-## 📝 Notes
-
-- All scripts are **idempotent** where possible (safe to run multiple times)
-- Run in **Supabase SQL Editor**: https://app.supabase.com
-- Test in **development** before running in production
-- Always **backup** before running drop_all.sql
-
----
-
-## 🔗 Related Documentation
-
-- [SETUP.md](../docs/SETUP.md) - Complete setup guide
-- [PROJECT_STATUS.md](../docs/PROJECT_STATUS.md) - Implementation status
-- [START_HERE.md](../START_HERE.md) - Quick start guide
-
+Clean, simple, and ready for fresh installs! 🚀

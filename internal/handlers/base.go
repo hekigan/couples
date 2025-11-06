@@ -9,14 +9,15 @@ import (
 
 // Handler holds all service dependencies
 type Handler struct {
-	UserService     *services.UserService
-	RoomService     *services.RoomService
-	GameService     *services.GameService
-	QuestionService *services.QuestionService
-	AnswerService   *services.AnswerService
-	FriendService   *services.FriendService
-	I18nService     *services.I18nService
-	Templates       *template.Template
+	UserService         *services.UserService
+	RoomService         *services.RoomService
+	GameService         *services.GameService
+	QuestionService     *services.QuestionService
+	AnswerService       *services.AnswerService
+	FriendService       *services.FriendService
+	I18nService         *services.I18nService
+	NotificationService *services.NotificationService
+	Templates           *template.Template
 }
 
 // Template function map for custom functions
@@ -34,26 +35,30 @@ func NewHandler(
 	answerService *services.AnswerService,
 	friendService *services.FriendService,
 	i18nService *services.I18nService,
+	notificationService *services.NotificationService,
 ) *Handler {
 	return &Handler{
-		UserService:     userService,
-		RoomService:     roomService,
-		GameService:     gameService,
-		QuestionService: questionService,
-		AnswerService:   answerService,
-		FriendService:   friendService,
-		I18nService:     i18nService,
-		Templates:       nil, // We'll parse templates on demand
+		UserService:         userService,
+		RoomService:         roomService,
+		GameService:         gameService,
+		QuestionService:     questionService,
+		AnswerService:       answerService,
+		FriendService:       friendService,
+		I18nService:         i18nService,
+		NotificationService: notificationService,
+		Templates:           nil, // We'll parse templates on demand
 	}
 }
 
 // TemplateData represents common data passed to templates
 type TemplateData struct {
-	Title   string
-	User    interface{}
-	Error   string
-	Success string
-	Data    interface{}
+	Title          string
+	User           interface{}
+	Error          string
+	Success        string
+	Data           interface{}
+	OwnerUsername  string
+	GuestUsername  string
 }
 
 // RenderTemplate renders a template with the given data

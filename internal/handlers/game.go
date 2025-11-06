@@ -6,8 +6,63 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/yourusername/couple-card-game/internal/middleware"
 	"github.com/yourusername/couple-card-game/internal/models"
 )
+
+// DeleteRoomAPIHandler handles room deletion via API
+func (h *Handler) DeleteRoomAPIHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	roomID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid room ID", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	// Get the room to check ownership
+	room, err := h.RoomService.GetRoomByID(ctx, roomID)
+	if err != nil {
+		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+
+	// Only the owner can delete the room
+	if room.OwnerID != userID {
+		http.Error(w, "You are not the owner of this room", http.StatusForbidden)
+		return
+	}
+
+	// Delete the room
+	if err := h.RoomService.DeleteRoom(ctx, roomID); err != nil {
+		http.Error(w, "Failed to delete room", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"success","message":"Room deleted successfully"}`))
+}
+
+// ListRoomsHandler lists all rooms for the current user
+func (h *Handler) ListRoomsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	rooms, err := h.RoomService.GetRoomsByUserID(ctx, userID)
+	if err != nil {
+		http.Error(w, "Failed to load rooms", http.StatusInternalServerError)
+		return
+	}
+
+	data := &TemplateData{
+		Title: "My Rooms",
+		Data:  rooms,
+	}
+	h.RenderTemplate(w, "game/rooms.html", data)
+}
 
 // CreateRoomHandler handles room creation
 func (h *Handler) CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +76,7 @@ func (h *Handler) CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 
 	// POST - Create room
 	ctx := context.Background()
-	userID := r.Context().Value("user_id").(uuid.UUID)
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 
 	room := &models.Room{
 		ID:       uuid.New(),
@@ -50,7 +105,47 @@ func (h *Handler) JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// POST - Join room logic
-	http.Error(w, "Join room not yet implemented", http.StatusNotImplemented)
+	ctx := context.Background()
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	
+	// Parse room ID from form
+	roomIDStr := r.FormValue("room_id")
+	roomID, err := uuid.Parse(roomIDStr)
+	if err != nil {
+		http.Error(w, "Invalid room ID", http.StatusBadRequest)
+		return
+	}
+	
+	// Get the room
+	room, err := h.RoomService.GetRoomByID(ctx, roomID)
+	if err != nil {
+		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+	
+	// Check if room is already full
+	if room.GuestID != nil {
+		http.Error(w, "Room is full", http.StatusBadRequest)
+		return
+	}
+	
+	// Check if user is trying to join their own room
+	if room.OwnerID == userID {
+		http.Error(w, "You cannot join your own room", http.StatusBadRequest)
+		return
+	}
+	
+	// Join the room by setting the guest_id
+	room.GuestID = &userID
+	room.Status = "ready" // Room is ready when both players are present
+	
+	if err := h.RoomService.UpdateRoom(ctx, room); err != nil {
+		http.Error(w, "Failed to join room", http.StatusInternalServerError)
+		return
+	}
+	
+	// Redirect to the room
+	http.Redirect(w, r, "/game/room/"+room.ID.String(), http.StatusSeeOther)
 }
 
 // RoomHandler displays the room lobby
@@ -65,9 +160,27 @@ func (h *Handler) RoomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get owner username
+	owner, err := h.UserService.GetUserByID(ctx, room.OwnerID)
+	var ownerUsername string
+	if err == nil && owner != nil {
+		ownerUsername = owner.Username
+	}
+
+	// Get guest username if present
+	var guestUsername string
+	if room.GuestID != nil {
+		guest, err := h.UserService.GetUserByID(ctx, *room.GuestID)
+		if err == nil && guest != nil {
+			guestUsername = guest.Username
+		}
+	}
+
 	data := &TemplateData{
-		Title: "Room - " + room.Name,
-		Data:  room,
+		Title:          "Room - " + room.Name,
+		Data:           room,
+		OwnerUsername:  ownerUsername,
+		GuestUsername:  guestUsername,
 	}
 	h.RenderTemplate(w, "game/room.html", data)
 }

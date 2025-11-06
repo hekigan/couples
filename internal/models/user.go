@@ -10,8 +10,8 @@ import (
 type User struct {
 	ID                 uuid.UUID  `json:"id"`
 	Email              *string    `json:"email,omitempty"`
-	Name               *string    `json:"name,omitempty"`
-	Username           *string    `json:"username,omitempty"`
+	Name               string     `json:"name"`
+	Username           string     `json:"username"`
 	DisplayName        *string    `json:"display_name,omitempty"`
 	AvatarURL          *string    `json:"avatar_url,omitempty"`
 	IsAdmin            bool       `json:"is_admin"`

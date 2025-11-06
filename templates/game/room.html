@@ -1,20 +1,31 @@
 {{define "content"}}
 <div class="room-container" data-room-id="{{.Data.ID}}">
-    <h1>Room: {{.Data.Name}}</h1>
-    
-    <div class="room-status">
-        <span class="status-badge status-{{.Data.Status}}">{{.Data.Status}}</span>
+    <div class="room-header-section">
+        <div class="room-title-row">
+            <h1>Room:</h1>
+            <div class="room-id-group">
+                <input type="text" id="room-id-input" value="{{.Data.ID}}" readonly class="room-id-input" />
+                <button onclick="copyRoomId()" class="btn btn-secondary btn-sm copy-btn" title="Copy Room ID">
+                    📋 Copy ID
+                </button>
+            </div>
+        </div>
+        <div class="room-status">
+            <span class="status-badge status-{{.Data.Status}}">{{.Data.Status}}</span>
+        </div>
     </div>
     
     <div class="room-players" id="player-list">
         <h2>Players</h2>
         <div class="player-grid">
             <div class="player-card">
-                <span>Owner</span>
+                <span class="player-label">Owner</span>
+                <span class="player-name">{{if .OwnerUsername}}{{.OwnerUsername}}{{else}}Unknown{{end}}</span>
             </div>
             {{if .Data.GuestID}}
             <div class="player-card">
-                <span>Guest</span>
+                <span class="player-label">Guest</span>
+                <span class="player-name">{{if .GuestUsername}}{{.GuestUsername}}{{else}}Unknown{{end}}</span>
             </div>
             {{else}}
             <div class="player-card empty">
@@ -23,10 +34,24 @@
             {{end}}
         </div>
     </div>
+
+    <!-- Invite Friends Section -->
+    <div class="invite-section" style="margin-top: 2rem;">
+        <h2>👥 Invite Friends</h2>
+        <div id="friends-list" class="friends-list">
+            <p style="color: #6b7280;">Loading friends...</p>
+        </div>
+    </div>
+
+    <!-- Pending Join Requests Section -->
+    <div id="join-requests-section" style="margin-top: 2rem;">
+        <h2>📬 Join Requests <span id="request-count" class="badge">0</span></h2>
+        <div id="join-requests-list"></div>
+    </div>
     
     <div class="room-actions">
         {{if .Data.Status}}{{if eq .Data.Status "ready"}}
-        <form action="/api/rooms/{{.Data.ID}}/start" method="POST">
+        <form action="/api/rooms/{{.Data.ID}}/start" method="POST" hx-post="/api/rooms/{{.Data.ID}}/start" hx-swap="none">
             <button type="submit" class="btn btn-primary btn-lg">Start Game</button>
         </form>
         {{end}}{{end}}
@@ -36,5 +61,413 @@
         </form>
     </div>
 </div>
+
+<script>
+// Copy room ID to clipboard
+function copyRoomId() {
+    const input = document.getElementById('room-id-input');
+    input.select();
+    document.execCommand('copy');
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = '✅ Copied!';
+    btn.style.background = '#10b981';
+    
+    setTimeout(() => {
+        btn.textContent = originalText;
+        btn.style.background = '';
+    }, 2000);
+}
+
+// Load join requests and friends on page load
+document.addEventListener('DOMContentLoaded', () => {
+    const roomId = document.querySelector('[data-room-id]').dataset.roomId;
+    loadJoinRequests(roomId);
+    loadFriends(roomId);
+    
+    // Poll for new requests every 5 seconds
+    setInterval(() => loadJoinRequests(roomId), 5000);
+});
+
+async function loadJoinRequests(roomId) {
+    try {
+        const response = await fetch(`/api/rooms/${roomId}/join-requests-json`);
+        if (!response.ok) {
+            document.getElementById('join-requests-list').innerHTML = '<p style="color: #6b7280;">No pending requests</p>';
+            return;
+        }
+        
+        const requests = await response.json();
+        
+        updateRequestCount(requests.length);
+        
+        if (requests.length > 0) {
+            displayJoinRequests(roomId, requests);
+        } else {
+            document.getElementById('join-requests-list').innerHTML = '<p style="color: #6b7280;">No pending requests</p>';
+        }
+    } catch (error) {
+        console.error('Failed to load join requests:', error);
+        document.getElementById('join-requests-list').innerHTML = '<p style="color: #6b7280;">No pending requests</p>';
+    }
+}
+
+function updateRequestCount(count) {
+    const badge = document.getElementById('request-count');
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'inline-block' : 'none';
+}
+
+function displayJoinRequests(roomId, requests) {
+    const listElement = document.getElementById('join-requests-list');
+    
+    const requestsHTML = requests.map(req => `
+        <div class="request-card" style="background: white; border: 2px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin: 0.5rem 0; display: flex; align-items: center; justify-content: space-between;">
+            <div style="flex: 1;">
+                <div style="font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem;">
+                    @${req.username}
+                </div>
+                <div style="font-size: 0.875rem; color: #6b7280;">
+                    ${new Date(req.created_at).toLocaleString()}
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button 
+                    onclick="acceptRequest('${req.id}')" 
+                    class="btn-accept"
+                    style="padding: 0.5rem 1rem; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;"
+                >
+                    ✅ Accept
+                </button>
+                <button 
+                    onclick="rejectRequest('${req.id}')" 
+                    class="btn-reject"
+                    style="padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;"
+                >
+                    ❌ Reject
+                </button>
+            </div>
+        </div>
+    `).join('');
+    
+    listElement.innerHTML = requestsHTML;
+}
+
+async function acceptRequest(requestId) {
+    try {
+        const response = await fetch(`/api/rooms/join-request/${requestId}/accept`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            showNotification('Join request accepted!', 'success');
+            // Reload the page to show the new guest
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showNotification('Failed to accept request', 'error');
+        }
+    } catch (error) {
+        console.error('Error accepting request:', error);
+        showNotification('Failed to accept request', 'error');
+    }
+}
+
+async function rejectRequest(requestId) {
+    try {
+        const response = await fetch(`/api/rooms/join-request/${requestId}/reject`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            showNotification('Join request rejected', 'success');
+            // Reload requests
+            const roomId = document.querySelector('[data-room-id]').dataset.roomId;
+            loadJoinRequests(roomId);
+        } else {
+            showNotification('Failed to reject request', 'error');
+        }
+    } catch (error) {
+        console.error('Error rejecting request:', error);
+        showNotification('Failed to reject request', 'error');
+    }
+}
+
+async function loadFriends(roomId) {
+    try {
+        const response = await fetch('/api/friends/list');
+        if (!response.ok) {
+            document.getElementById('friends-list').innerHTML = '<p style="color: #6b7280;">No friends to invite</p>';
+            return;
+        }
+        
+        const friends = await response.json();
+        
+        if (friends && friends.length > 0) {
+            displayFriendsList(roomId, friends);
+        } else {
+            document.getElementById('friends-list').innerHTML = '<p style="color: #6b7280;">No friends yet. <a href="/friends">Add friends</a></p>';
+        }
+    } catch (error) {
+        console.error('Failed to load friends:', error);
+        document.getElementById('friends-list').innerHTML = '<p style="color: #6b7280;">Failed to load friends</p>';
+    }
+}
+
+function displayFriendsList(roomId, friends) {
+    const listElement = document.getElementById('friends-list');
+    const friendsHTML = friends.map(friend => `
+        <div class="friend-item" id="friend-${friend.id}">
+            <div class="friend-info">
+                <span class="friend-name">${friend.username || friend.name}</span>
+            </div>
+            <button 
+                id="invite-btn-${friend.id}"
+                onclick="inviteFriend('${roomId}', '${friend.id}')" 
+                class="btn btn-primary btn-sm"
+            >
+                📧 Invite
+            </button>
+        </div>
+    `).join('');
+    listElement.innerHTML = friendsHTML;
+}
+
+async function inviteFriend(roomId, friendId) {
+    const btn = document.getElementById(`invite-btn-${friendId}`);
+    const originalText = btn.textContent;
+    
+    try {
+        const response = await fetch('/api/rooms/invitations', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                room_id: roomId,
+                invitee_id: friendId
+            })
+        });
+        
+        if (response.ok) {
+            // Disable all other invite buttons
+            document.querySelectorAll('.friend-item button').forEach(b => {
+                if (b.id !== `invite-btn-${friendId}`) {
+                    b.disabled = true;
+                    b.style.opacity = '0.5';
+                }
+            });
+            
+            // Change this button to "Cancel"
+            btn.textContent = '❌ Cancel';
+            btn.className = 'btn btn-secondary btn-sm';
+            btn.onclick = () => cancelInvitation(roomId, friendId);
+            
+            showNotification('✅ Invitation sent!', 'success');
+        } else {
+            const error = await response.text();
+            showNotification(`❌ ${error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error sending invitation:', error);
+        showNotification('❌ Failed to send invitation', 'error');
+    }
+}
+
+async function cancelInvitation(roomId, friendId) {
+    try {
+        const response = await fetch(`/api/rooms/invitations/${roomId}/${friendId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            // Re-enable all buttons
+            document.querySelectorAll('.friend-item button').forEach(b => {
+                b.disabled = false;
+                b.style.opacity = '1';
+            });
+            
+            // Reset this button to "Invite"
+            const btn = document.getElementById(`invite-btn-${friendId}`);
+            btn.textContent = '📧 Invite';
+            btn.className = 'btn btn-primary btn-sm';
+            btn.onclick = () => inviteFriend(roomId, friendId);
+            
+            showNotification('Invitation cancelled', 'success');
+        } else {
+            showNotification('Failed to cancel invitation', 'error');
+        }
+    } catch (error) {
+        console.error('Error cancelling invitation:', error);
+        showNotification('❌ Failed to cancel invitation', 'error');
+    }
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        background: ${type === 'success' ? '#10b981' : '#ef4444'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+</script>
+
+<style>
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: #ef4444;
+    color: white;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+.info-box {
+    border-radius: 8px;
+    margin: 1rem 0;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+
+.room-header-section {
+    margin-bottom: 2rem;
+}
+
+.room-title-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.room-title-row h1 {
+    margin: 0;
+}
+
+.room-id-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.room-id-input {
+    font-family: monospace;
+    padding: 0.5rem 0.75rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    background: #f9fafb;
+    font-size: 0.875rem;
+    color: #4b5563;
+    width: 300px;
+    cursor: text;
+}
+
+.room-id-input:focus {
+    outline: none;
+    border-color: #6B4CE6;
+}
+
+.copy-btn {
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.player-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.player-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.player-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.invite-section {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.friends-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.friend-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: #f9fafb;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+}
+
+.friend-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.friend-name {
+    font-weight: 500;
+    color: #111827;
+}
+
+.friend-item button:disabled {
+    cursor: not-allowed;
+}
+</style>
 {{end}}
 

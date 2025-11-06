@@ -38,7 +38,7 @@
 
         <!-- Request to Join Form (Hidden by default) -->
         <div id="request-join-form" style="display: none;">
-            <form action="/api/room/join-request" method="POST">
+            <form id="join-request-form" onsubmit="handleJoinRequest(event)">
                 <div class="form-group">
                     <label class="form-label" for="request_room_id">Room ID:</label>
                     <input 
@@ -69,28 +69,367 @@
 
         <a href="/" class="btn btn-secondary btn-block" style="margin-top: 16px;">Cancel</a>
 
-        {{if .AvailableRooms}}
-        <div class="available-rooms">
-            <h2>Available Rooms</h2>
-            <div class="rooms-list">
-                {{range .AvailableRooms}}
-                <div class="room-item">
-                    <div class="room-info">
-                        <strong>Room {{.ID}}</strong>
-                        <span class="room-owner">by {{.OwnerName}}</span>
-                    </div>
-                    <a href="/game/join-room?id={{.ID}}" class="btn btn-sm btn-primary">
-                        Join
-                    </a>
-                </div>
-                {{end}}
-            </div>
+        <!-- Pending Requests Section -->
+        <div id="pending-requests" style="display: none; margin-top: 2rem;">
+            <h3>📬 Pending Join Requests</h3>
+            <div id="pending-requests-list"></div>
         </div>
-        {{end}}
     </div>
 </div>
 
+<script>
+// Check for accepted requests on page load
+document.addEventListener('DOMContentLoaded', async () => {
+    await checkAcceptedRequests();
+});
+
+async function checkAcceptedRequests() {
+    try {
+        const response = await fetch('/api/rooms/my-accepted-requests');
+        if (response.ok) {
+            const requests = await response.json();
+            
+            if (requests && requests.length > 0) {
+                const pendingSection = document.getElementById('pending-requests');
+                const pendingList = document.getElementById('pending-requests-list');
+                pendingSection.style.display = 'block';
+                
+                requests.forEach(req => {
+                    const requestCard = document.createElement('div');
+                    requestCard.className = 'request-card';
+                    requestCard.id = `request-${req.room_id}`;
+                    requestCard.innerHTML = `
+                        <div class="request-info">
+                            <strong>Room: ${req.room_id}</strong>
+                            <span class="request-status accepted">✅ Request accepted!</span>
+                            <a href="/game/room/${req.room_id}" class="btn btn-success btn-sm" style="margin-top: 1rem; display: inline-block; padding: 0.5rem 1rem; background: #10b981; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                                Go to Room →
+                            </a>
+                        </div>
+                    `;
+                    pendingList.appendChild(requestCard);
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error checking accepted requests:', error);
+    }
+}
+
+function showDirectJoin() {
+    document.getElementById('direct-join-form').style.display = 'block';
+    document.getElementById('request-join-form').style.display = 'none';
+    document.getElementById('direct-btn').classList.add('active');
+    document.getElementById('request-btn').classList.remove('active');
+}
+
+function showRequestJoin() {
+    document.getElementById('direct-join-form').style.display = 'none';
+    document.getElementById('request-join-form').style.display = 'block';
+    document.getElementById('direct-btn').classList.remove('active');
+    document.getElementById('request-btn').classList.add('active');
+}
+
+async function handleJoinRequest(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const roomId = formData.get('room_id');
+    const message = formData.get('message');
+    
+    try {
+        const response = await fetch('/api/rooms/join-request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams(formData)
+        });
+        
+        if (!response.ok) {
+            const error = await response.text();
+            showNotification(error, 'error');
+            return;
+        }
+        
+        const data = await response.json();
+        
+        // Show success notification
+        showNotification('✅ Join request sent! Waiting for owner approval...', 'success');
+        
+        // Add to pending requests list
+        addPendingRequest(roomId, message || 'No message');
+        
+        // Clear form
+        form.reset();
+        
+        // Start polling for status
+        startPollingRequest(roomId);
+        
+    } catch (error) {
+        showNotification('❌ Failed to send join request', 'error');
+    }
+}
+
+function addPendingRequest(roomId, message) {
+    const pendingSection = document.getElementById('pending-requests');
+    const pendingList = document.getElementById('pending-requests-list');
+    
+    pendingSection.style.display = 'block';
+    
+    const requestCard = document.createElement('div');
+    requestCard.className = 'request-card';
+    requestCard.id = `request-${roomId}`;
+    requestCard.innerHTML = `
+        <div class="request-info">
+            <strong>Room: ${roomId}</strong>
+            <p class="request-message">${message}</p>
+            <span class="request-status pending">⏳ Request sent, waiting for approval...</span>
+        </div>
+        <button onclick="cancelRequest('${roomId}')" class="btn-cancel">Cancel Request</button>
+    `;
+    
+    pendingList.appendChild(requestCard);
+}
+
+function startPollingRequest(roomId) {
+    // Poll every 3 seconds to check if request was accepted
+    const pollInterval = setInterval(async () => {
+        try {
+            const response = await fetch(`/api/rooms/${roomId}/my-join-request`);
+            if (response.ok) {
+                const data = await response.json();
+                
+                if (data.status === 'accepted') {
+                    // Request was accepted! Update UI
+                    updateRequestAccepted(roomId);
+                    clearInterval(pollInterval);
+                } else if (data.status === 'rejected') {
+                    // Request was rejected
+                    updateRequestRejected(roomId);
+                    clearInterval(pollInterval);
+                } else if (data.status === 'not_found') {
+                    // Request was cancelled or deleted
+                    updateRequestCancelled(roomId);
+                    clearInterval(pollInterval);
+                }
+                // Otherwise, still pending - keep polling
+            }
+        } catch (error) {
+            console.error('Polling error:', error);
+        }
+    }, 3000);
+    
+    // Store interval ID to clear later
+    window[`poll_${roomId}`] = pollInterval;
+}
+
+function updateRequestAccepted(roomId) {
+    const requestCard = document.getElementById(`request-${roomId}`);
+    if (requestCard) {
+        requestCard.innerHTML = `
+            <div class="request-info">
+                <strong>Room: ${roomId}</strong>
+                <span class="request-status accepted">✅ Request accepted!</span>
+                <a href="/game/room/${roomId}" class="btn btn-success btn-sm" style="margin-top: 1rem;">
+                    Go to Room →
+                </a>
+            </div>
+        `;
+        
+        // Stop polling
+        clearInterval(window[`poll_${roomId}`]);
+        
+        showNotification('🎉 Your join request was accepted!', 'success');
+    }
+}
+
+function updateRequestRejected(roomId) {
+    const requestCard = document.getElementById(`request-${roomId}`);
+    if (requestCard) {
+        requestCard.innerHTML = `
+            <div class="request-info">
+                <strong>Room: ${roomId}</strong>
+                <span class="request-status rejected">❌ Request rejected by owner</span>
+                <p style="color: #6b7280; font-size: 0.875rem; margin-top: 0.5rem;">
+                    The room owner declined your request.
+                </p>
+            </div>
+        `;
+        
+        showNotification('❌ Your join request was rejected', 'error');
+        
+        // Remove the card after 5 seconds
+        setTimeout(() => {
+            requestCard.remove();
+            
+            // Hide section if no more requests
+            const pendingList = document.getElementById('pending-requests-list');
+            if (pendingList.children.length === 0) {
+                document.getElementById('pending-requests').style.display = 'none';
+            }
+        }, 5000);
+    }
+}
+
+function updateRequestCancelled(roomId) {
+    const requestCard = document.getElementById(`request-${roomId}`);
+    if (requestCard) {
+        requestCard.remove();
+        showNotification('Request cancelled', 'success');
+        
+        // Hide section if no more requests
+        const pendingList = document.getElementById('pending-requests-list');
+        if (pendingList.children.length === 0) {
+            document.getElementById('pending-requests').style.display = 'none';
+        }
+    }
+}
+
+async function cancelRequest(roomId) {
+    if (!confirm('Cancel this join request?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/rooms/${roomId}/cancel-my-request`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            // Stop polling
+            const pollInterval = window[`poll_${roomId}`];
+            if (pollInterval) {
+                clearInterval(pollInterval);
+            }
+            
+            updateRequestCancelled(roomId);
+        } else {
+            showNotification('Failed to cancel request', 'error');
+        }
+    } catch (error) {
+        console.error('Error cancelling request:', error);
+        showNotification('Failed to cancel request', 'error');
+    }
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        background: ${type === 'success' ? '#10b981' : '#ef4444'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+        max-width: 400px;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+    }, 5000);
+}
+</script>
+
 <style>
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+
+.request-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.request-info strong {
+    display: block;
+    color: #111827;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+}
+
+.request-message {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin: 0.5rem 0;
+}
+
+.request-status {
+    display: inline-block;
+    padding: 0.375rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-top: 0.5rem;
+}
+
+.request-status.pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.request-status.accepted {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.request-status.rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.btn-cancel {
+    padding: 0.5rem 1rem;
+    background: #6b7280;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin-left: 1rem;
+}
+
+.btn-cancel:hover {
+    background: #4b5563;
+}
+
+#pending-requests h3 {
+    color: #111827;
+    margin-bottom: 1rem;
+}
+
 .join-method-toggle {
     display: flex;
     gap: 8px;

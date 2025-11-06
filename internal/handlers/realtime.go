@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/yourusername/couple-card-game/internal/middleware"
 	"github.com/yourusername/couple-card-game/internal/services"
 )
 
@@ -33,7 +34,7 @@ func (h *RealtimeHandler) StreamRoomEvents(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	userID := r.Context().Value("user_id").(uuid.UUID)
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 
 	// Set SSE headers
 	w.Header().Set("Content-Type", "text/event-stream")
