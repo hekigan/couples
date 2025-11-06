@@ -1,3 +1,5 @@
+@use '../base/variables' as *;
+
 // Modals
 .modal-backdrop {
   position: fixed;
@@ -58,4 +60,5 @@
     color: $text-primary;
   }
 }
+
 

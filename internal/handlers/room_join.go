@@ -83,6 +83,18 @@ func (h *Handler) CreateJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Get user information for SSE broadcast
+	user, err := h.UserService.GetUserByID(ctx, userID)
+	var username string
+	if err == nil && user != nil {
+		username = user.Username
+	} else {
+		username = "Unknown"
+	}
+
+	// Broadcast to SSE that a new join request was created with full details
+	h.RoomService.BroadcastJoinRequestWithDetails(roomID, request.ID, userID, username, request.CreatedAt)
+
 	// Return success response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -121,11 +133,11 @@ func (h *Handler) AcceptJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 		guestUsername = guestUser.Username
 	}
 
-	// Broadcast to SSE that request was accepted
-	h.RoomService.BroadcastRoomUpdate(joinRequest.RoomID, map[string]interface{}{
-		"event": "request_accepted",
-		"guest_username": guestUsername,
-	})
+	// Broadcast to room that request was accepted
+	h.RoomService.BroadcastRequestAccepted(joinRequest.RoomID, guestUsername)
+
+	// Notify the guest user that their request was accepted
+	h.RoomService.BroadcastRequestAcceptedToGuest(joinRequest.UserID, joinRequest.RoomID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
@@ -145,10 +157,22 @@ func (h *Handler) RejectJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	ctx := context.Background()
+
+	// Get the join request to find the user ID and room ID before deleting
+	joinRequest, err := h.RoomService.GetJoinRequestByID(ctx, requestID)
+	if err != nil {
+		http.Error(w, "Join request not found", http.StatusNotFound)
+		return
+	}
+
+	// Reject the request
 	if err := h.RoomService.RejectJoinRequest(ctx, requestID); err != nil {
 		http.Error(w, "Failed to reject join request", http.StatusInternalServerError)
 		return
 	}
+
+	// Notify the guest user that their request was rejected
+	h.RoomService.BroadcastRequestRejectedToGuest(joinRequest.UserID, joinRequest.RoomID)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"status":"success","message":"Join request rejected"}`))

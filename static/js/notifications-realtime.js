@@ -304,3 +304,4 @@ window.addEventListener('beforeunload', () => {
     }
 });
 
+

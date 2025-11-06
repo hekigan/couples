@@ -1,3 +1,5 @@
+@use '../base/variables' as *;
+
 // Badges
 .badge {
   display: inline-flex;
@@ -43,4 +45,5 @@
   background-color: transparent;
   border: $border-width solid currentColor;
 }
+
 

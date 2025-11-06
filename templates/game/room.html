@@ -115,7 +115,8 @@ let joinRequestsPollInterval = null;
 // Load join requests and friends on page load
 document.addEventListener('DOMContentLoaded', () => {
     const roomId = document.querySelector('[data-room-id]').dataset.roomId;
-    loadJoinRequests(roomId);
+    // Don't load join requests here - let SSE handle it
+    // loadJoinRequests(roomId); // REMOVED - SSE will trigger this
     loadFriends(roomId);
     loadCategories(roomId);
 
@@ -123,8 +124,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof(EventSource) !== "undefined") {
         console.log('✅ SSE supported - using real-time join requests');
         connectJoinRequestsStream(roomId);
+        // Initial join requests will be sent via SSE after connection
     } else {
         console.log('⚠️ SSE not supported - falling back to polling');
+        // Load initial join requests before starting polling
+        loadJoinRequests(roomId);
         startPolling(roomId);
     }
 });
@@ -145,23 +149,37 @@ function connectJoinRequestsStream(roomId) {
     });
     
     joinRequestsEventSource.addEventListener('join_request', (event) => {
-        console.log('📬 New join request received via SSE:', event.data);
-        const data = JSON.parse(event.data);
-        loadJoinRequests(roomId); // Reload the list
+        try {
+            console.log('📬 New join request received via SSE:', event.data);
+            const requestData = JSON.parse(event.data);
+
+            // Add the new request directly to the UI without making an HTTP request
+            addJoinRequestToUI(roomId, requestData);
+        } catch (error) {
+            console.error('Error handling join_request event:', error);
+        }
     });
-    
+
     joinRequestsEventSource.addEventListener('request_accepted', (event) => {
-        console.log('✅ Join request accepted via SSE:', event.data);
-        const data = JSON.parse(event.data);
-        if (data.guest_username) {
-            updateUIAfterAccept(data.guest_username);
+        try {
+            console.log('✅ Join request accepted via SSE:', event.data);
+            const data = JSON.parse(event.data);
+            if (data.guest_username) {
+                updateUIAfterAccept(data.guest_username);
+            }
+        } catch (error) {
+            console.error('Error handling request_accepted event:', error);
         }
     });
 
     joinRequestsEventSource.addEventListener('categories_updated', (event) => {
-        console.log('🎯 Categories updated via SSE:', event.data);
-        const data = JSON.parse(event.data);
-        syncCategorySelections(data.category_ids || []);
+        try {
+            console.log('🎯 Categories updated via SSE:', event.data);
+            const data = JSON.parse(event.data);
+            syncCategorySelections(data.category_ids || []);
+        } catch (error) {
+            console.error('Error handling categories_updated event:', error);
+        }
     });
 
     joinRequestsEventSource.addEventListener('ping', (event) => {
@@ -171,9 +189,17 @@ function connectJoinRequestsStream(roomId) {
     joinRequestsEventSource.onerror = (error) => {
         console.error('❌ SSE connection error:', error);
         console.error('SSE readyState:', joinRequestsEventSource.readyState);
-        console.error('Falling back to polling...');
-        joinRequestsEventSource.close();
-        startPolling(roomId);
+
+        // Only fall back to polling if the connection is permanently closed
+        // readyState: 0 = CONNECTING, 1 = OPEN, 2 = CLOSED
+        if (joinRequestsEventSource.readyState === 2) {
+            console.error('SSE connection permanently closed, falling back to polling...');
+            joinRequestsEventSource.close();
+            startPolling(roomId);
+        } else {
+            console.log('SSE connection will retry automatically...');
+            // EventSource automatically reconnects, so we don't need to do anything
+        }
     };
 }
 
@@ -262,6 +288,54 @@ function displayJoinRequests(roomId, requests) {
     listElement.innerHTML = requestsHTML;
 }
 
+// Add a single join request to the UI (used by SSE)
+function addJoinRequestToUI(roomId, request) {
+    const listElement = document.getElementById('join-requests-list');
+
+    // Check if there's a "no pending requests" message and remove it
+    const noPendingMsg = listElement.querySelector('p[style*="color: #6b7280"]');
+    if (noPendingMsg) {
+        noPendingMsg.remove();
+    }
+
+    // Create the request card HTML
+    const requestHTML = `
+        <div class="request-card" id="request-${request.id}" style="background: white; border: 2px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin: 0.5rem 0; display: flex; align-items: center; justify-content: space-between;">
+            <div style="flex: 1;">
+                <div style="font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem;">
+                    @${request.username}
+                </div>
+                <div style="font-size: 0.875rem; color: #6b7280;">
+                    ${new Date(request.created_at).toLocaleString()}
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button
+                    onclick="acceptRequest('${request.id}')"
+                    class="btn-accept"
+                    style="padding: 0.5rem 1rem; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;"
+                >
+                    ✅ Accept
+                </button>
+                <button
+                    onclick="rejectRequest('${request.id}')"
+                    class="btn-reject"
+                    style="padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;"
+                >
+                    ❌ Reject
+                </button>
+            </div>
+        </div>
+    `;
+
+    // Add the request to the list
+    listElement.insertAdjacentHTML('beforeend', requestHTML);
+
+    // Update the request count
+    const currentCount = listElement.querySelectorAll('.request-card').length;
+    updateRequestCount(currentCount);
+}
+
 async function acceptRequest(requestId) {
     try {
         const response = await fetch(`/api/rooms/join-request/${requestId}/accept`, {
@@ -289,6 +363,12 @@ async function acceptRequest(requestId) {
 }
 
 function updateUIAfterAccept(guestUsername) {
+    // Prevent duplicate updates
+    if (document.querySelector('.start-game-section')) {
+        console.log('UI already updated, skipping duplicate update');
+        return;
+    }
+
     // 1. Update guest card
     const guestCard = document.getElementById('guest-card');
     guestCard.classList.remove('empty');
@@ -296,17 +376,25 @@ function updateUIAfterAccept(guestUsername) {
         <span class="player-label">Guest</span>
         <span class="player-name" id="guest-name">${guestUsername}</span>
     `;
-    
+
     // 2. Update status badge to "ready" and make it green
     const statusBadge = document.getElementById('room-status-badge');
     statusBadge.textContent = 'ready';
     statusBadge.className = 'status-badge status-ready';
-    
+
     // 3. Hide invite and join request sections
-    document.getElementById('invite-section').style.display = 'none';
-    document.getElementById('join-requests-section').style.display = 'none';
-    
-    // 4. Show "Start Game" button
+    const inviteSection = document.getElementById('invite-section');
+    const joinRequestsSection = document.getElementById('join-requests-section');
+    if (inviteSection) inviteSection.style.display = 'none';
+    if (joinRequestsSection) joinRequestsSection.style.display = 'none';
+
+    // 4. Show categories section if it exists
+    const categoriesSection = document.getElementById('categories-section');
+    if (categoriesSection) {
+        categoriesSection.style.display = 'block';
+    }
+
+    // 5. Show "Start Game" button
     const playerList = document.getElementById('player-list');
     const startSection = document.createElement('div');
     startSection.className = 'start-game-section';
@@ -323,12 +411,24 @@ async function rejectRequest(requestId) {
         const response = await fetch(`/api/rooms/join-request/${requestId}/reject`, {
             method: 'POST'
         });
-        
+
         if (response.ok) {
             showNotification('Join request rejected', 'success');
-            // Reload requests
-            const roomId = document.querySelector('[data-room-id]').dataset.roomId;
-            loadJoinRequests(roomId);
+            // Remove the request card from UI
+            const requestCard = document.getElementById(`request-${requestId}`);
+            if (requestCard) {
+                requestCard.remove();
+            }
+
+            // Update request count
+            const listElement = document.getElementById('join-requests-list');
+            const currentCount = listElement.querySelectorAll('.request-card').length;
+            updateRequestCount(currentCount);
+
+            // If no more requests, show "no pending requests" message
+            if (currentCount === 0) {
+                listElement.innerHTML = '<p style="color: #6b7280;">No pending requests</p>';
+            }
         } else {
             showNotification('Failed to reject request', 'error');
         }

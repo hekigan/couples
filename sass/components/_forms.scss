@@ -1,3 +1,5 @@
+@use '../base/variables' as *;
+
 // Forms
 .form-group {
   margin-bottom: $spacing-lg;
@@ -66,4 +68,5 @@ select.form-control {
   font-size: $font-size-sm;
   color: $danger-color;
 }
+
 

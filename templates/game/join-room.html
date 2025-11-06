@@ -78,9 +78,70 @@
 </div>
 
 <script>
-// Check for accepted requests on page load
+// SSE connection for real-time request status updates
+let userEventsSource = null;
+
+// Check for accepted requests on page load and setup SSE
 document.addEventListener('DOMContentLoaded', async () => {
     await checkAcceptedRequests();
+    setupSSE();
+});
+
+// Setup SSE connection for user notifications
+function setupSSE() {
+    if (typeof(EventSource) === "undefined") {
+        console.log('⚠️ SSE not supported');
+        return;
+    }
+
+    const sseUrl = '/api/user/events';
+    console.log('🔌 Connecting to user events SSE:', sseUrl);
+
+    userEventsSource = new EventSource(sseUrl);
+
+    userEventsSource.onopen = () => {
+        console.log('✅ User events SSE connection opened');
+    };
+
+    userEventsSource.addEventListener('connected', (event) => {
+        console.log('✅ User events SSE connected:', event.data);
+    });
+
+    userEventsSource.addEventListener('my_request_accepted', (event) => {
+        try {
+            console.log('✅ My join request was accepted via SSE:', event.data);
+            const data = JSON.parse(event.data);
+            updateRequestAccepted(data.room_id);
+        } catch (error) {
+            console.error('Error handling my_request_accepted:', error);
+        }
+    });
+
+    userEventsSource.addEventListener('my_request_rejected', (event) => {
+        try {
+            console.log('❌ My join request was rejected via SSE:', event.data);
+            const data = JSON.parse(event.data);
+            updateRequestRejected(data.room_id);
+        } catch (error) {
+            console.error('Error handling my_request_rejected:', error);
+        }
+    });
+
+    userEventsSource.addEventListener('ping', (event) => {
+        console.log('💓 User events SSE keepalive');
+    });
+
+    userEventsSource.onerror = (error) => {
+        console.error('❌ User events SSE error:', error);
+        // EventSource automatically reconnects
+    };
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (userEventsSource) {
+        userEventsSource.close();
+    }
 });
 
 async function checkAcceptedRequests() {
@@ -164,8 +225,7 @@ async function handleJoinRequest(event) {
         // Clear form
         form.reset();
         
-        // Start polling for status
-        startPollingRequest(roomId);
+        // SSE will handle status updates automatically - no polling needed
         
     } catch (error) {
         showNotification('❌ Failed to send join request', 'error');
@@ -193,37 +253,8 @@ function addPendingRequest(roomId, message) {
     pendingList.appendChild(requestCard);
 }
 
-function startPollingRequest(roomId) {
-    // Poll every 3 seconds to check if request was accepted
-    const pollInterval = setInterval(async () => {
-        try {
-            const response = await fetch(`/api/rooms/${roomId}/my-join-request`);
-            if (response.ok) {
-                const data = await response.json();
-                
-                if (data.status === 'accepted') {
-                    // Request was accepted! Update UI
-                    updateRequestAccepted(roomId);
-                    clearInterval(pollInterval);
-                } else if (data.status === 'rejected') {
-                    // Request was rejected
-                    updateRequestRejected(roomId);
-                    clearInterval(pollInterval);
-                } else if (data.status === 'not_found') {
-                    // Request was cancelled or deleted
-                    updateRequestCancelled(roomId);
-                    clearInterval(pollInterval);
-                }
-                // Otherwise, still pending - keep polling
-            }
-        } catch (error) {
-            console.error('Polling error:', error);
-        }
-    }, 3000);
-    
-    // Store interval ID to clear later
-    window[`poll_${roomId}`] = pollInterval;
-}
+// REMOVED: Polling replaced with SSE real-time updates
+// function startPollingRequest(roomId) { ... }
 
 function updateRequestAccepted(roomId) {
     const requestCard = document.getElementById(`request-${roomId}`);
@@ -237,10 +268,7 @@ function updateRequestAccepted(roomId) {
                 </a>
             </div>
         `;
-        
-        // Stop polling
-        clearInterval(window[`poll_${roomId}`]);
-        
+
         showNotification('🎉 Your join request was accepted!', 'success');
     }
 }
@@ -291,19 +319,13 @@ async function cancelRequest(roomId) {
     if (!confirm('Cancel this join request?')) {
         return;
     }
-    
+
     try {
         const response = await fetch(`/api/rooms/${roomId}/cancel-my-request`, {
             method: 'POST'
         });
-        
+
         if (response.ok) {
-            // Stop polling
-            const pollInterval = window[`poll_${roomId}`];
-            if (pollInterval) {
-                clearInterval(pollInterval);
-            }
-            
             updateRequestCancelled(roomId);
         } else {
             showNotification('Failed to cancel request', 'error');

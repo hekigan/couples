@@ -66,3 +66,4 @@ func (h *TranslationHandler) AddLanguageHandler(w http.ResponseWriter, r *http.R
 	http.Error(w, "Not yet implemented", http.StatusNotImplemented)
 }
 
+

@@ -1,3 +1,5 @@
+@use '../base/variables' as *;
+
 // Navigation
 .main-header {
   background-color: $bg-primary;
@@ -60,4 +62,5 @@
   padding: $spacing-xxl 0;
   margin-top: $spacing-xxl;
 }
+
 

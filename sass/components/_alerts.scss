@@ -1,3 +1,6 @@
+@use 'sass:color';
+@use '../base/variables' as *;
+
 // Alerts
 .alert {
   padding: $spacing-md $spacing-lg;
@@ -10,27 +13,27 @@
 }
 
 .alert-success {
-  background-color: lighten($success-color, 35%);
+  background-color: color.adjust($success-color, $lightness: 35%);
   border-color: $success-color;
-  color: darken($success-color, 30%);
+  color: color.adjust($success-color, $lightness: -30%);
 }
 
 .alert-error {
-  background-color: lighten($danger-color, 30%);
+  background-color: color.adjust($danger-color, $lightness: 30%);
   border-color: $danger-color;
-  color: darken($danger-color, 30%);
+  color: color.adjust($danger-color, $lightness: -30%);
 }
 
 .alert-warning {
-  background-color: lighten($warning-color, 35%);
+  background-color: color.adjust($warning-color, $lightness: 35%);
   border-color: $warning-color;
-  color: darken($warning-color, 40%);
+  color: color.adjust($warning-color, $lightness: -40%);
 }
 
 .alert-info {
-  background-color: lighten($info-color, 30%);
+  background-color: color.adjust($info-color, $lightness: 30%);
   border-color: $info-color;
-  color: darken($info-color, 30%);
+  color: color.adjust($info-color, $lightness: -30%);
 }
 
 .alert-icon {
@@ -52,4 +55,5 @@
     opacity: 1;
   }
 }
+
 

@@ -1,3 +1,6 @@
+@use 'sass:color';
+@use '../base/variables' as *;
+
 // Buttons
 .btn {
   display: inline-flex;
@@ -38,18 +41,18 @@
 .btn-primary {
   background-color: $primary-color;
   color: white;
-  
+
   &:hover {
-    background-color: darken($primary-color, 10%);
+    background-color: color.adjust($primary-color, $lightness: -10%);
   }
 }
 
 .btn-secondary {
   background-color: $secondary-color;
   color: white;
-  
+
   &:hover {
-    background-color: darken($secondary-color, 10%);
+    background-color: color.adjust($secondary-color, $lightness: -10%);
   }
 }
 
@@ -88,4 +91,5 @@
   width: 100%;
   display: flex;
 }
+
 

@@ -52,3 +52,4 @@ func (h *Handler) AdminTranslationsHandler(w http.ResponseWriter, r *http.Reques
 	h.RenderTemplate(w, "admin/translations.html", data)
 }
 
+

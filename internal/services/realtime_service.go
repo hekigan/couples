@@ -78,6 +78,22 @@ func (s *RealtimeService) Broadcast(roomID uuid.UUID, event RealtimeEvent) {
 	}
 }
 
+// BroadcastToUser sends an event to all connections for a specific user
+func (s *RealtimeService) BroadcastToUser(userID uuid.UUID, event RealtimeEvent) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	for _, client := range s.clients {
+		if client.UserID == userID {
+			select {
+			case client.Channel <- event:
+			default:
+				// Channel full, skip this client
+			}
+		}
+	}
+}
+
 // BroadcastRoomUpdate broadcasts a room_update event
 func (s *RealtimeService) BroadcastRoomUpdate(roomID uuid.UUID, room interface{}) {
 	s.Broadcast(roomID, RealtimeEvent{
@@ -157,9 +173,67 @@ func (s *RealtimeService) BroadcastRoomDeleted(roomID uuid.UUID) {
 	})
 }
 
+// BroadcastJoinRequest broadcasts a join_request event
+func (s *RealtimeService) BroadcastJoinRequest(roomID uuid.UUID, userID uuid.UUID) {
+	s.Broadcast(roomID, RealtimeEvent{
+		Type: "join_request",
+		Data: map[string]interface{}{
+			"user_id": userID.String(),
+		},
+	})
+}
+
+// BroadcastJoinRequestWithDetails broadcasts a join_request event with full request details
+func (s *RealtimeService) BroadcastJoinRequestWithDetails(roomID, requestID, userID uuid.UUID, username string, createdAt interface{}) {
+	s.Broadcast(roomID, RealtimeEvent{
+		Type: "join_request",
+		Data: map[string]interface{}{
+			"id":         requestID.String(),
+			"user_id":    userID.String(),
+			"username":   username,
+			"created_at": createdAt,
+			"status":     "pending",
+		},
+	})
+}
+
+// BroadcastRequestAccepted broadcasts a request_accepted event to room
+func (s *RealtimeService) BroadcastRequestAccepted(roomID uuid.UUID, guestUsername string) {
+	s.Broadcast(roomID, RealtimeEvent{
+		Type: "request_accepted",
+		Data: map[string]interface{}{
+			"guest_username": guestUsername,
+		},
+	})
+}
+
+// BroadcastRequestAcceptedToGuest notifies guest that their request was accepted
+func (s *RealtimeService) BroadcastRequestAcceptedToGuest(guestUserID, roomID uuid.UUID) {
+	s.BroadcastToUser(guestUserID, RealtimeEvent{
+		Type: "my_request_accepted",
+		Data: map[string]interface{}{
+			"room_id": roomID.String(),
+			"status":  "accepted",
+		},
+	})
+}
+
+// BroadcastRequestRejectedToGuest notifies guest that their request was rejected
+func (s *RealtimeService) BroadcastRequestRejectedToGuest(guestUserID, roomID uuid.UUID) {
+	s.BroadcastToUser(guestUserID, RealtimeEvent{
+		Type: "my_request_rejected",
+		Data: map[string]interface{}{
+			"room_id": roomID.String(),
+			"status":  "rejected",
+		},
+	})
+}
+
 // EventToSSE converts an event to Server-Sent Events format
 func EventToSSE(event RealtimeEvent) string {
-	data, _ := json.Marshal(event)
-	return fmt.Sprintf("data: %s\n\n", string(data))
+	data, _ := json.Marshal(event.Data)
+	// Include event type in SSE format for proper event handling
+	return fmt.Sprintf("event: %s\ndata: %s\n\n", event.Type, string(data))
 }
+
 

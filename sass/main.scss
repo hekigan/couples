@@ -2,24 +2,25 @@
 // Compile with: npx sass sass/main.scss static/css/main.css
 
 // Base styles
-@import 'base/variables';
-@import 'base/reset';
-@import 'base/typography';
-@import 'base/utilities';
+@use 'base/variables' as *;
+@use 'base/reset';
+@use 'base/typography';
+@use 'base/utilities';
 
 // Component styles
-@import 'components/buttons';
-@import 'components/cards';
-@import 'components/forms';
-@import 'components/modals';
-@import 'components/navigation';
-@import 'components/alerts';
-@import 'components/badges';
+@use 'components/buttons';
+@use 'components/cards';
+@use 'components/forms';
+@use 'components/modals';
+@use 'components/navigation';
+@use 'components/alerts';
+@use 'components/badges';
 
 // Page-specific styles
-@import 'pages/home';
-@import 'pages/auth';
-@import 'pages/game';
-@import 'pages/admin';
-@import 'pages/friends';
+@use 'pages/home';
+@use 'pages/auth';
+@use 'pages/game';
+@use 'pages/admin';
+@use 'pages/friends';
+
 

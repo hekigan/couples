@@ -1,3 +1,6 @@
+@use 'sass:color';
+@use 'variables' as *;
+
 // CSS Reset
 *, *::before, *::after {
   box-sizing: border-box;
@@ -40,7 +43,7 @@ a {
   transition: color $transition-fast;
   
   &:hover {
-    color: darken($primary-color, 10%);
+    color: color.adjust($primary-color, $lightness: -10%);
   }
 }
 
@@ -61,4 +64,5 @@ input, textarea, select {
   font-family: inherit;
   font-size: inherit;
 }
+
 

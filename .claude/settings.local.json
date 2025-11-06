@@ -5,7 +5,10 @@
       "Bash(go tool cover:*)",
       "Bash(make test:*)",
       "Bash(go build:*)",
-      "Bash(make test-coverage:*)"
+      "Bash(make test-coverage:*)",
+      "Bash(make sass:*)",
+      "Bash(make build:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

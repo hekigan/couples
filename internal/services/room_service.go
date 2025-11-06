@@ -123,6 +123,41 @@ func (s *RoomService) BroadcastRoomUpdate(roomID uuid.UUID, data map[string]inte
 	}
 }
 
+// BroadcastJoinRequest broadcasts a join request event to all connected clients
+func (s *RoomService) BroadcastJoinRequest(roomID uuid.UUID, userID uuid.UUID) {
+	if s.realtimeService != nil {
+		s.realtimeService.BroadcastJoinRequest(roomID, userID)
+	}
+}
+
+// BroadcastJoinRequestWithDetails broadcasts a join request event with full details to all connected clients
+func (s *RoomService) BroadcastJoinRequestWithDetails(roomID, requestID, userID uuid.UUID, username string, createdAt interface{}) {
+	if s.realtimeService != nil {
+		s.realtimeService.BroadcastJoinRequestWithDetails(roomID, requestID, userID, username, createdAt)
+	}
+}
+
+// BroadcastRequestAccepted broadcasts a request accepted event to all connected clients in room
+func (s *RoomService) BroadcastRequestAccepted(roomID uuid.UUID, guestUsername string) {
+	if s.realtimeService != nil {
+		s.realtimeService.BroadcastRequestAccepted(roomID, guestUsername)
+	}
+}
+
+// BroadcastRequestAcceptedToGuest notifies the guest user that their request was accepted
+func (s *RoomService) BroadcastRequestAcceptedToGuest(guestUserID, roomID uuid.UUID) {
+	if s.realtimeService != nil {
+		s.realtimeService.BroadcastRequestAcceptedToGuest(guestUserID, roomID)
+	}
+}
+
+// BroadcastRequestRejectedToGuest notifies the guest user that their request was rejected
+func (s *RoomService) BroadcastRequestRejectedToGuest(guestUserID, roomID uuid.UUID) {
+	if s.realtimeService != nil {
+		s.realtimeService.BroadcastRequestRejectedToGuest(guestUserID, roomID)
+	}
+}
+
 // DeleteRoom deletes a room from Supabase
 func (s *RoomService) DeleteRoom(ctx context.Context, id uuid.UUID) error {
 	fmt.Printf("DEBUG: Deleting room %s from database\n", id)

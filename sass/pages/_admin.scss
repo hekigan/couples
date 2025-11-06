@@ -1,3 +1,5 @@
+@use '../base/variables' as *;
+
 // Admin pages
 .admin-container {
   padding: $spacing-xl;
@@ -75,4 +77,5 @@
   gap: $spacing-md;
   margin-bottom: $spacing-lg;
 }
+
 

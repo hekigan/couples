@@ -103,3 +103,4 @@ INSERT INTO translations (lang_code, key, value) VALUES
 ('ja', 'nav.logout', 'ログアウト')
 ON CONFLICT (lang_code, key) DO NOTHING;
 
+

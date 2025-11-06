@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -57,11 +58,21 @@ func (h *RealtimeHandler) StreamRoomEvents(w http.ResponseWriter, r *http.Reques
 	fmt.Fprintf(w, "event: connected\ndata: {\"type\":\"connected\",\"room_id\":\"%s\"}\n\n", roomID)
 	flusher.Flush()
 
-	// Keep track of last join request count
+	// Send initial join requests (if user is room owner)
 	ctx := r.Context()
-	lastJoinRequestCount := 0
-	joinCheckTicker := time.NewTicker(2 * time.Second)
-	defer joinCheckTicker.Stop()
+	room, err := h.handler.RoomService.GetRoomByID(ctx, roomID)
+	if err == nil && room.OwnerID == userID {
+		// Get pending join requests with user info
+		requests, err := h.handler.RoomService.GetJoinRequestsWithUserInfo(ctx, roomID)
+		if err == nil && len(requests) > 0 {
+			// Send each request as a join_request event
+			for _, req := range requests {
+				data, _ := json.Marshal(req)
+				fmt.Fprintf(w, "event: join_request\ndata: %s\n\n", string(data))
+			}
+			flusher.Flush()
+		}
+	}
 
 	// Stream events until client disconnects
 	for {
@@ -70,17 +81,49 @@ func (h *RealtimeHandler) StreamRoomEvents(w http.ResponseWriter, r *http.Reques
 			// Send event from realtime service
 			fmt.Fprint(w, services.EventToSSE(event))
 			flusher.Flush()
-		case <-joinCheckTicker.C:
-			// Check for new join requests every 2 seconds
-			requests, err := h.handler.RoomService.GetJoinRequestsByRoom(ctx, roomID)
-			if err == nil {
-				currentCount := len(requests)
-				if currentCount != lastJoinRequestCount {
-					fmt.Fprintf(w, "event: join_request\ndata: {\"count\":%d}\n\n", currentCount)
-					flusher.Flush()
-					lastJoinRequestCount = currentCount
-				}
-			}
+		case <-r.Context().Done():
+			return
+		case <-time.After(30 * time.Second):
+			// Send keepalive ping
+			fmt.Fprintf(w, "event: ping\ndata: {\"time\":\"%s\"}\n\n", time.Now().Format(time.RFC3339))
+			flusher.Flush()
+		}
+	}
+}
+
+// StreamUserNotifications streams user-specific notifications via SSE
+func (h *RealtimeHandler) StreamUserNotifications(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	// Set SSE headers
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	// Subscribe to user events (use a dummy room ID since we're not in a room)
+	dummyRoomID := uuid.MustParse("00000000-0000-0000-0000-000000000000")
+	client := h.realtimeService.Subscribe(dummyRoomID, userID)
+	defer h.realtimeService.Unsubscribe(client.ID)
+
+	// Stream events
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
+		return
+	}
+
+	// Send initial connection message
+	fmt.Fprintf(w, "event: connected\ndata: {\"type\":\"connected\",\"user_id\":\"%s\"}\n\n", userID)
+	flusher.Flush()
+
+	// Stream events until client disconnects
+	for {
+		select {
+		case event := <-client.Channel:
+			// Send event from realtime service
+			fmt.Fprint(w, services.EventToSSE(event))
+			flusher.Flush()
 		case <-r.Context().Done():
 			return
 		case <-time.After(30 * time.Second):

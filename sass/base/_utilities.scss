@@ -1,3 +1,5 @@
+@use 'variables' as *;
+
 // Utility classes
 .container {
   max-width: 1200px;
@@ -56,4 +58,5 @@
 .gap-sm { gap: $spacing-sm; }
 .gap-md { gap: $spacing-md; }
 .gap-lg { gap: $spacing-lg; }
+
 

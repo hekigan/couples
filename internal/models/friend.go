@@ -26,3 +26,4 @@ type FriendWithUserInfo struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+
