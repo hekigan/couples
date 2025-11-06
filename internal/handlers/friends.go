@@ -31,18 +31,25 @@ func (h *Handler) FriendListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get friends (using stub service for now)
+	// Get friends
 	friends, err := h.FriendService.GetFriends(r.Context(), parsedUserID)
 	if err != nil {
 		log.Printf("Error getting friends: %v", err)
-		friends = []models.Friend{} // Empty list
+		friends = []models.FriendWithUserInfo{} // Empty list
+	}
+
+	// Get pending friend requests
+	pendingRequests, err := h.FriendService.GetPendingRequests(r.Context(), parsedUserID)
+	if err != nil {
+		log.Printf("Error getting pending requests: %v", err)
+		pendingRequests = []models.FriendWithUserInfo{} // Empty list
 	}
 
 	data := &TemplateData{
 		Title: "Friends",
 		Data: map[string]interface{}{
 			"Friends":            friends,
-			"PendingInvitations": []interface{}{},
+			"PendingInvitations": pendingRequests,
 			"CurrentUserID":      userID,
 		},
 	}
@@ -154,8 +161,14 @@ func (h *Handler) DeclineFriendHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// For now, just redirect (service method not implemented)
-	log.Printf("Would decline friend request: %s", requestID)
+	err = h.FriendService.DeclineFriendRequest(r.Context(), requestID)
+	if err != nil {
+		log.Printf("Error declining friend request: %v", err)
+		http.Error(w, "Failed to decline friend request", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Declined friend request: %s", requestID)
 	http.Redirect(w, r, "/friends", http.StatusSeeOther)
 }
 
@@ -183,7 +196,51 @@ func (h *Handler) RemoveFriendHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// For now, just redirect (service method not implemented)
-	log.Printf("Would remove friendship: %s", friendshipID)
-	http.Redirect(w, r, "/friends", http.StatusSeeOther)
+	err = h.FriendService.RemoveFriend(r.Context(), friendshipID)
+	if err != nil {
+		log.Printf("Error removing friend: %v", err)
+		http.Error(w, "Failed to remove friend", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Removed friendship: %s", friendshipID)
+
+	// Return success JSON for AJAX requests
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"success","message":"Friend removed"}`))
+}
+
+// GetFriendsAPIHandler returns friends list as JSON (for room invitations)
+func (h *Handler) GetFriendsAPIHandler(w http.ResponseWriter, r *http.Request) {
+	// Get user from context
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	// Get friends
+	friends, err := h.FriendService.GetFriends(r.Context(), userID)
+	if err != nil {
+		log.Printf("Error getting friends: %v", err)
+		http.Error(w, "Failed to get friends", http.StatusInternalServerError)
+		return
+	}
+
+	// Build JSON response manually
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	jsonStr := `[`
+	for i, friend := range friends {
+		if i > 0 {
+			jsonStr += ","
+		}
+		// Determine which ID is the actual friend (not the current user)
+		friendIDStr := friend.FriendID.String()
+		if friend.FriendID == userID {
+			friendIDStr = friend.UserID.String()
+		}
+		jsonStr += `{"id":"` + friendIDStr + `","username":"` + friend.Username + `","name":"` + friend.Name + `"}`
+	}
+	jsonStr += `]`
+
+	w.Write([]byte(jsonStr))
 }

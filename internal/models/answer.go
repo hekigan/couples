@@ -13,6 +13,7 @@ type Answer struct {
 	QuestionID uuid.UUID `json:"question_id"`
 	UserID     uuid.UUID `json:"user_id"`
 	AnswerText string    `json:"answer_text"`
+	ActionType string    `json:"action_type"` // "answered" or "passed"
 	CreatedAt  time.Time `json:"created_at"`
 }
 

@@ -444,20 +444,38 @@ func (s *RoomService) AcceptJoinRequest(ctx context.Context, requestID uuid.UUID
 // RejectJoinRequest rejects a join request in Supabase
 func (s *RoomService) RejectJoinRequest(ctx context.Context, requestID uuid.UUID) error {
 	now := time.Now()
-	
+
 	data := map[string]interface{}{
 		"status":     "rejected",
 		"updated_at": now,
 	}
-	
+
 	_, _, err := s.client.From("room_join_requests").
 		Update(data, "", "").
 		Eq("id", requestID.String()).
 		Execute()
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to reject join request: %w", err)
 	}
-	
+
 	return nil
+}
+
+// BroadcastCategoriesUpdated broadcasts category selection updates via SSE
+func (s *RoomService) BroadcastCategoriesUpdated(roomID uuid.UUID, categoryIDs []uuid.UUID) {
+	if s.realtimeService != nil {
+		// Convert UUIDs to strings for JSON
+		categoryIDStrings := make([]string, len(categoryIDs))
+		for i, id := range categoryIDs {
+			categoryIDStrings[i] = id.String()
+		}
+
+		s.realtimeService.Broadcast(roomID, RealtimeEvent{
+			Type: "categories_updated",
+			Data: map[string]interface{}{
+				"category_ids": categoryIDStrings,
+			},
+		})
+	}
 }

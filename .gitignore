@@ -18,6 +18,7 @@ go.work
 /bin/
 /dist/
 couple-card-game
+couple-game
 server
 main
 

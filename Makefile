@@ -1,19 +1,45 @@
-.PHONY: help build run test clean docker-build docker-run sass dev
+.PHONY: help build run test test-short test-full test-coverage test-coverage-html clean docker-build docker-run sass dev
+.PHONY: test-db-setup test-db-start test-db-stop test-db-reset test-db-status test-db-studio
 
 # Default target
 help:
 	@echo "Couple Card Game - Makefile Commands"
 	@echo ""
 	@echo "Available targets:"
-	@echo "  make build       - Build the Go binary"
-	@echo "  make run         - Run the server"
-	@echo "  make test        - Run tests"
-	@echo "  make clean       - Clean build artifacts"
-	@echo "  make sass        - Compile SASS to CSS"
-	@echo "  make sass-watch  - Watch and compile SASS"
-	@echo "  make dev         - Run in development mode (with sass watch)"
-	@echo "  make docker-build - Build Docker image"
-	@echo "  make docker-run  - Run Docker container"
+	@echo ""
+	@echo "Build & Run:"
+	@echo "  make build         - Build the Go binary"
+	@echo "  make run           - Run the server"
+	@echo "  make dev           - Run in development mode (with sass watch)"
+	@echo ""
+	@echo "Testing:"
+	@echo "  make test          - Run short tests (unit tests only)"
+	@echo "  make test-full     - Run full test suite (requires test DB)"
+	@echo "  make test-coverage - Run tests with coverage report"
+	@echo "  make test-coverage-html - Open coverage report in browser"
+	@echo ""
+	@echo "Test Database:"
+	@echo "  make test-db-setup  - Setup test database (one-time)"
+	@echo "  make test-db-start  - Start test database"
+	@echo "  make test-db-stop   - Stop test database"
+	@echo "  make test-db-reset  - Reset test database (clean slate)"
+	@echo "  make test-db-status - Show test database status"
+	@echo "  make test-db-studio - Open Supabase Studio UI"
+	@echo ""
+	@echo "Styling:"
+	@echo "  make sass          - Compile SASS to CSS"
+	@echo "  make sass-watch    - Watch and compile SASS"
+	@echo ""
+	@echo "Docker:"
+	@echo "  make docker-build  - Build Docker image"
+	@echo "  make docker-run    - Run Docker container"
+	@echo "  make docker-stop   - Stop Docker container"
+	@echo ""
+	@echo "Utilities:"
+	@echo "  make clean         - Clean build artifacts"
+	@echo "  make deps          - Install dependencies"
+	@echo "  make fmt           - Format code"
+	@echo "  make lint          - Lint code"
 	@echo ""
 
 # Build the Go binary
@@ -27,10 +53,33 @@ run: sass
 	@echo "Starting server..."
 	@./server
 
-# Run tests
+# Run short tests (unit tests only, no database required)
 test:
-	@echo "Running tests..."
-	@go test -v ./...
+	@echo "Running short tests (unit tests only)..."
+	@go test -v -short ./...
+
+# Alias for test
+test-short: test
+
+# Run full test suite (requires test database)
+test-full:
+	@echo "Running full test suite..."
+	@echo "Make sure test database is running: make test-db-status"
+	@go test -v ./internal/services/...
+
+# Run tests with coverage
+test-coverage:
+	@echo "Running tests with coverage..."
+	@go test -short -coverprofile=coverage.out ./internal/services/...
+	@go tool cover -func=coverage.out | grep total
+	@echo ""
+	@echo "Coverage report saved to: coverage.out"
+	@echo "View HTML report with: make test-coverage-html"
+
+# Open coverage report in browser
+test-coverage-html: test-coverage
+	@echo "Opening coverage report in browser..."
+	@go tool cover -html=coverage.out
 
 # Clean build artifacts
 clean:
@@ -110,4 +159,49 @@ setup: deps sass db-setup
 	@echo "2. Update .env with your Supabase credentials"
 	@echo "3. Run 'make build' to build the server"
 	@echo "4. Run 'make run' to start the server"
+
+# ============================================
+# Test Database Commands
+# ============================================
+
+# Setup test database (one-time setup)
+test-db-setup:
+	@echo "Setting up test database..."
+	@chmod +x scripts/setup-test-db.sh
+	@./scripts/setup-test-db.sh
+
+# Start test database
+test-db-start:
+	@echo "Starting test database..."
+	@supabase start
+	@echo ""
+	@echo "✅ Test database started!"
+	@echo "   Studio UI: http://localhost:54323"
+	@echo "   API URL:   http://localhost:54321"
+	@echo ""
+	@echo "Run tests with: make test-full"
+
+# Stop test database
+test-db-stop:
+	@echo "Stopping test database..."
+	@supabase stop
+	@echo "✅ Test database stopped"
+
+# Reset test database (clean slate with fresh schema and seed data)
+test-db-reset:
+	@echo "Resetting test database..."
+	@supabase db reset
+	@echo "✅ Test database reset complete"
+	@echo "All data wiped and schema/seed reapplied"
+
+# Show test database status
+test-db-status:
+	@echo "Test database status:"
+	@echo ""
+	@supabase status || (echo "❌ Test database not running" && echo "Start with: make test-db-start" && exit 1)
+
+# Open Supabase Studio UI in browser
+test-db-studio:
+	@echo "Opening Supabase Studio..."
+	@open http://localhost:54323 2>/dev/null || xdg-open http://localhost:54323 2>/dev/null || echo "Please open http://localhost:54323 in your browser"
 

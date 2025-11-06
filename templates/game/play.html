@@ -1,24 +1,496 @@
 {{define "content"}}
+<style>
+    .game-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .game-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .game-progress {
+        font-size: 14px;
+        color: #666;
+        margin-top: 10px;
+    }
+
+    .turn-indicator {
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: bold;
+    }
+
+    .turn-indicator.your-turn {
+        background-color: #d4edda;
+        color: #155724;
+        border: 2px solid #c3e6cb;
+    }
+
+    .turn-indicator.waiting {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 2px solid #f5c6cb;
+    }
+
+    .question-card {
+        background: #fff;
+        border: 2px solid #dee2e6;
+        border-radius: 12px;
+        padding: 40px;
+        margin: 20px 0;
+        text-align: center;
+        min-height: 150px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .question-text {
+        font-size: 20px;
+        line-height: 1.6;
+        color: #333;
+    }
+
+    .answer-form {
+        margin-top: 30px;
+    }
+
+    .answer-form textarea {
+        width: 100%;
+        padding: 15px;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        font-size: 16px;
+        resize: vertical;
+        min-height: 100px;
+    }
+
+    .form-check {
+        margin: 15px 0;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s;
+        flex: 1;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background-color: #218838;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background-color: #c82333;
+    }
+
+    .btn:disabled {
+        background-color: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .answer-display {
+        background: #e9ecef;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+
+    .answer-display h3 {
+        margin-top: 0;
+        color: #495057;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 20px;
+        color: #6c757d;
+    }
+
+    .error {
+        background-color: #f8d7da;
+        color: #721c24;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+</style>
+
 <div class="game-container" data-room-id="{{.Data.ID}}">
     <div class="game-header">
         <h1>{{.Data.Name}}</h1>
-        <div class="game-progress">
-            Question {{.Data.CurrentQuestion}} of {{.Data.MaxQuestions}}
+        <div class="game-progress" id="progress">
+            Question <span id="currentQuestion">{{.Data.CurrentQuestion}}</span> of <span id="maxQuestions">{{.Data.MaxQuestions}}</span>
         </div>
     </div>
-    
-    <div id="game-content" class="game-content">
-        <div class="question-card">
-            <p class="question-text">Loading question...</p>
-        </div>
-        
-        <div class="answer-form">
-            <form method="POST" action="/api/rooms/{{.Data.ID}}/answer">
-                <textarea name="answer" placeholder="Your answer..." rows="4" required></textarea>
-                <button type="submit" class="btn btn-primary">Submit Answer</button>
-            </form>
-        </div>
-    </div>
-</div>
-{{end}}
 
+    <div id="turnIndicator" class="turn-indicator">
+        <span id="turnText">Loading...</span>
+    </div>
+
+    <div id="gameContent" class="game-content">
+        <div class="question-card">
+            <p class="question-text" id="questionText">Waiting to start...</p>
+        </div>
+
+        <!-- Active player form -->
+        <div id="answerForm" class="answer-form" style="display: none;">
+            <textarea id="answerText" placeholder="Write your answer here..." rows="4"></textarea>
+
+            <div class="form-check">
+                <input type="checkbox" id="passCheck" class="form-check-input">
+                <label for="passCheck" class="form-check-label">
+                    Pass this question
+                </label>
+            </div>
+
+            <div class="button-group">
+                <button id="submitBtn" class="btn btn-primary" onclick="submitAnswer()">
+                    Submit Answer
+                </button>
+            </div>
+        </div>
+
+        <!-- Waiting player UI -->
+        <div id="waitingUI" class="answer-form" style="display: none;">
+            <div id="otherPlayerAnswer" class="answer-display" style="display: none;">
+                <h3>Other player's response:</h3>
+                <p id="otherAnswerText"></p>
+            </div>
+
+            <div class="button-group">
+                <button id="nextCardBtn" class="btn btn-success" onclick="nextCard()">
+                    Next Card →
+                </button>
+            </div>
+        </div>
+
+        <div class="button-group" style="margin-top: 30px;">
+            <button class="btn btn-danger" onclick="finishGame()">
+                Finish Game
+            </button>
+        </div>
+    </div>
+
+    <div id="loadingIndicator" class="loading">
+        Loading game...
+    </div>
+
+    <div id="errorMessage" class="error" style="display: none;"></div>
+</div>
+
+<script>
+    const roomId = '{{.Data.ID}}';
+    let eventSource = null;
+    let currentUserId = null;
+    let currentQuestion = null;
+    let gameState = {
+        currentTurn: null,
+        status: 'loading'
+    };
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get current user ID from session (you may need to pass this from backend)
+        currentUserId = '{{.Data.OwnerID}}'; // This should be the current user's ID from session
+
+        // Connect to SSE
+        connectSSE();
+
+        // Load initial game state
+        loadGameState();
+    });
+
+    // Connect to Server-Sent Events for real-time updates
+    function connectSSE() {
+        eventSource = new EventSource(`/api/rooms/${roomId}/events`);
+
+        eventSource.addEventListener('game_started', function(e) {
+            const data = JSON.parse(e.data);
+            console.log('Game started:', data);
+            gameState.status = 'playing';
+            loadGameState();
+        });
+
+        eventSource.addEventListener('question_drawn', function(e) {
+            const data = JSON.parse(e.data);
+            console.log('Question drawn:', data);
+            displayQuestion(data.question);
+        });
+
+        eventSource.addEventListener('answer_submitted', function(e) {
+            const data = JSON.parse(e.data);
+            console.log('Answer submitted:', data);
+            displayOtherPlayerAnswer(data.answer);
+        });
+
+        eventSource.addEventListener('turn_changed', function(e) {
+            const data = JSON.parse(e.data);
+            console.log('Turn changed:', data);
+            gameState.currentTurn = data.current_turn;
+            updateUI();
+        });
+
+        eventSource.addEventListener('game_finished', function(e) {
+            const data = JSON.parse(e.data);
+            console.log('Game finished:', data);
+            window.location.href = `/game/finished/${roomId}`;
+        });
+
+        eventSource.onerror = function(e) {
+            console.error('SSE connection error:', e);
+            showError('Connection lost. Trying to reconnect...');
+            // Reconnection is automatic with EventSource
+        };
+    }
+
+    // Load current game state from API
+    async function loadGameState() {
+        try {
+            const response = await fetch(`/api/rooms/${roomId}/state`);
+            if (!response.ok) throw new Error('Failed to load game state');
+
+            const data = await response.json();
+            gameState = data;
+
+            document.getElementById('currentQuestion').textContent = data.current_question || 0;
+
+            updateUI();
+
+            // If game is playing and no question is shown, draw first question
+            if (data.status === 'playing' && !currentQuestion) {
+                drawQuestion();
+            }
+        } catch (error) {
+            console.error('Error loading game state:', error);
+            showError('Failed to load game state');
+        }
+    }
+
+    // Draw a new question
+    async function drawQuestion() {
+        try {
+            const response = await fetch(`/api/rooms/${roomId}/draw`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(error);
+            }
+
+            const data = await response.json();
+            displayQuestion(data.question);
+        } catch (error) {
+            console.error('Error drawing question:', error);
+            showError('Failed to draw question: ' + error.message);
+        }
+    }
+
+    // Display question on screen
+    function displayQuestion(question) {
+        currentQuestion = question;
+        document.getElementById('questionText').textContent = question.text;
+        document.getElementById('loadingIndicator').style.display = 'none';
+        updateUI();
+    }
+
+    // Submit answer
+    async function submitAnswer() {
+        const answerText = document.getElementById('answerText').value;
+        const passed = document.getElementById('passCheck').checked;
+
+        if (!passed && !answerText.trim()) {
+            showError('Please enter an answer or check "Pass"');
+            return;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('question_id', currentQuestion.id);
+            formData.append('answer_text', answerText);
+            formData.append('passed', passed);
+
+            const response = await fetch(`/api/rooms/${roomId}/answer`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(error);
+            }
+
+            // Clear form
+            document.getElementById('answerText').value = '';
+            document.getElementById('passCheck').checked = false;
+
+            // Show success message
+            showMessage('Answer submitted! Waiting for other player...');
+
+            // Update UI to show waiting state
+            document.getElementById('answerForm').style.display = 'none';
+            document.getElementById('waitingUI').style.display = 'none';
+
+        } catch (error) {
+            console.error('Error submitting answer:', error);
+            showError('Failed to submit answer: ' + error.message);
+        }
+    }
+
+    // Display other player's answer
+    function displayOtherPlayerAnswer(answer) {
+        const answerDiv = document.getElementById('otherPlayerAnswer');
+        const answerText = document.getElementById('otherAnswerText');
+
+        if (answer.action_type === 'passed') {
+            answerText.textContent = '(Passed)';
+        } else {
+            answerText.textContent = answer.answer_text || '(No answer provided)';
+        }
+
+        answerDiv.style.display = 'block';
+        document.getElementById('waitingUI').style.display = 'block';
+    }
+
+    // Next card (change turn)
+    async function nextCard() {
+        try {
+            const response = await fetch(`/api/rooms/${roomId}/next-card`, {
+                method: 'POST'
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(error);
+            }
+
+            // Draw next question
+            await drawQuestion();
+
+            // Hide answer display
+            document.getElementById('otherPlayerAnswer').style.display = 'none';
+
+        } catch (error) {
+            console.error('Error getting next card:', error);
+            showError('Failed to get next card: ' + error.message);
+        }
+    }
+
+    // Finish game
+    async function finishGame() {
+        if (!confirm('Are you sure you want to finish the game?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/rooms/${roomId}/finish`, {
+                method: 'POST'
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(error);
+            }
+
+            const data = await response.json();
+            if (data.redirect) {
+                window.location.href = data.redirect;
+            }
+        } catch (error) {
+            console.error('Error finishing game:', error);
+            showError('Failed to finish game: ' + error.message);
+        }
+    }
+
+    // Update UI based on game state
+    function updateUI() {
+        const isMyTurn = gameState.current_turn === currentUserId;
+        const turnIndicator = document.getElementById('turnIndicator');
+        const turnText = document.getElementById('turnText');
+        const answerForm = document.getElementById('answerForm');
+        const waitingUI = document.getElementById('waitingUI');
+
+        if (isMyTurn) {
+            turnIndicator.className = 'turn-indicator your-turn';
+            turnText.textContent = "It's YOUR turn!";
+            answerForm.style.display = 'block';
+            waitingUI.style.display = 'none';
+        } else {
+            turnIndicator.className = 'turn-indicator waiting';
+            turnText.textContent = 'Waiting for other player...';
+            answerForm.style.display = 'none';
+            // Waiting UI will be shown when answer is submitted
+        }
+    }
+
+    // Show error message
+    function showError(message) {
+        const errorDiv = document.getElementById('errorMessage');
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+        }, 5000);
+    }
+
+    // Show success message
+    function showMessage(message) {
+        const errorDiv = document.getElementById('errorMessage');
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+        errorDiv.style.backgroundColor = '#d4edda';
+        errorDiv.style.color = '#155724';
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+            errorDiv.style.backgroundColor = '';
+            errorDiv.style.color = '';
+        }, 3000);
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+        if (eventSource) {
+            eventSource.close();
+        }
+    });
+</script>
+{{end}}

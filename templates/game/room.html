@@ -46,6 +46,18 @@
             {{end}}
         </div>
 
+        <!-- Category Selection Section (shown when guest joined) -->
+        {{if .Data.GuestID}}
+        <div class="categories-section" id="categories-section">
+            <h2>🎯 Select Question Categories</h2>
+            <p class="categories-hint">Both players can select categories. Selections sync in real-time!</p>
+
+            <div id="categories-grid" class="categories-grid">
+                <p style="color: #6b7280;">Loading categories...</p>
+            </div>
+        </div>
+        {{end}}
+
         <!-- Invite Friends Section (hidden when guest joined) - OWNER ONLY -->
         {{if .IsOwner}}
         <div class="invite-section" id="invite-section" style="margin-top: 2rem; {{if .Data.GuestID}}display: none;{{end}}">
@@ -105,7 +117,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const roomId = document.querySelector('[data-room-id]').dataset.roomId;
     loadJoinRequests(roomId);
     loadFriends(roomId);
-    
+    loadCategories(roomId);
+
     // Try SSE first, fallback to polling if not supported
     if (typeof(EventSource) !== "undefined") {
         console.log('✅ SSE supported - using real-time join requests');
@@ -144,7 +157,13 @@ function connectJoinRequestsStream(roomId) {
             updateUIAfterAccept(data.guest_username);
         }
     });
-    
+
+    joinRequestsEventSource.addEventListener('categories_updated', (event) => {
+        console.log('🎯 Categories updated via SSE:', event.data);
+        const data = JSON.parse(event.data);
+        syncCategorySelections(data.category_ids || []);
+    });
+
     joinRequestsEventSource.addEventListener('ping', (event) => {
         console.log('💓 SSE keepalive ping received');
     });
@@ -454,15 +473,122 @@ function showNotification(message, type) {
     }, 3000);
 }
 
+// Load categories
+let selectedCategories = [];
+
+async function loadCategories(roomId) {
+    try {
+        const response = await fetch('/api/categories');
+        if (!response.ok) {
+            document.getElementById('categories-grid').innerHTML = '<p style="color: #6b7280;">Failed to load categories</p>';
+            return;
+        }
+
+        const data = await response.json();
+        const categories = data.categories || [];
+
+        if (categories.length > 0) {
+            displayCategories(roomId, categories);
+        } else {
+            document.getElementById('categories-grid').innerHTML = '<p style="color: #6b7280;">No categories available</p>';
+        }
+    } catch (error) {
+        console.error('Failed to load categories:', error);
+        document.getElementById('categories-grid').innerHTML = '<p style="color: #6b7280;">Failed to load categories</p>';
+    }
+}
+
+function displayCategories(roomId, categories) {
+    const gridElement = document.getElementById('categories-grid');
+
+    const categoriesHTML = categories.map(cat => `
+        <label class="category-checkbox">
+            <input
+                type="checkbox"
+                id="category-${cat.id}"
+                value="${cat.id}"
+                onchange="toggleCategory('${roomId}', '${cat.id}')"
+            />
+            <span class="category-label">${cat.key}</span>
+        </label>
+    `).join('');
+
+    gridElement.innerHTML = categoriesHTML;
+}
+
+async function toggleCategory(roomId, categoryId) {
+    const checkbox = document.getElementById(`category-${categoryId}`);
+
+    if (checkbox.checked) {
+        selectedCategories.push(categoryId);
+    } else {
+        selectedCategories = selectedCategories.filter(id => id !== categoryId);
+    }
+
+    // Send update to server
+    try {
+        const formData = new FormData();
+        selectedCategories.forEach(id => {
+            formData.append('category_ids', id);
+        });
+
+        const response = await fetch(`/api/rooms/${roomId}/categories`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            console.error('Failed to update categories');
+            // Revert checkbox state
+            checkbox.checked = !checkbox.checked;
+            if (checkbox.checked) {
+                selectedCategories.push(categoryId);
+            } else {
+                selectedCategories = selectedCategories.filter(id => id !== categoryId);
+            }
+        }
+    } catch (error) {
+        console.error('Error updating categories:', error);
+        // Revert checkbox state
+        checkbox.checked = !checkbox.checked;
+        if (checkbox.checked) {
+            selectedCategories.push(categoryId);
+        } else {
+            selectedCategories = selectedCategories.filter(id => id !== categoryId);
+        }
+    }
+}
+
+// Sync category selections from SSE updates
+function syncCategorySelections(categoryIds) {
+    selectedCategories = categoryIds;
+
+    // Update all checkboxes to match server state
+    document.querySelectorAll('.category-checkbox input[type="checkbox"]').forEach(checkbox => {
+        const categoryId = checkbox.value;
+        const shouldBeChecked = categoryIds.includes(categoryId);
+
+        if (checkbox.checked !== shouldBeChecked) {
+            checkbox.checked = shouldBeChecked;
+        }
+    });
+}
+
 // Start Game Function
 async function startGame() {
     const roomId = document.querySelector('[data-room-id]').dataset.roomId;
-    
+
+    // Check if at least one category is selected
+    if (selectedCategories.length === 0) {
+        showNotification('⚠️ Please select at least one category before starting the game', 'error');
+        return;
+    }
+
     try {
         const response = await fetch(`/api/rooms/${roomId}/start`, {
             method: 'POST'
         });
-        
+
         if (response.ok) {
             showNotification('🚀 Starting game...', 'success');
             // Navigate to game page after a short delay
@@ -667,6 +793,76 @@ async function startGame() {
     .status-waiting {
         background: #fef3c7;
         color: #92400e;
+    }
+
+    /* Categories Section */
+    .categories-section {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin: 2rem 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .categories-section h2 {
+        margin-top: 0;
+        color: #111827;
+        margin-bottom: 0.5rem;
+    }
+
+    .categories-hint {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .categories-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .category-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        background: #f9fafb;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        user-select: none;
+    }
+
+    .category-checkbox:hover {
+        background: #f3f4f6;
+        border-color: #667eea;
+    }
+
+    .category-checkbox input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        accent-color: #667eea;
+    }
+
+    .category-checkbox input[type="checkbox"]:checked + .category-label {
+        color: #667eea;
+        font-weight: 600;
+    }
+
+    .category-label {
+        flex: 1;
+        font-size: 1rem;
+        color: #374151;
+        text-transform: capitalize;
+    }
+
+    @media (max-width: 768px) {
+        .categories-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 {{end}}

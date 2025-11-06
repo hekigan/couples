@@ -28,8 +28,8 @@ npx sass sass/main.scss static/css/main.css
 
 1. Create a new project at [https://supabase.com](https://supabase.com/)
 2. Go to **Settings** > **API** and copy:
-   - Project URL : https://fsymkxnnmwyhafcdnpzx.supabase.co
-   - Anon/Public Key (or Service Role Key for server-side) : eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzeW1reG5ubXd5aGFmY2RucHp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzOTc2MzYsImV4cCI6MjA3Nzk3MzYzNn0.cAKexX51S7zd309vYzIusqSlzoG0aXX6zzqlGVCPEWU
+   - **Project URL** (e.g., `https://your-project-id.supabase.co`)
+   - **Anon/Public Key** (for client-side) or **Service Role Key** (for server-side)
 3. Go to **SQL Editor** and run:
    - `sql/schema.sql` (database structure)
    - `sql/seed.sql` (sample data)
