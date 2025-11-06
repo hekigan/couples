@@ -46,6 +46,12 @@ func (h *Handler) DeleteRoomAPIHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"status":"success","message":"Room deleted successfully"}`))
 }
 
+// RoomWithUsername is a room enriched with the other player's username
+type RoomWithUsername struct {
+	*models.Room
+	OtherPlayerUsername string
+}
+
 // ListRoomsHandler lists all rooms for the current user
 func (h *Handler) ListRoomsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
@@ -57,9 +63,39 @@ func (h *Handler) ListRoomsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Enrich rooms with the other player's username
+	enrichedRooms := make([]RoomWithUsername, 0, len(rooms))
+	for _, room := range rooms {
+		enrichedRoom := RoomWithUsername{
+			Room: &room,
+		}
+		
+		// Determine who the "other player" is
+		var otherPlayerID uuid.UUID
+		if room.OwnerID == userID {
+			// Current user is owner, so other player is guest
+			if room.GuestID != nil {
+				otherPlayerID = *room.GuestID
+			}
+		} else if room.GuestID != nil && *room.GuestID == userID {
+			// Current user is guest, so other player is owner
+			otherPlayerID = room.OwnerID
+		}
+		
+		// Fetch the other player's username
+		if otherPlayerID != uuid.Nil {
+			otherPlayer, err := h.UserService.GetUserByID(ctx, otherPlayerID)
+			if err == nil && otherPlayer != nil {
+				enrichedRoom.OtherPlayerUsername = otherPlayer.Username
+			}
+		}
+		
+		enrichedRooms = append(enrichedRooms, enrichedRoom)
+	}
+
 	data := &TemplateData{
 		Title: "My Rooms",
-		Data:  rooms,
+		Data:  enrichedRooms,
 	}
 	h.RenderTemplate(w, "game/rooms.html", data)
 }
@@ -160,6 +196,9 @@ func (h *Handler) RoomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get current user ID from context
+	currentUserID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
 	// Get owner username
 	owner, err := h.UserService.GetUserByID(ctx, room.OwnerID)
 	var ownerUsername string
@@ -176,11 +215,15 @@ func (h *Handler) RoomHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Check if current user is the owner
+	isOwner := currentUserID == room.OwnerID
+
 	data := &TemplateData{
 		Title:          "Room - " + room.Name,
 		Data:           room,
 		OwnerUsername:  ownerUsername,
 		GuestUsername:  guestUsername,
+		IsOwner:        isOwner,
 	}
 	h.RenderTemplate(w, "game/room.html", data)
 }

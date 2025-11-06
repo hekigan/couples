@@ -99,13 +99,40 @@ func (h *Handler) AcceptJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	ctx := context.Background()
-	if err := h.RoomService.AcceptJoinRequest(ctx, requestID); err != nil {
-		http.Error(w, "Failed to accept join request", http.StatusInternalServerError)
+	
+	// Get the join request to find the user ID
+	joinRequest, err := h.RoomService.GetJoinRequestByID(ctx, requestID)
+	if err != nil {
+		http.Error(w, "Join request not found", http.StatusNotFound)
 		return
 	}
+	
+	// Accept the request
+	if err := h.RoomService.AcceptJoinRequest(ctx, requestID); err != nil {
+		fmt.Printf("ERROR: AcceptJoinRequest failed: %v\n", err)
+		http.Error(w, fmt.Sprintf("Failed to accept join request: %v", err), http.StatusInternalServerError)
+		return
+	}
+	
+	// Get the guest username
+	guestUser, err := h.UserService.GetUserByID(ctx, joinRequest.UserID)
+	var guestUsername string
+	if err == nil && guestUser != nil {
+		guestUsername = guestUser.Username
+	}
+
+	// Broadcast to SSE that request was accepted
+	h.RoomService.BroadcastRoomUpdate(joinRequest.RoomID, map[string]interface{}{
+		"event": "request_accepted",
+		"guest_username": guestUsername,
+	})
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"status":"success","message":"Join request accepted"}`))
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "success",
+		"message": "Join request accepted",
+		"guest_username": guestUsername,
+	})
 }
 
 // RejectJoinRequestHandler rejects a join request

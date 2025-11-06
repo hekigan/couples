@@ -1,54 +1,69 @@
 {{define "content"}}
 <div class="room-container" data-room-id="{{.Data.ID}}">
-    <div class="room-header-section">
-        <div class="room-title-row">
-            <h1>Room:</h1>
-            <div class="room-id-group">
-                <input type="text" id="room-id-input" value="{{.Data.ID}}" readonly class="room-id-input" />
-                <button onclick="copyRoomId()" class="btn btn-secondary btn-sm copy-btn" title="Copy Room ID">
-                    📋 Copy ID
+        <div class="room-header-section">
+            <div class="room-title-row">
+                <h1>Room:</h1>
+                <div class="room-id-group">
+                    <input type="text" id="room-id-input" value="{{.Data.ID}}" readonly class="room-id-input" />
+                    <button onclick="copyRoomId()" class="btn btn-secondary btn-sm copy-btn" title="Copy Room ID">
+                        📋 Copy ID
+                    </button>
+                </div>
+            </div>
+            <div class="room-status">
+                <span class="status-badge status-{{.Data.Status}}" id="room-status-badge">
+                    {{if eq .Data.Status "ready"}}ready{{else if eq .Data.Status "playing"}}playing{{else}}waiting{{end}}
+                </span>
+            </div>
+        </div>
+    
+        <div class="room-players" id="player-list">
+            <h2>Players</h2>
+            <div class="player-grid">
+                <div class="player-card">
+                    <span class="player-label">Owner</span>
+                    <span class="player-name">{{if .OwnerUsername}}{{.OwnerUsername}}{{else}}Unknown{{end}}</span>
+                </div>
+                <div class="player-card {{if not .Data.GuestID}}empty{{end}}" id="guest-card">
+                    {{if .Data.GuestID}}
+                    <span class="player-label">Guest</span>
+                    <span class="player-name" id="guest-name">{{if .GuestUsername}}{{.GuestUsername}}{{else}}Unknown{{end}}</span>
+                    {{else}}
+                    <span id="guest-waiting">Waiting for guest...</span>
+                    {{end}}
+                </div>
+            </div>
+            
+            <!-- Start Game Button (shown when ready) - OWNER ONLY -->
+            {{if .IsOwner}}
+            {{if eq .Data.Status "ready"}}
+            <div class="start-game-section">
+                <button onclick="startGame()" class="btn btn-primary btn-lg start-game-btn">
+                    🚀 Start Game
                 </button>
             </div>
-        </div>
-        <div class="room-status">
-            <span class="status-badge status-{{.Data.Status}}">{{.Data.Status}}</span>
-        </div>
-    </div>
-    
-    <div class="room-players" id="player-list">
-        <h2>Players</h2>
-        <div class="player-grid">
-            <div class="player-card">
-                <span class="player-label">Owner</span>
-                <span class="player-name">{{if .OwnerUsername}}{{.OwnerUsername}}{{else}}Unknown{{end}}</span>
-            </div>
-            {{if .Data.GuestID}}
-            <div class="player-card">
-                <span class="player-label">Guest</span>
-                <span class="player-name">{{if .GuestUsername}}{{.GuestUsername}}{{else}}Unknown{{end}}</span>
-            </div>
-            {{else}}
-            <div class="player-card empty">
-                <span>Waiting for guest...</span>
-            </div>
+            {{end}}
             {{end}}
         </div>
-    </div>
 
-    <!-- Invite Friends Section -->
-    <div class="invite-section" style="margin-top: 2rem;">
-        <h2>👥 Invite Friends</h2>
-        <div id="friends-list" class="friends-list">
-            <p style="color: #6b7280;">Loading friends...</p>
+        <!-- Invite Friends Section (hidden when guest joined) - OWNER ONLY -->
+        {{if .IsOwner}}
+        <div class="invite-section" id="invite-section" style="margin-top: 2rem; {{if .Data.GuestID}}display: none;{{end}}">
+            <h2>👥 Invite Friends</h2>
+            <div id="friends-list" class="friends-list">
+                <p style="color: #6b7280;">Loading friends...</p>
+            </div>
         </div>
-    </div>
 
-    <!-- Pending Join Requests Section -->
-    <div id="join-requests-section" style="margin-top: 2rem;">
-        <h2>📬 Join Requests <span id="request-count" class="badge">0</span></h2>
-        <div id="join-requests-list"></div>
-    </div>
+        <!-- Pending Join Requests Section (hidden when guest joined) - OWNER ONLY -->
+        <div id="join-requests-section" style="margin-top: 2rem; {{if .Data.GuestID}}display: none;{{end}}">
+            <h2>📬 Join Requests <span id="request-count" class="badge">0</span></h2>
+            <div id="join-requests-list"></div>
+        </div>
+        {{end}}
     
+    <!-- Owner Actions (Start Game, Delete Room) - OWNER ONLY -->
+    {{if .IsOwner}}
     <div class="room-actions">
         {{if .Data.Status}}{{if eq .Data.Status "ready"}}
         <form action="/api/rooms/{{.Data.ID}}/start" method="POST" hx-post="/api/rooms/{{.Data.ID}}/start" hx-swap="none">
@@ -60,6 +75,7 @@
             <button type="submit" class="btn btn-danger">Delete Room</button>
         </form>
     </div>
+    {{end}}
 </div>
 
 <script>
@@ -80,14 +96,87 @@ function copyRoomId() {
     }, 2000);
 }
 
+// Real-time join requests with SSE (fallback to polling)
+let joinRequestsEventSource = null;
+let joinRequestsPollInterval = null;
+
 // Load join requests and friends on page load
 document.addEventListener('DOMContentLoaded', () => {
     const roomId = document.querySelector('[data-room-id]').dataset.roomId;
     loadJoinRequests(roomId);
     loadFriends(roomId);
     
-    // Poll for new requests every 5 seconds
-    setInterval(() => loadJoinRequests(roomId), 5000);
+    // Try SSE first, fallback to polling if not supported
+    if (typeof(EventSource) !== "undefined") {
+        console.log('✅ SSE supported - using real-time join requests');
+        connectJoinRequestsStream(roomId);
+    } else {
+        console.log('⚠️ SSE not supported - falling back to polling');
+        startPolling(roomId);
+    }
+});
+
+// Connect to SSE stream for real-time join requests
+function connectJoinRequestsStream(roomId) {
+    const sseUrl = `/api/rooms/${roomId}/events`;
+    console.log(`🔌 Attempting SSE connection to: ${sseUrl}`);
+    
+    joinRequestsEventSource = new EventSource(sseUrl);
+    
+    joinRequestsEventSource.onopen = () => {
+        console.log('✅ SSE connection opened successfully!');
+    };
+    
+    joinRequestsEventSource.addEventListener('connected', (event) => {
+        console.log('✅ SSE connected event received:', event.data);
+    });
+    
+    joinRequestsEventSource.addEventListener('join_request', (event) => {
+        console.log('📬 New join request received via SSE:', event.data);
+        const data = JSON.parse(event.data);
+        loadJoinRequests(roomId); // Reload the list
+    });
+    
+    joinRequestsEventSource.addEventListener('request_accepted', (event) => {
+        console.log('✅ Join request accepted via SSE:', event.data);
+        const data = JSON.parse(event.data);
+        if (data.guest_username) {
+            updateUIAfterAccept(data.guest_username);
+        }
+    });
+    
+    joinRequestsEventSource.addEventListener('ping', (event) => {
+        console.log('💓 SSE keepalive ping received');
+    });
+    
+    joinRequestsEventSource.onerror = (error) => {
+        console.error('❌ SSE connection error:', error);
+        console.error('SSE readyState:', joinRequestsEventSource.readyState);
+        console.error('Falling back to polling...');
+        joinRequestsEventSource.close();
+        startPolling(roomId);
+    };
+}
+
+// Fallback polling (only used if SSE fails)
+function startPolling(roomId) {
+    if (joinRequestsPollInterval) {
+        clearInterval(joinRequestsPollInterval);
+    }
+    joinRequestsPollInterval = setInterval(() => {
+        console.log('🔄 Polling for join requests (fallback mode)');
+        loadJoinRequests(roomId);
+    }, 5000);
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (joinRequestsEventSource) {
+        joinRequestsEventSource.close();
+    }
+    if (joinRequestsPollInterval) {
+        clearInterval(joinRequestsPollInterval);
+    }
 });
 
 async function loadJoinRequests(roomId) {
@@ -161,9 +250,16 @@ async function acceptRequest(requestId) {
         });
         
         if (response.ok) {
-            showNotification('Join request accepted!', 'success');
-            // Reload the page to show the new guest
-            setTimeout(() => window.location.reload(), 1000);
+            const data = await response.json();
+            showNotification('✅ Join request accepted!', 'success');
+            
+            // Update UI dynamically instead of reloading
+            if (data.guest_username) {
+                updateUIAfterAccept(data.guest_username);
+            } else {
+                // Fallback to reload if no username provided
+                setTimeout(() => window.location.reload(), 1000);
+            }
         } else {
             showNotification('Failed to accept request', 'error');
         }
@@ -171,6 +267,36 @@ async function acceptRequest(requestId) {
         console.error('Error accepting request:', error);
         showNotification('Failed to accept request', 'error');
     }
+}
+
+function updateUIAfterAccept(guestUsername) {
+    // 1. Update guest card
+    const guestCard = document.getElementById('guest-card');
+    guestCard.classList.remove('empty');
+    guestCard.innerHTML = `
+        <span class="player-label">Guest</span>
+        <span class="player-name" id="guest-name">${guestUsername}</span>
+    `;
+    
+    // 2. Update status badge to "ready" and make it green
+    const statusBadge = document.getElementById('room-status-badge');
+    statusBadge.textContent = 'ready';
+    statusBadge.className = 'status-badge status-ready';
+    
+    // 3. Hide invite and join request sections
+    document.getElementById('invite-section').style.display = 'none';
+    document.getElementById('join-requests-section').style.display = 'none';
+    
+    // 4. Show "Start Game" button
+    const playerList = document.getElementById('player-list');
+    const startSection = document.createElement('div');
+    startSection.className = 'start-game-section';
+    startSection.innerHTML = `
+        <button onclick="startGame()" class="btn btn-primary btn-lg start-game-btn">
+            🚀 Start Game
+        </button>
+    `;
+    playerList.appendChild(startSection);
 }
 
 async function rejectRequest(requestId) {
@@ -327,6 +453,31 @@ function showNotification(message, type) {
         setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
+
+// Start Game Function
+async function startGame() {
+    const roomId = document.querySelector('[data-room-id]').dataset.roomId;
+    
+    try {
+        const response = await fetch(`/api/rooms/${roomId}/start`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            showNotification('🚀 Starting game...', 'success');
+            // Navigate to game page after a short delay
+            setTimeout(() => {
+                window.location.href = `/game/play/${roomId}`;
+            }, 500);
+        } else {
+            const error = await response.text();
+            showNotification(`Failed to start game: ${error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error starting game:', error);
+        showNotification('Failed to start game', 'error');
+    }
+}
 </script>
 
 <style>
@@ -465,9 +616,58 @@ function showNotification(message, type) {
     color: #111827;
 }
 
-.friend-item button:disabled {
-    cursor: not-allowed;
-}
+    .friend-item button:disabled {
+        cursor: not-allowed;
+    }
+
+    /* Start Game Section */
+    .start-game-section {
+        margin-top: 2rem;
+        text-align: center;
+        padding: 2rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+
+    .start-game-btn {
+        font-size: 1.25rem;
+        padding: 1rem 3rem;
+        background: white;
+        color: #667eea;
+        border: none;
+        border-radius: 50px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .start-game-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        background: #f0f0f0;
+    }
+
+    .start-game-btn:active {
+        transform: translateY(0);
+    }
+
+    /* Status badge colors */
+    .status-ready {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-playing {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .status-waiting {
+        background: #fef3c7;
+        color: #92400e;
+    }
 </style>
 {{end}}
 

@@ -15,6 +15,16 @@
                 </div>
                 <div class="room-card-body">
                     <p class="room-info">
+                        <span class="room-info-label">Playing with:</span>
+                        <span class="room-info-value">
+                            {{if .OtherPlayerUsername}}
+                                👤 {{.OtherPlayerUsername}}
+                            {{else}}
+                                ⏳ Waiting for player...
+                            {{end}}
+                        </span>
+                    </p>
+                    <p class="room-info">
                         <span class="room-info-label">Language:</span>
                         <span class="room-info-value">{{if .Language}}{{.Language}}{{else}}en{{end}}</span>
                     </p>

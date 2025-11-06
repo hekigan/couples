@@ -116,6 +116,13 @@ func (s *RoomService) UpdateRoom(ctx context.Context, room *models.Room) error {
 	return nil
 }
 
+// BroadcastRoomUpdate broadcasts a room update event to all connected clients
+func (s *RoomService) BroadcastRoomUpdate(roomID uuid.UUID, data map[string]interface{}) {
+	if s.realtimeService != nil {
+		s.realtimeService.BroadcastRoomUpdate(roomID, data)
+	}
+}
+
 // DeleteRoom deletes a room from Supabase
 func (s *RoomService) DeleteRoom(ctx context.Context, id uuid.UUID) error {
 	fmt.Printf("DEBUG: Deleting room %s from database\n", id)
@@ -298,6 +305,26 @@ type JoinRequestWithUserInfo struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// GetJoinRequestByID gets a specific join request by ID
+func (s *RoomService) GetJoinRequestByID(ctx context.Context, requestID uuid.UUID) (*models.RoomJoinRequest, error) {
+	data, _, err := s.client.From("room_join_requests").
+		Select("*", "", false).
+		Eq("id", requestID.String()).
+		Single().
+		Execute()
+	
+	if err != nil {
+		return nil, fmt.Errorf("join request not found: %w", err)
+	}
+	
+	var request models.RoomJoinRequest
+	if err := json.Unmarshal(data, &request); err != nil {
+		return nil, fmt.Errorf("failed to parse join request: %w", err)
+	}
+	
+	return &request, nil
+}
+
 // GetJoinRequestsWithUserInfo gets join requests with user information
 func (s *RoomService) GetJoinRequestsWithUserInfo(ctx context.Context, roomID uuid.UUID) ([]JoinRequestWithUserInfo, error) {
 	// Get join requests
@@ -347,18 +374,68 @@ func (s *RoomService) GetJoinRequestsWithUserInfo(ctx context.Context, roomID uu
 func (s *RoomService) AcceptJoinRequest(ctx context.Context, requestID uuid.UUID) error {
 	now := time.Now()
 	
+	// First, get the join request to find the user and room
+	requestData, _, err := s.client.From("room_join_requests").
+		Select("*", "", false).
+		Eq("id", requestID.String()).
+		Single().
+		Execute()
+	
+	if err != nil {
+		return fmt.Errorf("failed to find join request: %w", err)
+	}
+	
+	var joinRequest models.RoomJoinRequest
+	if err := json.Unmarshal(requestData, &joinRequest); err != nil {
+		return fmt.Errorf("failed to parse join request: %w", err)
+	}
+	
+	// Update the join request status to accepted
 	data := map[string]interface{}{
 		"status":     "accepted",
 		"updated_at": now,
 	}
 	
-	_, _, err := s.client.From("room_join_requests").
+	_, _, err = s.client.From("room_join_requests").
 		Update(data, "", "").
 		Eq("id", requestID.String()).
 		Execute()
 	
 	if err != nil {
 		return fmt.Errorf("failed to accept join request: %w", err)
+	}
+	
+	// CRITICAL: Update the room with the guest_id and change status to "ready"
+	roomUpdateData := map[string]interface{}{
+		"guest_id":   joinRequest.UserID.String(),
+		"status":     "ready",
+		"updated_at": now,
+	}
+	
+	fmt.Printf("DEBUG: Updating room %s with guest_id=%s, status=ready\n", 
+		joinRequest.RoomID, joinRequest.UserID)
+	
+	responseData, count, err := s.client.From("rooms").
+		Update(roomUpdateData, "", "").
+		Eq("id", joinRequest.RoomID.String()).
+		Execute()
+	
+	if err != nil {
+		fmt.Printf("ERROR: Failed to update room: %v\n", err)
+		return fmt.Errorf("failed to update room with guest: %w", err)
+	}
+	
+	fmt.Printf("DEBUG: Room update response: %s, Count: %d\n", string(responseData), count)
+	fmt.Printf("DEBUG: Room %s successfully updated with guest\n", joinRequest.RoomID)
+	
+	// Verify the update by fetching the room
+	verifyData, _, verifyErr := s.client.From("rooms").
+		Select("*", "", false).
+		Eq("id", joinRequest.RoomID.String()).
+		Single().
+		Execute()
+	if verifyErr == nil {
+		fmt.Printf("DEBUG: Room verification: %s\n", string(verifyData))
 	}
 	
 	return nil

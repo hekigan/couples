@@ -79,6 +79,8 @@ CREATE TABLE IF NOT EXISTS rooms (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     guest_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    -- IMPORTANT: 'ready' status is REQUIRED for join request flow!
+    -- When a guest joins via join request, status changes: waiting → ready → playing
     status VARCHAR(50) NOT NULL CHECK (status IN ('waiting', 'ready', 'playing', 'finished')) DEFAULT 'waiting',
     selected_categories JSONB,
     current_player_id UUID REFERENCES users(id),

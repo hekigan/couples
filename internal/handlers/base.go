@@ -59,6 +59,7 @@ type TemplateData struct {
 	Data           interface{}
 	OwnerUsername  string
 	GuestUsername  string
+	IsOwner        bool
 }
 
 // RenderTemplate renders a template with the given data
