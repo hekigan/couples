@@ -77,13 +77,21 @@ COMMENT ON TABLE questions IS 'Game questions in multiple languages';
 -- Rooms table
 CREATE TABLE IF NOT EXISTS rooms (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255),
     owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     guest_id UUID REFERENCES users(id) ON DELETE CASCADE,
     -- IMPORTANT: 'ready' status is REQUIRED for join request flow!
     -- When a guest joins via join request, status changes: waiting → ready → playing
     status VARCHAR(50) NOT NULL CHECK (status IN ('waiting', 'ready', 'playing', 'finished')) DEFAULT 'waiting',
+    language VARCHAR(10) DEFAULT 'en',
+    is_private BOOLEAN DEFAULT FALSE,
+    guest_ready BOOLEAN DEFAULT FALSE,
+    max_questions INT DEFAULT 20,
+    current_question INT DEFAULT 0,
     selected_categories JSONB,
     current_player_id UUID REFERENCES users(id),
+    paused_at TIMESTAMP WITH TIME ZONE,
+    disconnected_user UUID REFERENCES users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -91,9 +99,18 @@ CREATE TABLE IF NOT EXISTS rooms (
 CREATE INDEX IF NOT EXISTS idx_rooms_owner_id ON rooms(owner_id);
 CREATE INDEX IF NOT EXISTS idx_rooms_guest_id ON rooms(guest_id);
 CREATE INDEX IF NOT EXISTS idx_rooms_status ON rooms(status);
+CREATE INDEX IF NOT EXISTS idx_rooms_language ON rooms(language);
+CREATE INDEX IF NOT EXISTS idx_rooms_disconnected_user ON rooms(disconnected_user);
 
 COMMENT ON TABLE rooms IS 'Game rooms where two players play together';
+COMMENT ON COLUMN rooms.name IS 'Optional room name set by owner';
 COMMENT ON COLUMN rooms.status IS 'waiting=no guest, ready=guest joined, playing=game active, finished=game over';
+COMMENT ON COLUMN rooms.language IS 'Game language (en, fr, ja, etc.)';
+COMMENT ON COLUMN rooms.is_private IS 'Whether room requires invitation to join';
+COMMENT ON COLUMN rooms.max_questions IS 'Maximum number of questions for this game';
+COMMENT ON COLUMN rooms.current_question IS 'Current question number (0-based)';
+COMMENT ON COLUMN rooms.paused_at IS 'Timestamp when game was paused (if paused)';
+COMMENT ON COLUMN rooms.disconnected_user IS 'User who disconnected (if any)';
 
 -- Room join requests table
 CREATE TABLE IF NOT EXISTS room_join_requests (

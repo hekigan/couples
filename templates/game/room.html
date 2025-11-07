@@ -1,5 +1,5 @@
 {{define "content"}}
-<div class="room-container" data-room-id="{{.Data.ID}}">
+<div class="room-container" data-room-id="{{.Data.ID}}" data-selected-categories='{{if .Data.SelectedCategories}}{{range $i, $cat := .Data.SelectedCategories}}{{if $i}},{{end}}"{{$cat}}"{{end}}{{end}}'>
         <div class="room-header-section">
             <div class="room-title-row">
                 <h1>Room:</h1>
@@ -37,10 +37,34 @@
             <!-- Start Game Button (shown when ready) - OWNER ONLY -->
             {{if .IsOwner}}
             {{if eq .Data.Status "ready"}}
-            <div class="start-game-section">
+            <div class="start-game-section" id="start-game-section">
+                {{if .Data.GuestReady}}
                 <button onclick="startGame()" class="btn btn-primary btn-lg start-game-btn">
                     🚀 Start Game
                 </button>
+                {{else}}
+                <div class="waiting-ready-message">
+                    ⏳ Waiting for guest to click Ready...
+                </div>
+                {{end}}
+            </div>
+            {{end}}
+            {{end}}
+
+            <!-- Ready Button - GUEST ONLY -->
+            {{if not .IsOwner}}
+            {{if eq .Data.Status "ready"}}
+            <div class="guest-ready-section" id="guest-ready-section">
+                {{if .Data.GuestReady}}
+                <div class="ready-confirmed-message">
+                    ✅ You're ready! Waiting for owner to start the game...
+                </div>
+                {{else}}
+                <button onclick="setGuestReady()" class="btn btn-success btn-lg ready-btn" id="ready-btn">
+                    ✅ Ready to Play
+                </button>
+                <p class="ready-hint">Click when you're done selecting categories</p>
+                {{end}}
             </div>
             {{end}}
             {{end}}
@@ -117,6 +141,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const roomId = document.querySelector('[data-room-id]').dataset.roomId;
     // Don't load join requests here - let SSE handle it
     // loadJoinRequests(roomId); // REMOVED - SSE will trigger this
+
+    // Initialize selected categories from server data BEFORE loading categories
+    initializeSelectedCategories();
+
     loadFriends(roomId);
     loadCategories(roomId);
 
@@ -176,9 +204,40 @@ function connectJoinRequestsStream(roomId) {
         try {
             console.log('🎯 Categories updated via SSE:', event.data);
             const data = JSON.parse(event.data);
-            syncCategorySelections(data.category_ids || []);
+            const categoryIds = data.category_ids || [];
+            console.log('Category IDs received:', categoryIds);
+            console.log('Current selected categories:', selectedCategories);
+            syncCategorySelections(categoryIds);
         } catch (error) {
             console.error('Error handling categories_updated event:', error);
+        }
+    });
+
+    joinRequestsEventSource.addEventListener('room_update', (event) => {
+        try {
+            console.log('🏠 Room update via SSE:', event.data);
+            const data = JSON.parse(event.data);
+            console.log('🏠 Parsed room update data:', data);
+            console.log('🏠 guest_ready value:', data.guest_ready);
+            if (data.guest_ready !== undefined) {
+                console.log('🏠 Calling handleGuestReadyUpdate with:', data.guest_ready);
+                handleGuestReadyUpdate(data.guest_ready);
+            } else {
+                console.log('🏠 guest_ready is undefined in room_update');
+            }
+        } catch (error) {
+            console.error('Error handling room_update event:', error);
+        }
+    });
+
+    joinRequestsEventSource.addEventListener('game_started', (event) => {
+        try {
+            console.log('🎮 Game started via SSE:', event.data);
+            const data = JSON.parse(event.data);
+            // Redirect both owner and guest to the game page
+            window.location.href = `/game/play/${roomId}`;
+        } catch (error) {
+            console.error('Error handling game_started event:', error);
         }
     });
 
@@ -388,10 +447,13 @@ function updateUIAfterAccept(guestUsername) {
     if (inviteSection) inviteSection.style.display = 'none';
     if (joinRequestsSection) joinRequestsSection.style.display = 'none';
 
-    // 4. Show categories section if it exists
+    // 4. Show categories section and load categories
     const categoriesSection = document.getElementById('categories-section');
     if (categoriesSection) {
         categoriesSection.style.display = 'block';
+        // Initialize and load categories now that guest has joined
+        initializeSelectedCategories();
+        loadCategories(roomId);
     }
 
     // 5. Show "Start Game" button
@@ -576,6 +638,24 @@ function showNotification(message, type) {
 // Load categories
 let selectedCategories = [];
 
+// Initialize selected categories from server data
+function initializeSelectedCategories() {
+    const container = document.querySelector('[data-selected-categories]');
+    if (container) {
+        const categoriesAttr = container.getAttribute('data-selected-categories');
+        if (categoriesAttr && categoriesAttr.trim() !== '') {
+            try {
+                // Parse the JSON array of category IDs
+                selectedCategories = JSON.parse('[' + categoriesAttr + ']');
+                console.log('📋 Initialized selected categories:', selectedCategories);
+            } catch (error) {
+                console.error('Failed to parse selected categories:', error);
+                selectedCategories = [];
+            }
+        }
+    }
+}
+
 async function loadCategories(roomId) {
     try {
         const response = await fetch('/api/categories');
@@ -601,29 +681,39 @@ async function loadCategories(roomId) {
 function displayCategories(roomId, categories) {
     const gridElement = document.getElementById('categories-grid');
 
-    const categoriesHTML = categories.map(cat => `
-        <label class="category-checkbox">
-            <input
-                type="checkbox"
-                id="category-${cat.id}"
-                value="${cat.id}"
-                onchange="toggleCategory('${roomId}', '${cat.id}')"
-            />
-            <span class="category-label">${cat.key}</span>
-        </label>
-    `).join('');
+    const categoriesHTML = categories.map(cat => {
+        // Check if this category is in the selected categories
+        const isSelected = selectedCategories.includes(cat.id);
+        console.log(`Category ${cat.key} (${cat.id}): selected=${isSelected}`);
+
+        return `
+            <label class="category-checkbox">
+                <input
+                    type="checkbox"
+                    id="category-${cat.id}"
+                    value="${cat.id}"
+                    onchange="toggleCategory('${roomId}', '${cat.id}')"
+                    ${isSelected ? 'checked' : ''}
+                />
+                <span class="category-label">${cat.key}</span>
+            </label>
+        `;
+    }).join('');
 
     gridElement.innerHTML = categoriesHTML;
 }
 
 async function toggleCategory(roomId, categoryId) {
     const checkbox = document.getElementById(`category-${categoryId}`);
+    console.log(`📝 Toggle category ${categoryId}, checkbox.checked=${checkbox.checked}`);
 
     if (checkbox.checked) {
         selectedCategories.push(categoryId);
     } else {
         selectedCategories = selectedCategories.filter(id => id !== categoryId);
     }
+
+    console.log('📤 Sending categories to server:', selectedCategories);
 
     // Send update to server
     try {
@@ -632,13 +722,19 @@ async function toggleCategory(roomId, categoryId) {
             formData.append('category_ids', id);
         });
 
+        console.log('📤 FormData entries:', Array.from(formData.entries()));
+
         const response = await fetch(`/api/rooms/${roomId}/categories`, {
             method: 'POST',
             body: formData
         });
 
+        console.log('📥 Server response status:', response.status);
+        const responseText = await response.text();
+        console.log('📥 Server response body:', responseText);
+
         if (!response.ok) {
-            console.error('Failed to update categories');
+            console.error('❌ Failed to update categories');
             // Revert checkbox state
             checkbox.checked = !checkbox.checked;
             if (checkbox.checked) {
@@ -646,9 +742,11 @@ async function toggleCategory(roomId, categoryId) {
             } else {
                 selectedCategories = selectedCategories.filter(id => id !== categoryId);
             }
+        } else {
+            console.log('✅ Categories updated successfully');
         }
     } catch (error) {
-        console.error('Error updating categories:', error);
+        console.error('❌ Error updating categories:', error);
         // Revert checkbox state
         checkbox.checked = !checkbox.checked;
         if (checkbox.checked) {
@@ -661,17 +759,86 @@ async function toggleCategory(roomId, categoryId) {
 
 // Sync category selections from SSE updates
 function syncCategorySelections(categoryIds) {
+    console.log('🔄 Syncing category selections:', categoryIds);
     selectedCategories = categoryIds;
 
     // Update all checkboxes to match server state
     document.querySelectorAll('.category-checkbox input[type="checkbox"]').forEach(checkbox => {
         const categoryId = checkbox.value;
         const shouldBeChecked = categoryIds.includes(categoryId);
+        console.log(`Checkbox ${categoryId}: current=${checkbox.checked}, should=${shouldBeChecked}, includes=${categoryIds.includes(categoryId)}`);
 
         if (checkbox.checked !== shouldBeChecked) {
+            console.log(`Updating checkbox ${categoryId} from ${checkbox.checked} to ${shouldBeChecked}`);
             checkbox.checked = shouldBeChecked;
         }
     });
+}
+
+// Guest Ready Function
+async function setGuestReady() {
+    const roomId = document.querySelector('[data-room-id]').dataset.roomId;
+
+    // Check if at least one category is selected
+    if (selectedCategories.length === 0) {
+        showNotification('⚠️ Please select at least one category before marking ready', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/rooms/${roomId}/guest-ready`, {
+            method: 'POST'
+        });
+
+        if (response.ok) {
+            showNotification('✅ Marked as ready! Waiting for owner to start...', 'success');
+            // Disable category checkboxes
+            document.querySelectorAll('.category-checkbox input[type="checkbox"]').forEach(checkbox => {
+                checkbox.disabled = true;
+            });
+            // Update UI
+            const readySection = document.getElementById('guest-ready-section');
+            if (readySection) {
+                readySection.innerHTML = `
+                    <div class="ready-confirmed-message">
+                        ✅ You're ready! Waiting for owner to start the game...
+                    </div>
+                `;
+            }
+        } else {
+            const error = await response.text();
+            showNotification(`Failed to mark ready: ${error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error marking ready:', error);
+        showNotification('Failed to mark ready', 'error');
+    }
+}
+
+// Handle guest ready update (for owner)
+function handleGuestReadyUpdate(guestReady) {
+    console.log('🎯 handleGuestReadyUpdate called with:', guestReady);
+
+    if (!guestReady) {
+        console.log('⚠️ Guest not ready, returning early');
+        return;
+    }
+
+    console.log('✅ Guest is ready, updating UI');
+    const startSection = document.getElementById('start-game-section');
+    console.log('🎯 Start section element:', startSection);
+
+    if (startSection) {
+        startSection.innerHTML = `
+            <button onclick="startGame()" class="btn btn-primary btn-lg start-game-btn">
+                🚀 Start Game
+            </button>
+        `;
+        console.log('✅ Updated start section HTML');
+    } else {
+        console.error('❌ start-game-section element not found');
+    }
+    showNotification('✅ Guest is ready! You can now start the game.', 'success');
 }
 
 // Start Game Function
@@ -691,10 +858,7 @@ async function startGame() {
 
         if (response.ok) {
             showNotification('🚀 Starting game...', 'success');
-            // Navigate to game page after a short delay
-            setTimeout(() => {
-                window.location.href = `/game/play/${roomId}`;
-            }, 500);
+            // Don't redirect here - let SSE handle it for both users
         } else {
             const error = await response.text();
             showNotification(`Failed to start game: ${error}`, 'error');
@@ -963,6 +1127,65 @@ async function startGame() {
         .categories-grid {
             grid-template-columns: 1fr;
         }
+    }
+
+    /* Guest Ready Section */
+    .guest-ready-section {
+        text-align: center;
+        padding: 2rem;
+        background: white;
+        border-radius: 12px;
+        margin: 1rem 0;
+    }
+
+    .ready-btn {
+        font-size: 1.25rem;
+        padding: 1rem 2rem;
+        background: #10b981;
+        border: none;
+        color: white;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+
+    .ready-btn:hover {
+        background: #059669;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+    }
+
+    .ready-hint {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+    }
+
+    .ready-confirmed-message {
+        background: #dcfce7;
+        color: #166534;
+        padding: 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    .waiting-ready-message {
+        background: #fef3c7;
+        color: #92400e;
+        padding: 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    /* Disabled checkboxes */
+    .category-checkbox input[type="checkbox"]:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .category-checkbox input[type="checkbox"]:disabled + .category-label {
+        color: #9ca3af;
     }
 </style>
 {{end}}

@@ -15,6 +15,7 @@ type Room struct {
 	Status             string      `json:"status"` // waiting, ready, playing, paused, finished
 	Language           string      `json:"language"`
 	IsPrivate          bool        `json:"is_private"`
+	GuestReady         bool        `json:"guest_ready"`
 	MaxQuestions       int         `json:"max_questions"`
 	CurrentQuestion    int         `json:"current_question"`
 	CurrentTurn        *uuid.UUID  `json:"current_player_id"`

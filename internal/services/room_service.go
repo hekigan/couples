@@ -89,8 +89,10 @@ func (s *RoomService) UpdateRoom(ctx context.Context, room *models.Room) error {
 	room.UpdatedAt = time.Now()
 
 	data := map[string]interface{}{
-		"status":     room.Status,
-		"updated_at": room.UpdatedAt,
+		"status":              room.Status,
+		"updated_at":          room.UpdatedAt,
+		"selected_categories": room.SelectedCategories,
+		"guest_ready":         room.GuestReady,
 	}
 
 	// Always update guest_id (including NULL values)
@@ -123,6 +125,13 @@ func (s *RoomService) UpdateRoom(ctx context.Context, room *models.Room) error {
 func (s *RoomService) BroadcastRoomUpdate(roomID uuid.UUID, data map[string]interface{}) {
 	if s.realtimeService != nil {
 		s.realtimeService.BroadcastRoomUpdate(roomID, data)
+	}
+}
+
+// BroadcastPlayerTyping broadcasts a player typing event to all connected clients in the room
+func (s *RoomService) BroadcastPlayerTyping(roomID, userID uuid.UUID, isTyping bool) {
+	if s.realtimeService != nil {
+		s.realtimeService.BroadcastPlayerTyping(roomID, userID, isTyping)
 	}
 }
 

@@ -44,7 +44,7 @@ func (s *RealtimeService) Subscribe(roomID, userID uuid.UUID) *RealtimeClient {
 		ID:      uuid.New().String(),
 		RoomID:  roomID,
 		UserID:  userID,
-		Channel: make(chan RealtimeEvent, 10),
+		Channel: make(chan RealtimeEvent, 100), // Increased buffer size to prevent dropped events
 	}
 
 	s.clients[client.ID] = client
@@ -67,14 +67,20 @@ func (s *RealtimeService) Broadcast(roomID uuid.UUID, event RealtimeEvent) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
+	broadcastCount := 0
 	for _, client := range s.clients {
 		if client.RoomID == roomID {
 			select {
 			case client.Channel <- event:
+				broadcastCount++
 			default:
 				// Channel full, skip this client
+				fmt.Printf("⚠️ Warning: Skipped broadcasting %s event to client %s (channel full)\n", event.Type, client.ID)
 			}
 		}
+	}
+	if broadcastCount > 0 {
+		fmt.Printf("📡 Broadcasted %s event to %d clients in room %s\n", event.Type, broadcastCount, roomID)
 	}
 }
 
@@ -225,6 +231,17 @@ func (s *RealtimeService) BroadcastRequestRejectedToGuest(guestUserID, roomID uu
 		Data: map[string]interface{}{
 			"room_id": roomID.String(),
 			"status":  "rejected",
+		},
+	})
+}
+
+// BroadcastPlayerTyping broadcasts a player_typing event to other players in the room
+func (s *RealtimeService) BroadcastPlayerTyping(roomID, userID uuid.UUID, isTyping bool) {
+	s.Broadcast(roomID, RealtimeEvent{
+		Type: "player_typing",
+		Data: map[string]interface{}{
+			"user_id":   userID.String(),
+			"is_typing": isTyping,
 		},
 	})
 }

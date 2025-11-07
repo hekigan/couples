@@ -95,7 +95,11 @@ func (s *QuestionService) GetRandomQuestion(ctx context.Context, roomID uuid.UUI
 	}
 
 	if len(questions) == 0 {
-		return nil, fmt.Errorf("no questions available")
+		// Provide more helpful error message
+		if len(categoryIDs) > 0 {
+			return nil, fmt.Errorf("no questions available for the selected categories and language '%s'. Please add questions to the database or change category selection", language)
+		}
+		return nil, fmt.Errorf("no questions available for language '%s'. Please add questions to the database", language)
 	}
 
 	return &questions[0], nil

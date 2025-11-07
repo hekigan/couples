@@ -151,11 +151,11 @@
     }
 </style>
 
-<div class="game-container" data-room-id="{{.Data.ID}}">
+<div class="game-container" data-room-id="{{.Data.Room.ID}}">
     <div class="game-header">
-        <h1>{{.Data.Name}}</h1>
+        <h1>{{.Data.Room.Name}}</h1>
         <div class="game-progress" id="progress">
-            Question <span id="currentQuestion">{{.Data.CurrentQuestion}}</span> of <span id="maxQuestions">{{.Data.MaxQuestions}}</span>
+            Question <span id="currentQuestion">{{.Data.Room.CurrentQuestion}}</span> of <span id="maxQuestions">{{.Data.Room.MaxQuestions}}</span>
         </div>
     </div>
 
@@ -170,33 +170,29 @@
 
         <!-- Active player form -->
         <div id="answerForm" class="answer-form" style="display: none;">
-            <textarea id="answerText" placeholder="Write your answer here..." rows="4"></textarea>
+            <textarea id="answerText" placeholder="Write your answer here (optional)..." rows="4"></textarea>
 
-            <div class="form-check">
-                <input type="checkbox" id="passCheck" class="form-check-input">
-                <label for="passCheck" class="form-check-label">
-                    Pass this question
-                </label>
-            </div>
-
-            <div class="button-group">
-                <button id="submitBtn" class="btn btn-primary" onclick="submitAnswer()">
-                    Submit Answer
+            <div class="button-group" style="display: flex; gap: 10px; justify-content: center;">
+                <button id="answeredBtn" class="btn btn-primary" onclick="submitAnswer('answered')" style="flex: 1; max-width: 200px;">
+                    ✅ Answered
+                </button>
+                <button id="passBtn" class="btn btn-secondary" onclick="submitAnswer('passed')" style="flex: 1; max-width: 200px;">
+                    ⏭️ Pass
                 </button>
             </div>
         </div>
 
-        <!-- Waiting player UI -->
+        <!-- Passive player UI -->
         <div id="waitingUI" class="answer-form" style="display: none;">
-            <div id="otherPlayerAnswer" class="answer-display" style="display: none;">
-                <h3>Other player's response:</h3>
-                <p id="otherAnswerText"></p>
+            <textarea id="passiveAnswerText" placeholder="" rows="4" disabled style="background-color: #f5f5f5;"></textarea>
+
+            <div id="typingIndicator" class="typing-indicator" style="display: none; text-align: center; padding: 10px; font-style: italic; color: #666;">
+                💬 Other player is typing...
             </div>
 
-            <div class="button-group">
-                <button id="nextCardBtn" class="btn btn-success" onclick="nextCard()">
-                    Next Card →
-                </button>
+            <div id="otherPlayerAnswer" class="answer-display" style="display: none; margin-top: 15px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+                <h3 style="margin-top: 0;">Other player's response:</h3>
+                <p id="otherAnswerText" style="white-space: pre-wrap;"></p>
             </div>
         </div>
 
@@ -215,26 +211,55 @@
 </div>
 
 <script>
-    const roomId = '{{.Data.ID}}';
+    const roomId = '{{.Data.Room.ID}}';
     let eventSource = null;
-    let currentUserId = null;
+    let currentUserId = '{{.Data.CurrentUserID}}'; // Current logged-in user's ID
     let currentQuestion = null;
     let gameState = {
         currentTurn: null,
         status: 'loading'
     };
+    let typingTimeout = null; // For debouncing typing indicator
 
     // Initialize when page loads
     document.addEventListener('DOMContentLoaded', function() {
-        // Get current user ID from session (you may need to pass this from backend)
-        currentUserId = '{{.Data.OwnerID}}'; // This should be the current user's ID from session
+        console.log('🎮 Game initialized for user:', currentUserId, 'in room:', roomId);
 
         // Connect to SSE
         connectSSE();
 
         // Load initial game state
         loadGameState();
+
+        // Add typing indicator listener for active player
+        const answerTextarea = document.getElementById('answerText');
+        if (answerTextarea) {
+            answerTextarea.addEventListener('input', function() {
+                // Debounce typing indicator - only send after user stops typing for 300ms
+                clearTimeout(typingTimeout);
+                sendTypingStatus(true);
+
+                typingTimeout = setTimeout(() => {
+                    sendTypingStatus(false);
+                }, 300);
+            });
+        }
     });
+
+    // Send typing status to server
+    async function sendTypingStatus(isTyping) {
+        try {
+            await fetch(`/api/rooms/${roomId}/typing`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ is_typing: isTyping })
+            });
+        } catch (error) {
+            console.error('Error sending typing status:', error);
+        }
+    }
 
     // Connect to Server-Sent Events for real-time updates
     function connectSSE() {
@@ -261,9 +286,23 @@
 
         eventSource.addEventListener('turn_changed', function(e) {
             const data = JSON.parse(e.data);
-            console.log('Turn changed:', data);
+            console.log('🔄 Turn changed:', data);
             gameState.currentTurn = data.current_turn;
+            console.log('🔄 New current turn:', gameState.currentTurn);
             updateUI();
+        });
+
+        eventSource.addEventListener('player_typing', function(e) {
+            const data = JSON.parse(e.data);
+            console.log('Player typing:', data);
+
+            // Only show typing indicator if it's not the current user typing
+            if (data.user_id !== currentUserId) {
+                const typingIndicator = document.getElementById('typingIndicator');
+                if (typingIndicator) {
+                    typingIndicator.style.display = data.is_typing ? 'block' : 'none';
+                }
+            }
         });
 
         eventSource.addEventListener('game_finished', function(e) {
@@ -272,12 +311,46 @@
             window.location.href = `/game/finished/${roomId}`;
         });
 
+        // Track connection state
+        let connectionLostTimeout = null;
+        let isConnected = false;
+
+        eventSource.addEventListener('connected', function(e) {
+            console.log('SSE connected');
+            isConnected = true;
+            // Clear any pending "connection lost" message
+            if (connectionLostTimeout) {
+                clearTimeout(connectionLostTimeout);
+                connectionLostTimeout = null;
+            }
+            // Hide error message if it's showing
+            const errorDiv = document.getElementById('errorMessage');
+            if (errorDiv && errorDiv.textContent.includes('Connection lost')) {
+                errorDiv.style.display = 'none';
+            }
+        });
+
         eventSource.onerror = function(e) {
             console.error('SSE connection error:', e);
-            showError('Connection lost. Trying to reconnect...');
+
+            // Only show "connection lost" message after 2 seconds
+            // This prevents flashing the message during brief network hiccups
+            if (!connectionLostTimeout) {
+                connectionLostTimeout = setTimeout(() => {
+                    if (eventSource.readyState !== EventSource.OPEN) {
+                        showError('Connection lost. Trying to reconnect...');
+                    }
+                    connectionLostTimeout = null;
+                }, 2000);
+            }
+
             // Reconnection is automatic with EventSource
         };
     }
+
+    // Track if game state has loaded successfully
+    let gameStateLoaded = false;
+    let loadGameStateTimeout = null;
 
     // Load current game state from API
     async function loadGameState() {
@@ -286,7 +359,17 @@
             if (!response.ok) throw new Error('Failed to load game state');
 
             const data = await response.json();
-            gameState = data;
+            gameState.currentTurn = data.current_turn;
+            gameState.status = data.status;
+            gameStateLoaded = true;
+
+            console.log('📊 Game state loaded:', gameState);
+
+            // Clear any pending error timeout since we loaded successfully
+            if (loadGameStateTimeout) {
+                clearTimeout(loadGameStateTimeout);
+                loadGameStateTimeout = null;
+            }
 
             document.getElementById('currentQuestion').textContent = data.current_question || 0;
 
@@ -298,7 +381,16 @@
             }
         } catch (error) {
             console.error('Error loading game state:', error);
-            showError('Failed to load game state');
+
+            // Only show error after 10 seconds if game state hasn't loaded
+            if (!loadGameStateTimeout) {
+                loadGameStateTimeout = setTimeout(() => {
+                    if (!gameStateLoaded) {
+                        showError('Failed to load game state');
+                    }
+                    loadGameStateTimeout = null;
+                }, 10000);
+            }
         }
     }
 
@@ -334,20 +426,23 @@
     }
 
     // Submit answer
-    async function submitAnswer() {
-        const answerText = document.getElementById('answerText').value;
-        const passed = document.getElementById('passCheck').checked;
+    async function submitAnswer(actionType) {
+        const answerText = document.getElementById('answerText').value.trim();
 
-        if (!passed && !answerText.trim()) {
-            showError('Please enter an answer or check "Pass"');
-            return;
-        }
+        console.log(`📝 Submitting answer with action: ${actionType}`);
 
         try {
+            // Stop sending typing indicator
+            if (typingTimeout) {
+                clearTimeout(typingTimeout);
+            }
+            sendTypingStatus(false);
+
             const formData = new FormData();
             formData.append('question_id', currentQuestion.id);
             formData.append('answer_text', answerText);
-            formData.append('passed', passed);
+            formData.append('action_type', actionType);
+            formData.append('passed', actionType === 'passed' ? 'true' : 'false');
 
             const response = await fetch(`/api/rooms/${roomId}/answer`, {
                 method: 'POST',
@@ -359,16 +454,20 @@
                 throw new Error(error);
             }
 
+            console.log(`✅ Answer submitted successfully (${actionType})`);
+
             // Clear form
             document.getElementById('answerText').value = '';
-            document.getElementById('passCheck').checked = false;
 
-            // Show success message
-            showMessage('Answer submitted! Waiting for other player...');
+            // Show message based on action type
+            if (actionType === 'answered') {
+                showMessage('Answer submitted! Turn switching to other player...');
+            } else {
+                showMessage('Question passed! Drawing new card...');
+            }
 
-            // Update UI to show waiting state
+            // Hide answer form while waiting for new question
             document.getElementById('answerForm').style.display = 'none';
-            document.getElementById('waitingUI').style.display = 'none';
 
         } catch (error) {
             console.error('Error submitting answer:', error);
@@ -443,22 +542,31 @@
 
     // Update UI based on game state
     function updateUI() {
-        const isMyTurn = gameState.current_turn === currentUserId;
+        const isMyTurn = gameState.currentTurn === currentUserId;
         const turnIndicator = document.getElementById('turnIndicator');
         const turnText = document.getElementById('turnText');
         const answerForm = document.getElementById('answerForm');
         const waitingUI = document.getElementById('waitingUI');
+        const otherPlayerAnswer = document.getElementById('otherPlayerAnswer');
+
+        console.log('🔄 Updating UI - isMyTurn:', isMyTurn, 'currentTurn:', gameState.currentTurn, 'userId:', currentUserId);
 
         if (isMyTurn) {
+            // Active player - show answer form with enabled textarea
             turnIndicator.className = 'turn-indicator your-turn';
             turnText.textContent = "It's YOUR turn!";
             answerForm.style.display = 'block';
             waitingUI.style.display = 'none';
         } else {
+            // Passive player - show disabled textarea and typing indicator
             turnIndicator.className = 'turn-indicator waiting';
             turnText.textContent = 'Waiting for other player...';
             answerForm.style.display = 'none';
-            // Waiting UI will be shown when answer is submitted
+            waitingUI.style.display = 'block';
+            // Hide answer display until answer is submitted
+            if (otherPlayerAnswer) {
+                otherPlayerAnswer.style.display = 'none';
+            }
         }
     }
 

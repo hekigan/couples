@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 
@@ -294,15 +295,23 @@ func (h *Handler) PlayHandler(w http.ResponseWriter, r *http.Request) {
 	roomID, _ := uuid.Parse(vars["id"])
 
 	ctx := context.Background()
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
 	room, err := h.RoomService.GetRoomByID(ctx, roomID)
 	if err != nil {
 		http.Error(w, "Room not found", http.StatusNotFound)
 		return
 	}
 
+	// Create a map to pass both room and current user ID
+	playData := map[string]interface{}{
+		"Room":          room,
+		"CurrentUserID": userID.String(),
+	}
+
 	data := &TemplateData{
 		Title: "Play - " + room.Name,
-		Data:  room,
+		Data:  playData,
 	}
 	h.RenderTemplate(w, "game/play.html", data)
 }
@@ -443,6 +452,12 @@ func (h *Handler) StartGameAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify guest is ready
+	if !room.GuestReady {
+		http.Error(w, "Guest is not ready yet. Wait for guest to click Ready button.", http.StatusBadRequest)
+		return
+	}
+
 	// Start the game
 	if err := h.GameService.StartGame(ctx, roomID); err != nil {
 		http.Error(w, "Failed to start game: "+err.Error(), http.StatusInternalServerError)
@@ -452,6 +467,105 @@ func (h *Handler) StartGameAPIHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status":"success","message":"Game started"}`))
+}
+
+// SetGuestReadyAPIHandler marks the guest as ready
+func (h *Handler) SetGuestReadyAPIHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	roomID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid room ID", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	// Get the room
+	room, err := h.RoomService.GetRoomByID(ctx, roomID)
+	if err != nil {
+		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+
+	// Verify user is the guest
+	if room.GuestID == nil || *room.GuestID != userID {
+		http.Error(w, "Only the guest can mark themselves as ready", http.StatusForbidden)
+		return
+	}
+
+	// Mark guest as ready
+	room.GuestReady = true
+	if err := h.RoomService.UpdateRoom(ctx, room); err != nil {
+		log.Printf("❌ Failed to update guest ready status: %v", err)
+		http.Error(w, "Failed to update ready status: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("✅ Guest %s marked as ready in room %s", userID, roomID)
+
+	// Broadcast guest ready event via SSE
+	h.RoomService.BroadcastRoomUpdate(roomID, map[string]interface{}{
+		"guest_ready": true,
+	})
+
+	log.Printf("📡 Broadcasting guest_ready=true to room %s", roomID)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"success","message":"Guest marked as ready"}`))
+}
+
+// PlayerTypingAPIHandler broadcasts typing status to other players in the room
+func (h *Handler) PlayerTypingAPIHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	roomID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid room ID", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	// Parse request body
+	var req struct {
+		IsTyping bool `json:"is_typing"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Get the room to verify user is a participant
+	room, err := h.RoomService.GetRoomByID(ctx, roomID)
+	if err != nil {
+		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+
+	// Verify user is part of this room
+	isOwner := room.OwnerID == userID
+	isGuest := room.GuestID != nil && *room.GuestID == userID
+	if !isOwner && !isGuest {
+		http.Error(w, "You are not a member of this room", http.StatusForbidden)
+		return
+	}
+
+	// Verify it's the user's turn
+	if room.CurrentTurn == nil || *room.CurrentTurn != userID {
+		// Silently ignore typing events if it's not their turn
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ignored"}`))
+		return
+	}
+
+	// Broadcast typing status to other players in the room
+	h.RoomService.BroadcastPlayerTyping(roomID, userID, req.IsTyping)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"success"}`))
 }
 
 // DrawQuestionAPIHandler draws a random question for the room
@@ -546,10 +660,14 @@ func (h *Handler) SubmitAnswerAPIHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Create answer
-	actionType := "answered"
-	if passed {
-		actionType = "passed"
+	// Get action type from form (either "answered" or "passed")
+	actionType := r.FormValue("action_type")
+	if actionType == "" {
+		// Default to "answered" for backwards compatibility
+		actionType = "answered"
+		if passed {
+			actionType = "passed"
+		}
 	}
 
 	answer := &models.Answer{
@@ -564,6 +682,35 @@ func (h *Handler) SubmitAnswerAPIHandler(w http.ResponseWriter, r *http.Request)
 	if err := h.GameService.SubmitAnswer(ctx, answer); err != nil {
 		http.Error(w, "Failed to submit answer: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	log.Printf("✅ Answer submitted by user %s in room %s (action: %s)", userID, roomID, actionType)
+
+	// Handle action based on type
+	if actionType == "answered" {
+		// Switch turn to the other player
+		log.Printf("🔄 Switching turn after answer in room %s", roomID)
+		if err := h.GameService.ChangeTurn(ctx, roomID); err != nil {
+			log.Printf("❌ Failed to change turn: %v", err)
+			http.Error(w, "Failed to change turn: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Draw a new question for the new active player
+		log.Printf("🎴 Drawing new question after turn change in room %s", roomID)
+		if _, err := h.GameService.DrawQuestion(ctx, roomID); err != nil {
+			log.Printf("❌ Failed to draw question: %v", err)
+			http.Error(w, "Failed to draw question: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else if actionType == "passed" {
+		// Same player continues, just draw a new question
+		log.Printf("⏭️ Passing question, drawing new card for same player in room %s", roomID)
+		if _, err := h.GameService.DrawQuestion(ctx, roomID); err != nil {
+			log.Printf("❌ Failed to draw question after pass: %v", err)
+			http.Error(w, "Failed to draw question: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -674,13 +821,13 @@ func (h *Handler) UpdateCategoriesAPIHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Parse category IDs from request
-	if err := r.ParseForm(); err != nil {
+	// Parse category IDs from request (multipart form data from FormData)
+	if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MB max
 		http.Error(w, "Failed to parse form", http.StatusBadRequest)
 		return
 	}
 
-	categoryIDStrings := r.Form["category_ids"]
+	categoryIDStrings := r.MultipartForm.Value["category_ids"]
 	categoryIDs := make([]uuid.UUID, 0, len(categoryIDStrings))
 	for _, idStr := range categoryIDStrings {
 		id, err := uuid.Parse(idStr)

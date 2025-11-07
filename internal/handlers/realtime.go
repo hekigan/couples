@@ -75,17 +75,29 @@ func (h *RealtimeHandler) StreamRoomEvents(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Stream events until client disconnects
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
-		case event := <-client.Channel:
+		case event, ok := <-client.Channel:
+			if !ok {
+				// Channel closed
+				return
+			}
 			// Send event from realtime service
-			fmt.Fprint(w, services.EventToSSE(event))
+			sseData := services.EventToSSE(event)
+			if _, err := fmt.Fprint(w, sseData); err != nil {
+				return
+			}
 			flusher.Flush()
 		case <-r.Context().Done():
 			return
-		case <-time.After(30 * time.Second):
-			// Send keepalive ping
-			fmt.Fprintf(w, "event: ping\ndata: {\"time\":\"%s\"}\n\n", time.Now().Format(time.RFC3339))
+		case <-ticker.C:
+			// Send keepalive ping every 15 seconds
+			if _, err := fmt.Fprintf(w, "event: ping\ndata: {\"time\":\"%s\"}\n\n", time.Now().Format(time.RFC3339)); err != nil {
+				return
+			}
 			flusher.Flush()
 		}
 	}
@@ -118,17 +130,29 @@ func (h *RealtimeHandler) StreamUserNotifications(w http.ResponseWriter, r *http
 	flusher.Flush()
 
 	// Stream events until client disconnects
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
-		case event := <-client.Channel:
+		case event, ok := <-client.Channel:
+			if !ok {
+				// Channel closed
+				return
+			}
 			// Send event from realtime service
-			fmt.Fprint(w, services.EventToSSE(event))
+			sseData := services.EventToSSE(event)
+			if _, err := fmt.Fprint(w, sseData); err != nil {
+				return
+			}
 			flusher.Flush()
 		case <-r.Context().Done():
 			return
-		case <-time.After(30 * time.Second):
-			// Send keepalive ping
-			fmt.Fprintf(w, "event: ping\ndata: {\"time\":\"%s\"}\n\n", time.Now().Format(time.RFC3339))
+		case <-ticker.C:
+			// Send keepalive ping every 15 seconds
+			if _, err := fmt.Fprintf(w, "event: ping\ndata: {\"time\":\"%s\"}\n\n", time.Now().Format(time.RFC3339)); err != nil {
+				return
+			}
 			flusher.Flush()
 		}
 	}
@@ -139,8 +163,59 @@ func (h *RealtimeHandler) GetRoomPlayers(w http.ResponseWriter, r *http.Request)
 	http.Error(w, "Not yet implemented", http.StatusNotImplemented)
 }
 
+// RoomStateResponse represents the room state for the frontend
+type RoomStateResponse struct {
+	ID              uuid.UUID   `json:"id"`
+	Status          string      `json:"status"`
+	CurrentQuestion int         `json:"current_question"`
+	CurrentTurn     *uuid.UUID  `json:"current_turn"` // Note: different field name for frontend compatibility
+	MaxQuestions    int         `json:"max_questions"`
+	OwnerID         uuid.UUID   `json:"owner_id"`
+	GuestID         *uuid.UUID  `json:"guest_id"`
+	Language        string      `json:"language"`
+}
+
 // GetRoomState gets current room state
 func (h *RealtimeHandler) GetRoomState(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "Not yet implemented", http.StatusNotImplemented)
+	vars := mux.Vars(r)
+	roomID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid room ID", http.StatusBadRequest)
+		return
+	}
+
+	ctx := r.Context()
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	// Get the room
+	room, err := h.handler.RoomService.GetRoomByID(ctx, roomID)
+	if err != nil {
+		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+
+	// Check if user is part of this room
+	isOwner := room.OwnerID == userID
+	isGuest := room.GuestID != nil && *room.GuestID == userID
+	if !isOwner && !isGuest {
+		http.Error(w, "You are not a member of this room", http.StatusForbidden)
+		return
+	}
+
+	// Create response with frontend-compatible field names
+	response := RoomStateResponse{
+		ID:              room.ID,
+		Status:          room.Status,
+		CurrentQuestion: room.CurrentQuestion,
+		CurrentTurn:     room.CurrentTurn, // Maps CurrentTurn to current_turn in JSON
+		MaxQuestions:    room.MaxQuestions,
+		OwnerID:         room.OwnerID,
+		GuestID:         room.GuestID,
+		Language:        room.Language,
+	}
+
+	// Return the room state as JSON
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
