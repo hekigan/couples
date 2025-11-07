@@ -46,10 +46,50 @@ func (h *Handler) DeleteRoomAPIHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"status":"success","message":"Room deleted successfully"}`))
 }
 
+// LeaveRoomHandler handles a guest leaving a room
+func (h *Handler) LeaveRoomHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	roomID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid room ID", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	// Get the room to check if user is the guest
+	room, err := h.RoomService.GetRoomByID(ctx, roomID)
+	if err != nil {
+		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+
+	// Check if user is the guest
+	if room.GuestID == nil || *room.GuestID != userID {
+		http.Error(w, "You are not a guest in this room", http.StatusForbidden)
+		return
+	}
+
+	// Remove the guest from the room by setting GuestID to nil
+	room.GuestID = nil
+	room.Status = "waiting" // Reset status to waiting
+
+	if err := h.RoomService.UpdateRoom(ctx, room); err != nil {
+		http.Error(w, "Failed to leave room", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"success","message":"Left room successfully"}`))
+}
+
 // RoomWithUsername is a room enriched with the other player's username
 type RoomWithUsername struct {
 	*models.Room
 	OtherPlayerUsername string
+	IsOwner             bool
 }
 
 // ListRoomsHandler lists all rooms for the current user
@@ -63,13 +103,14 @@ func (h *Handler) ListRoomsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Enrich rooms with the other player's username
+	// Enrich rooms with the other player's username and ownership info
 	enrichedRooms := make([]RoomWithUsername, 0, len(rooms))
 	for _, room := range rooms {
 		enrichedRoom := RoomWithUsername{
-			Room: &room,
+			Room:    &room,
+			IsOwner: room.OwnerID == userID,
 		}
-		
+
 		// Determine who the "other player" is
 		var otherPlayerID uuid.UUID
 		if room.OwnerID == userID {
@@ -81,7 +122,7 @@ func (h *Handler) ListRoomsHandler(w http.ResponseWriter, r *http.Request) {
 			// Current user is guest, so other player is owner
 			otherPlayerID = room.OwnerID
 		}
-		
+
 		// Fetch the other player's username
 		if otherPlayerID != uuid.Nil {
 			otherPlayer, err := h.UserService.GetUserByID(ctx, otherPlayerID)
@@ -89,7 +130,7 @@ func (h *Handler) ListRoomsHandler(w http.ResponseWriter, r *http.Request) {
 				enrichedRoom.OtherPlayerUsername = otherPlayer.Username
 			}
 		}
-		
+
 		enrichedRooms = append(enrichedRooms, enrichedRoom)
 	}
 
