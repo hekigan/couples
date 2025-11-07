@@ -102,6 +102,20 @@ func (s *RoomService) UpdateRoom(ctx context.Context, room *models.Room) error {
 		data["guest_id"] = nil
 	}
 
+	// Always update current_question_id (including NULL values)
+	if room.CurrentQuestionID != nil {
+		data["current_question_id"] = room.CurrentQuestionID.String()
+	} else {
+		data["current_question_id"] = nil
+	}
+
+	// Always update current_player_id (including NULL values)
+	if room.CurrentTurn != nil {
+		data["current_player_id"] = room.CurrentTurn.String()
+	} else {
+		data["current_player_id"] = nil
+	}
+
 	fmt.Printf("DEBUG: Updating room %s with data: %+v\n", room.ID, data)
 
 	_, _, err := s.client.From("rooms").

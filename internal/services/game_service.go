@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -58,8 +59,37 @@ func (s *GameService) StartGame(ctx context.Context, roomID uuid.UUID) error {
 		return err
 	}
 
+	// Broadcast game started event
 	s.realtimeService.BroadcastGameStarted(roomID)
+
+	// Draw the first question immediately
+	_, err = s.DrawQuestion(ctx, roomID)
+	if err != nil {
+		return fmt.Errorf("failed to draw first question: %w", err)
+	}
+
 	return nil
+}
+
+// GetCurrentQuestion retrieves the current active question for a room if it exists
+func (s *GameService) GetCurrentQuestion(ctx context.Context, roomID uuid.UUID) (*models.Question, error) {
+	room, err := s.roomService.GetRoomByID(ctx, roomID)
+	if err != nil {
+		return nil, err
+	}
+
+	// If no current question ID is set, return nil (no error)
+	if room.CurrentQuestionID == nil {
+		return nil, nil
+	}
+
+	// Fetch the current question
+	question, err := s.questionService.GetQuestionByID(ctx, *room.CurrentQuestionID)
+	if err != nil {
+		return nil, err
+	}
+
+	return question, nil
 }
 
 // DrawQuestion draws a new question for the room filtered by selected categories
@@ -80,8 +110,9 @@ func (s *GameService) DrawQuestion(ctx context.Context, roomID uuid.UUID) (*mode
 		return nil, err
 	}
 
-	// Increment current question counter
+	// Increment current question counter and save current question ID
 	room.CurrentQuestion++
+	room.CurrentQuestionID = &question.ID
 	if err := s.roomService.UpdateRoom(ctx, room); err != nil {
 		return nil, err
 	}

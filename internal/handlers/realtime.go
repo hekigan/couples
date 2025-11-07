@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/yourusername/couple-card-game/internal/middleware"
+	"github.com/yourusername/couple-card-game/internal/models"
 	"github.com/yourusername/couple-card-game/internal/services"
 )
 
@@ -165,14 +166,15 @@ func (h *RealtimeHandler) GetRoomPlayers(w http.ResponseWriter, r *http.Request)
 
 // RoomStateResponse represents the room state for the frontend
 type RoomStateResponse struct {
-	ID              uuid.UUID   `json:"id"`
-	Status          string      `json:"status"`
-	CurrentQuestion int         `json:"current_question"`
-	CurrentTurn     *uuid.UUID  `json:"current_turn"` // Note: different field name for frontend compatibility
-	MaxQuestions    int         `json:"max_questions"`
-	OwnerID         uuid.UUID   `json:"owner_id"`
-	GuestID         *uuid.UUID  `json:"guest_id"`
-	Language        string      `json:"language"`
+	ID              uuid.UUID        `json:"id"`
+	Status          string           `json:"status"`
+	CurrentQuestion int              `json:"current_question"`
+	CurrentTurn     *uuid.UUID       `json:"current_turn"` // Note: different field name for frontend compatibility
+	MaxQuestions    int              `json:"max_questions"`
+	OwnerID         uuid.UUID        `json:"owner_id"`
+	GuestID         *uuid.UUID       `json:"guest_id"`
+	Language        string           `json:"language"`
+	CurrentQuestionData *models.Question `json:"current_question_data,omitempty"` // Include full question data if exists
 }
 
 // GetRoomState gets current room state
@@ -202,16 +204,29 @@ func (h *RealtimeHandler) GetRoomState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch the current question if it exists
+	var currentQuestionData *models.Question
+	if room.CurrentQuestionID != nil {
+		question, err := h.handler.QuestionService.GetQuestionByID(ctx, *room.CurrentQuestionID)
+		if err != nil {
+			// Log error but don't fail the request - question might have been deleted
+			fmt.Printf("Warning: Failed to fetch current question %s: %v\n", room.CurrentQuestionID, err)
+		} else {
+			currentQuestionData = question
+		}
+	}
+
 	// Create response with frontend-compatible field names
 	response := RoomStateResponse{
-		ID:              room.ID,
-		Status:          room.Status,
-		CurrentQuestion: room.CurrentQuestion,
-		CurrentTurn:     room.CurrentTurn, // Maps CurrentTurn to current_turn in JSON
-		MaxQuestions:    room.MaxQuestions,
-		OwnerID:         room.OwnerID,
-		GuestID:         room.GuestID,
-		Language:        room.Language,
+		ID:                  room.ID,
+		Status:              room.Status,
+		CurrentQuestion:     room.CurrentQuestion,
+		CurrentTurn:         room.CurrentTurn, // Maps CurrentTurn to current_turn in JSON
+		MaxQuestions:        room.MaxQuestions,
+		OwnerID:             room.OwnerID,
+		GuestID:             room.GuestID,
+		Language:            room.Language,
+		CurrentQuestionData: currentQuestionData, // Include question data if exists
 	}
 
 	// Return the room state as JSON

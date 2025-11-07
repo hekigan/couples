@@ -262,14 +262,16 @@ function updateRequestAccepted(roomId) {
         requestCard.innerHTML = `
             <div class="request-info">
                 <strong>Room: ${roomId}</strong>
-                <span class="request-status accepted">✅ Request accepted!</span>
-                <a href="/game/room/${roomId}" class="btn btn-success btn-sm" style="margin-top: 1rem;">
-                    Go to Room →
-                </a>
+                <span class="request-status accepted">✅ Request accepted! Joining room...</span>
             </div>
         `;
 
-        showNotification('🎉 Your join request was accepted!', 'success');
+        showNotification('🎉 Your join request was accepted! Redirecting...', 'success');
+
+        // Automatically redirect to the room after a brief delay
+        setTimeout(() => {
+            window.location.href = `/game/room/${roomId}`;
+        }, 1000);
     }
 }
 

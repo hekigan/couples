@@ -279,6 +279,10 @@ func (h *Handler) RoomHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if current user is the owner
 	isOwner := currentUserID == room.OwnerID
 
+	// Debug logging
+	log.Printf("🔍 DEBUG RoomHandler: roomID=%s, currentUserID=%s, ownerID=%s, isOwner=%v, status=%s, guestReady=%v",
+		room.ID, currentUserID, room.OwnerID, isOwner, room.Status, room.GuestReady)
+
 	data := &TemplateData{
 		Title:          "Room - " + room.Name,
 		Data:           room,
@@ -599,11 +603,27 @@ func (h *Handler) DrawQuestionAPIHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Draw a question
-	question, err := h.GameService.DrawQuestion(ctx, roomID)
-	if err != nil {
-		http.Error(w, "Failed to draw question: "+err.Error(), http.StatusInternalServerError)
-		return
+	// Check if a question already exists (prevent race condition)
+	var question *models.Question
+	if room.CurrentQuestionID != nil {
+		// Question already exists, fetch it instead of drawing a new one
+		log.Printf("⚠️ Question already exists for room %s, returning existing question %s", roomID, *room.CurrentQuestionID)
+		existingQuestion, err := h.QuestionService.GetQuestionByID(ctx, *room.CurrentQuestionID)
+		if err != nil {
+			log.Printf("❌ Failed to fetch existing question: %v", err)
+			http.Error(w, "Failed to fetch existing question: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		question = existingQuestion
+	} else {
+		// No question exists, draw a new one
+		log.Printf("🎴 Drawing new question for room %s", roomID)
+		newQuestion, err := h.GameService.DrawQuestion(ctx, roomID)
+		if err != nil {
+			http.Error(w, "Failed to draw question: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		question = newQuestion
 	}
 
 	w.Header().Set("Content-Type", "application/json")

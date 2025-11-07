@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS rooms (
     guest_ready BOOLEAN DEFAULT FALSE,
     max_questions INT DEFAULT 20,
     current_question INT DEFAULT 0,
+    current_question_id UUID REFERENCES questions(id),
     selected_categories JSONB,
     current_player_id UUID REFERENCES users(id),
     paused_at TIMESTAMP WITH TIME ZONE,
@@ -100,6 +101,7 @@ CREATE INDEX IF NOT EXISTS idx_rooms_owner_id ON rooms(owner_id);
 CREATE INDEX IF NOT EXISTS idx_rooms_guest_id ON rooms(guest_id);
 CREATE INDEX IF NOT EXISTS idx_rooms_status ON rooms(status);
 CREATE INDEX IF NOT EXISTS idx_rooms_language ON rooms(language);
+CREATE INDEX IF NOT EXISTS idx_rooms_current_question_id ON rooms(current_question_id);
 CREATE INDEX IF NOT EXISTS idx_rooms_disconnected_user ON rooms(disconnected_user);
 
 COMMENT ON TABLE rooms IS 'Game rooms where two players play together';
@@ -109,6 +111,7 @@ COMMENT ON COLUMN rooms.language IS 'Game language (en, fr, ja, etc.)';
 COMMENT ON COLUMN rooms.is_private IS 'Whether room requires invitation to join';
 COMMENT ON COLUMN rooms.max_questions IS 'Maximum number of questions for this game';
 COMMENT ON COLUMN rooms.current_question IS 'Current question number (0-based)';
+COMMENT ON COLUMN rooms.current_question_id IS 'ID of the currently active question (persists across page refreshes)';
 COMMENT ON COLUMN rooms.paused_at IS 'Timestamp when game was paused (if paused)';
 COMMENT ON COLUMN rooms.disconnected_user IS 'User who disconnected (if any)';
 

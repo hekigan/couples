@@ -364,6 +364,7 @@
             gameStateLoaded = true;
 
             console.log('📊 Game state loaded:', gameState);
+            console.log('📊 Current question data:', data.current_question_data);
 
             // Clear any pending error timeout since we loaded successfully
             if (loadGameStateTimeout) {
@@ -373,10 +374,20 @@
 
             document.getElementById('currentQuestion').textContent = data.current_question || 0;
 
+            // If a current question exists in the state, display it
+            if (data.current_question_data) {
+                console.log('📋 Displaying existing question from state');
+                displayQuestion({
+                    id: data.current_question_data.id,
+                    text: data.current_question_data.question_text
+                });
+            }
+
             updateUI();
 
-            // If game is playing and no question is shown, draw first question
-            if (data.status === 'playing' && !currentQuestion) {
+            // Only draw a new question if game is playing AND no question exists AND it's our turn
+            if (data.status === 'playing' && !currentQuestion && !data.current_question_data && gameState.currentTurn === currentUserId) {
+                console.log('🎴 No question exists and it\'s our turn, drawing new question');
                 drawQuestion();
             }
         } catch (error) {

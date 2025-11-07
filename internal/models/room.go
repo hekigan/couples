@@ -18,6 +18,7 @@ type Room struct {
 	GuestReady         bool        `json:"guest_ready"`
 	MaxQuestions       int         `json:"max_questions"`
 	CurrentQuestion    int         `json:"current_question"`
+	CurrentQuestionID  *uuid.UUID  `json:"current_question_id"`
 	CurrentTurn        *uuid.UUID  `json:"current_player_id"`
 	SelectedCategories []uuid.UUID `json:"selected_categories"`
 	PausedAt           *time.Time  `json:"paused_at,omitempty"`

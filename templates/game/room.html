@@ -38,14 +38,17 @@
             {{if .IsOwner}}
             {{if eq .Data.Status "ready"}}
             <div class="start-game-section" id="start-game-section">
-                {{if .Data.GuestReady}}
-                <button onclick="startGame()" class="btn btn-primary btn-lg start-game-btn">
+                <button
+                    id="start-game-btn"
+                    onclick="startGame()"
+                    class="btn btn-primary btn-lg start-game-btn"
+                    {{if not .Data.GuestReady}}disabled{{end}}>
                     🚀 Start Game
                 </button>
-                {{else}}
-                <div class="waiting-ready-message">
+                {{if not .Data.GuestReady}}
+                <p class="waiting-hint" style="text-align: center; color: #6b7280; margin-top: 10px; font-size: 14px;">
                     ⏳ Waiting for guest to click Ready...
-                </div>
+                </p>
                 {{end}}
             </div>
             {{end}}
@@ -71,8 +74,7 @@
         </div>
 
         <!-- Category Selection Section (shown when guest joined) -->
-        {{if .Data.GuestID}}
-        <div class="categories-section" id="categories-section">
+        <div class="categories-section" id="categories-section" style="{{if not .Data.GuestID}}display: none;{{end}}">
             <h2>🎯 Select Question Categories</h2>
             <p class="categories-hint">Both players can select categories. Selections sync in real-time!</p>
 
@@ -80,7 +82,6 @@
                 <p style="color: #6b7280;">Loading categories...</p>
             </div>
         </div>
-        {{end}}
 
         <!-- Invite Friends Section (hidden when guest joined) - OWNER ONLY -->
         {{if .IsOwner}}
@@ -98,14 +99,9 @@
         </div>
         {{end}}
     
-    <!-- Owner Actions (Start Game, Delete Room) - OWNER ONLY -->
+    <!-- Owner Actions (Delete Room) - OWNER ONLY -->
     {{if .IsOwner}}
     <div class="room-actions">
-        {{if .Data.Status}}{{if eq .Data.Status "ready"}}
-        <form action="/api/rooms/{{.Data.ID}}/start" method="POST" hx-post="/api/rooms/{{.Data.ID}}/start" hx-swap="none">
-            <button type="submit" class="btn btn-primary btn-lg">Start Game</button>
-        </form>
-        {{end}}{{end}}
         
         <form action="/game/room/{{.Data.ID}}/delete" method="POST" onsubmit="return confirm('Delete this room?');">
             <button type="submit" class="btn btn-danger">Delete Room</button>
@@ -139,6 +135,13 @@ let joinRequestsPollInterval = null;
 // Load join requests and friends on page load
 document.addEventListener('DOMContentLoaded', () => {
     const roomId = document.querySelector('[data-room-id]').dataset.roomId;
+
+    // Debug: Log template values
+    console.log('🔍 DEBUG: IsOwner =', {{.IsOwner}});
+    console.log('🔍 DEBUG: Room Status =', '{{.Data.Status}}');
+    console.log('🔍 DEBUG: GuestReady =', {{.Data.GuestReady}});
+    console.log('🔍 DEBUG: Start Game button exists?', document.getElementById('start-game-btn') !== null);
+
     // Don't load join requests here - let SSE handle it
     // loadJoinRequests(roomId); // REMOVED - SSE will trigger this
 
@@ -170,10 +173,12 @@ function connectJoinRequestsStream(roomId) {
     
     joinRequestsEventSource.onopen = () => {
         console.log('✅ SSE connection opened successfully!');
+        console.log('📊 SSE readyState:', joinRequestsEventSource.readyState, '(0=CONNECTING, 1=OPEN, 2=CLOSED)');
     };
-    
+
     joinRequestsEventSource.addEventListener('connected', (event) => {
         console.log('✅ SSE connected event received:', event.data);
+        console.log('📊 SSE readyState after connected:', joinRequestsEventSource.readyState);
     });
     
     joinRequestsEventSource.addEventListener('join_request', (event) => {
@@ -213,12 +218,18 @@ function connectJoinRequestsStream(roomId) {
         }
     });
 
+    console.log('📡 Setting up room_update listener, SSE connection state:', joinRequestsEventSource.readyState);
+
     joinRequestsEventSource.addEventListener('room_update', (event) => {
         try {
-            console.log('🏠 Room update via SSE:', event.data);
+            console.log('🏠 Room update via SSE (RAW):', event);
+            console.log('🏠 Room update data (string):', event.data);
             const data = JSON.parse(event.data);
             console.log('🏠 Parsed room update data:', data);
+            console.log('🏠 Type of data:', typeof data);
+            console.log('🏠 Data keys:', Object.keys(data));
             console.log('🏠 guest_ready value:', data.guest_ready);
+            console.log('🏠 guest_ready type:', typeof data.guest_ready);
             if (data.guest_ready !== undefined) {
                 console.log('🏠 Calling handleGuestReadyUpdate with:', data.guest_ready);
                 handleGuestReadyUpdate(data.guest_ready);
@@ -226,7 +237,7 @@ function connectJoinRequestsStream(roomId) {
                 console.log('🏠 guest_ready is undefined in room_update');
             }
         } catch (error) {
-            console.error('Error handling room_update event:', error);
+            console.error('Error handling room_update event:', error, 'Raw event:', event);
         }
     });
 
@@ -234,8 +245,10 @@ function connectJoinRequestsStream(roomId) {
         try {
             console.log('🎮 Game started via SSE:', event.data);
             const data = JSON.parse(event.data);
+            const gameRoomId = data.room_id || roomId; // Use event data or fallback to parameter
+            console.log('🎮 Redirecting to game page:', `/game/play/${gameRoomId}`);
             // Redirect both owner and guest to the game page
-            window.location.href = `/game/play/${roomId}`;
+            window.location.href = `/game/play/${gameRoomId}`;
         } catch (error) {
             console.error('Error handling game_started event:', error);
         }
@@ -351,6 +364,12 @@ function displayJoinRequests(roomId, requests) {
 function addJoinRequestToUI(roomId, request) {
     const listElement = document.getElementById('join-requests-list');
 
+    // Check if this request already exists in the DOM (prevent duplicates)
+    if (document.getElementById(`request-${request.id}`)) {
+        console.log(`Request ${request.id} already exists, skipping duplicate`);
+        return;
+    }
+
     // Check if there's a "no pending requests" message and remove it
     const noPendingMsg = listElement.querySelector('p[style*="color: #6b7280"]');
     if (noPendingMsg) {
@@ -422,6 +441,9 @@ async function acceptRequest(requestId) {
 }
 
 function updateUIAfterAccept(guestUsername) {
+    // Get roomId from the page
+    const roomId = document.querySelector('[data-room-id]').dataset.roomId;
+
     // Prevent duplicate updates
     if (document.querySelector('.start-game-section')) {
         console.log('UI already updated, skipping duplicate update');
@@ -456,14 +478,22 @@ function updateUIAfterAccept(guestUsername) {
         loadCategories(roomId);
     }
 
-    // 5. Show "Start Game" button
+    // 5. Show "Start Game" button (disabled until guest clicks Ready)
     const playerList = document.getElementById('player-list');
     const startSection = document.createElement('div');
     startSection.className = 'start-game-section';
+    startSection.id = 'start-game-section';
     startSection.innerHTML = `
-        <button onclick="startGame()" class="btn btn-primary btn-lg start-game-btn">
+        <button
+            id="start-game-btn"
+            onclick="startGame()"
+            class="btn btn-primary btn-lg start-game-btn"
+            disabled>
             🚀 Start Game
         </button>
+        <p class="waiting-hint" style="text-align: center; color: #6b7280; margin-top: 10px; font-size: 14px;">
+            ⏳ Waiting for guest to click Ready...
+        </p>
     `;
     playerList.appendChild(startSection);
 }
@@ -824,20 +854,24 @@ function handleGuestReadyUpdate(guestReady) {
         return;
     }
 
-    console.log('✅ Guest is ready, updating UI');
-    const startSection = document.getElementById('start-game-section');
-    console.log('🎯 Start section element:', startSection);
+    console.log('✅ Guest is ready, enabling Start Game button');
 
-    if (startSection) {
-        startSection.innerHTML = `
-            <button onclick="startGame()" class="btn btn-primary btn-lg start-game-btn">
-                🚀 Start Game
-            </button>
-        `;
-        console.log('✅ Updated start section HTML');
+    // Find and enable the Start Game button
+    const startBtn = document.getElementById('start-game-btn');
+    if (startBtn) {
+        startBtn.disabled = false;
+        console.log('✅ Start Game button enabled');
     } else {
-        console.error('❌ start-game-section element not found');
+        console.error('❌ start-game-btn element not found');
     }
+
+    // Hide the waiting hint if it exists
+    const waitingHint = document.querySelector('.waiting-hint');
+    if (waitingHint) {
+        waitingHint.style.display = 'none';
+        console.log('✅ Waiting hint hidden');
+    }
+
     showNotification('✅ Guest is ready! You can now start the game.', 'success');
 }
 
