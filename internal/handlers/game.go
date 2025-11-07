@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -65,8 +66,14 @@ func (h *Handler) LeaveRoomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("DEBUG LeaveRoom: Room before update - ID: %s, OwnerID: %s, GuestID: %v, Status: %s",
+		room.ID, room.OwnerID, room.GuestID, room.Status)
+	log.Printf("DEBUG LeaveRoom: User requesting leave: %s", userID)
+
 	// Check if user is the guest
 	if room.GuestID == nil || *room.GuestID != userID {
+		log.Printf("ERROR LeaveRoom: User %s is not the guest of room %s (GuestID: %v)",
+			userID, roomID, room.GuestID)
 		http.Error(w, "You are not a guest in this room", http.StatusForbidden)
 		return
 	}
@@ -75,10 +82,15 @@ func (h *Handler) LeaveRoomHandler(w http.ResponseWriter, r *http.Request) {
 	room.GuestID = nil
 	room.Status = "waiting" // Reset status to waiting
 
+	log.Printf("DEBUG LeaveRoom: Updating room to remove guest - GuestID will be set to nil")
+
 	if err := h.RoomService.UpdateRoom(ctx, room); err != nil {
+		log.Printf("ERROR LeaveRoom: Failed to update room: %v", err)
 		http.Error(w, "Failed to leave room", http.StatusInternalServerError)
 		return
 	}
+
+	log.Printf("DEBUG LeaveRoom: Successfully updated room %s, guest removed", roomID)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -97,15 +109,22 @@ func (h *Handler) ListRoomsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 
+	log.Printf("DEBUG ListRooms: Fetching rooms for user %s", userID)
+
 	rooms, err := h.RoomService.GetRoomsByUserID(ctx, userID)
 	if err != nil {
 		http.Error(w, "Failed to load rooms", http.StatusInternalServerError)
 		return
 	}
 
+	log.Printf("DEBUG ListRooms: Found %d rooms", len(rooms))
+
 	// Enrich rooms with the other player's username and ownership info
 	enrichedRooms := make([]RoomWithUsername, 0, len(rooms))
 	for _, room := range rooms {
+		log.Printf("DEBUG ListRooms: Room %s - OwnerID: %s, GuestID: %v, Status: %s",
+			room.ID, room.OwnerID, room.GuestID, room.Status)
+
 		enrichedRoom := RoomWithUsername{
 			Room:    &room,
 			IsOwner: room.OwnerID == userID,

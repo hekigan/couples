@@ -93,8 +93,11 @@ func (s *RoomService) UpdateRoom(ctx context.Context, room *models.Room) error {
 		"updated_at": room.UpdatedAt,
 	}
 
+	// Always update guest_id (including NULL values)
 	if room.GuestID != nil {
 		data["guest_id"] = room.GuestID.String()
+	} else {
+		data["guest_id"] = nil
 	}
 
 	fmt.Printf("DEBUG: Updating room %s with data: %+v\n", room.ID, data)
