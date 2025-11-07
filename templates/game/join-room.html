@@ -109,11 +109,15 @@ function setupSSE() {
 
     userEventsSource.addEventListener('my_request_accepted', (event) => {
         try {
-            console.log('✅ My join request was accepted via SSE:', event.data);
+            console.log('✅ My join request was accepted via SSE!');
+            console.log('   Raw event data:', event.data);
             const data = JSON.parse(event.data);
+            console.log('   Parsed data:', data);
+            console.log('   Room ID:', data.room_id);
+            console.log('   Calling updateRequestAccepted...');
             updateRequestAccepted(data.room_id);
         } catch (error) {
-            console.error('Error handling my_request_accepted:', error);
+            console.error('❌ Error handling my_request_accepted:', error);
         }
     });
 
@@ -133,7 +137,14 @@ function setupSSE() {
 
     userEventsSource.onerror = (error) => {
         console.error('❌ User events SSE error:', error);
-        // EventSource automatically reconnects
+        console.log('   EventSource readyState:', userEventsSource.readyState);
+        console.log('   0=CONNECTING, 1=OPEN, 2=CLOSED');
+
+        if (userEventsSource.readyState === EventSource.CLOSED) {
+            console.log('   Connection closed, EventSource will attempt to reconnect...');
+        } else if (userEventsSource.readyState === EventSource.CONNECTING) {
+            console.log('   Reconnecting...');
+        }
     };
 }
 
@@ -257,8 +268,13 @@ function addPendingRequest(roomId, message) {
 // function startPollingRequest(roomId) { ... }
 
 function updateRequestAccepted(roomId) {
+    console.log('🎯 updateRequestAccepted called with roomId:', roomId);
+
     const requestCard = document.getElementById(`request-${roomId}`);
+    console.log('   Request card element:', requestCard);
+
     if (requestCard) {
+        console.log('   ✅ Found request card, updating UI...');
         requestCard.innerHTML = `
             <div class="request-info">
                 <strong>Room: ${roomId}</strong>
@@ -268,10 +284,15 @@ function updateRequestAccepted(roomId) {
 
         showNotification('🎉 Your join request was accepted! Redirecting...', 'success');
 
+        console.log('   🚀 Scheduling redirect in 1 second...');
         // Automatically redirect to the room after a brief delay
         setTimeout(() => {
+            console.log('   ➡️ Redirecting to /game/room/' + roomId);
             window.location.href = `/game/room/${roomId}`;
         }, 1000);
+    } else {
+        console.warn('   ⚠️ Request card not found for roomId:', roomId);
+        console.log('   Available request cards:', document.querySelectorAll('[id^="request-"]'));
     }
 }
 

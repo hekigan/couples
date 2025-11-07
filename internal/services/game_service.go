@@ -99,6 +99,24 @@ func (s *GameService) DrawQuestion(ctx context.Context, roomID uuid.UUID) (*mode
 		return nil, err
 	}
 
+	// IDEMPOTENCY CHECK: If a question is already drawn, return it
+	if room.CurrentQuestionID != nil {
+		fmt.Printf("⚠️ Question already exists for room %s, returning existing question %s\n", roomID, *room.CurrentQuestionID)
+		fmt.Printf("🔍 DEBUG: CurrentQuestionID type: %T, value: %v\n", *room.CurrentQuestionID, *room.CurrentQuestionID)
+
+		existingQuestion, err := s.questionService.GetQuestionByID(ctx, *room.CurrentQuestionID)
+		if err != nil {
+			fmt.Printf("❌ Failed to fetch existing question: %v\n", err)
+			// Clear the invalid question ID and draw a new one
+			fmt.Printf("🔧 Clearing invalid CurrentQuestionID and drawing new question\n")
+			room.CurrentQuestionID = nil
+			// Fall through to draw a new question
+		} else {
+			// Return the existing question without broadcasting again
+			return existingQuestion, nil
+		}
+	}
+
 	// Get random question filtered by categories and history
 	question, err := s.questionService.GetRandomQuestion(ctx, roomID, room.Language, room.SelectedCategories)
 	if err != nil {
@@ -107,7 +125,14 @@ func (s *GameService) DrawQuestion(ctx context.Context, roomID uuid.UUID) (*mode
 
 	// Mark question as asked to prevent repetition
 	if err := s.questionService.MarkQuestionAsked(ctx, roomID, question.ID); err != nil {
-		return nil, err
+		// Check if this is a duplicate key error (constraint violation)
+		if isConstraintViolation(err) {
+			fmt.Printf("⚠️ Duplicate question marking detected (race condition), continuing anyway. Room: %s, Question: %s\n", roomID, question.ID)
+			// Question is already marked, this is fine - continue
+		} else {
+			// Real error, return it
+			return nil, err
+		}
 	}
 
 	// Increment current question counter and save current question ID
@@ -119,6 +144,29 @@ func (s *GameService) DrawQuestion(ctx context.Context, roomID uuid.UUID) (*mode
 
 	s.realtimeService.BroadcastQuestionDrawn(roomID, question)
 	return question, nil
+}
+
+// isConstraintViolation checks if the error is a unique constraint violation
+func isConstraintViolation(err error) bool {
+	if err == nil {
+		return false
+	}
+	// Check for common unique constraint violation error messages
+	errStr := err.Error()
+	return contains(errStr, "23505") || contains(errStr, "duplicate key") || contains(errStr, "unique constraint")
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || containsMiddle(s, substr)))
+}
+
+func containsMiddle(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }
 
 // SubmitAnswer submits an answer to a question

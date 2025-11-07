@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -628,9 +629,10 @@ func (h *Handler) DrawQuestionAPIHandler(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	// Return question as JSON (simple encoding for now)
-	response := `{"status":"success","question":{"id":"` + question.ID.String() + `","text":"` + question.Text + `"}}`
-	w.Write([]byte(response))
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":   "success",
+		"question": question,
+	})
 }
 
 // SubmitAnswerAPIHandler handles answer submission
@@ -664,21 +666,58 @@ func (h *Handler) SubmitAnswerAPIHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Parse form data
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Failed to parse form", http.StatusBadRequest)
-		return
+	// Parse form data (handles both URL-encoded and multipart forms)
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		// If multipart parsing fails, try regular form parsing
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Failed to parse form", http.StatusBadRequest)
+			return
+		}
 	}
 
 	questionIDStr := r.FormValue("question_id")
+	log.Printf("🔍 Received question_id from form: '%s' (length: %d)", questionIDStr, len(questionIDStr))
 	answerText := r.FormValue("answer_text")
 	passed := r.FormValue("passed") == "true"
 
 	questionID, err := uuid.Parse(questionIDStr)
 	if err != nil {
-		http.Error(w, "Invalid question ID", http.StatusBadRequest)
+		log.Printf("❌ Failed to parse question ID '%s': %v", questionIDStr, err)
+		http.Error(w, "Invalid question ID format", http.StatusBadRequest)
 		return
 	}
+
+	log.Printf("🔍 Validating question %s for room %s", questionID, roomID)
+
+	// Verify question exists in database
+	question, err := h.QuestionService.GetQuestionByID(ctx, questionID)
+	if err != nil {
+		log.Printf("❌ Question %s not found in database: %v", questionID, err)
+		http.Error(w, fmt.Sprintf("Question not found in database (ID: %s)", questionID), http.StatusBadRequest)
+		return
+	}
+	log.Printf("✅ Question exists: %s", question.Text)
+
+	// Verify question matches room's current question
+	room, err = h.RoomService.GetRoomByID(ctx, roomID)
+	if err != nil {
+		log.Printf("❌ Failed to get room %s: %v", roomID, err)
+		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+
+	if room.CurrentQuestionID == nil {
+		log.Printf("❌ Room %s has no current question", roomID)
+		http.Error(w, "No active question for this room", http.StatusBadRequest)
+		return
+	}
+
+	if *room.CurrentQuestionID != questionID {
+		log.Printf("❌ Question mismatch: room current=%s, submitted=%s", *room.CurrentQuestionID, questionID)
+		http.Error(w, fmt.Sprintf("Question mismatch: you're answering question %s but current question is %s", questionID, *room.CurrentQuestionID), http.StatusBadRequest)
+		return
+	}
+	log.Printf("✅ Question matches room's current question")
 
 	// Get action type from form (either "answered" or "passed")
 	actionType := r.FormValue("action_type")

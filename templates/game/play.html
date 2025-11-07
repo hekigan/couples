@@ -221,6 +221,14 @@
     };
     let typingTimeout = null; // For debouncing typing indicator
 
+    // SSE and polling state management
+    let pollingInterval = null;
+    let isSSEActive = false;
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 3;
+    const POLL_INTERVAL = 3000; // Poll every 3 seconds
+    let lastPolledState = null;
+
     // Initialize when page loads
     document.addEventListener('DOMContentLoaded', function() {
         console.log('🎮 Game initialized for user:', currentUserId, 'in room:', roomId);
@@ -273,8 +281,13 @@
         });
 
         eventSource.addEventListener('question_drawn', function(e) {
+            console.log('📩 question_drawn event received (RAW):', e);
+            console.log('📩 question_drawn data (string):', e.data);
             const data = JSON.parse(e.data);
-            console.log('Question drawn:', data);
+            console.log('📩 Parsed question data:', data);
+            console.log('📩 Question object:', data.question);
+            console.log('📩 Current user ID:', currentUserId);
+            console.log('📩 Current turn:', gameState.currentTurn);
             displayQuestion(data.question);
         });
 
@@ -305,6 +318,29 @@
             }
         });
 
+        eventSource.addEventListener('room_update', function(e) {
+            const data = JSON.parse(e.data);
+            console.log('🏠 Room update received:', data);
+
+            // Update turn if it changed
+            if (data.current_turn !== undefined) {
+                console.log('🏠 Updating currentTurn from', gameState.currentTurn, 'to', data.current_turn);
+                gameState.currentTurn = data.current_turn;
+                updateUI();
+            }
+
+            // Update status if it changed
+            if (data.status !== undefined && data.status !== gameState.status) {
+                console.log('🏠 Status changed from', gameState.status, 'to', data.status);
+                gameState.status = data.status;
+
+                // Redirect if game finished
+                if (data.status === 'finished') {
+                    window.location.href = `/game/finished/${roomId}`;
+                }
+            }
+        });
+
         eventSource.addEventListener('game_finished', function(e) {
             const data = JSON.parse(e.data);
             console.log('Game finished:', data);
@@ -330,22 +366,141 @@
             }
         });
 
+        eventSource.onopen = function() {
+            console.log('✅ SSE connection opened successfully!');
+            isSSEActive = true;
+            reconnectAttempts = 0;
+            stopPolling(); // Stop polling if it was active
+
+            // Clear any pending "connection lost" message
+            if (connectionLostTimeout) {
+                clearTimeout(connectionLostTimeout);
+                connectionLostTimeout = null;
+            }
+            // Hide error message
+            const errorDiv = document.getElementById('errorMessage');
+            if (errorDiv && errorDiv.textContent.includes('Connection lost')) {
+                errorDiv.style.display = 'none';
+            }
+        };
+
         eventSource.onerror = function(e) {
             console.error('SSE connection error:', e);
+            isSSEActive = false;
+            reconnectAttempts++;
 
-            // Only show "connection lost" message after 2 seconds
-            // This prevents flashing the message during brief network hiccups
-            if (!connectionLostTimeout) {
-                connectionLostTimeout = setTimeout(() => {
-                    if (eventSource.readyState !== EventSource.OPEN) {
-                        showError('Connection lost. Trying to reconnect...');
-                    }
-                    connectionLostTimeout = null;
-                }, 2000);
+            console.log(`⚠️ SSE error, attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`);
+
+            if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                console.error('❌ SSE failed after max attempts, switching to polling');
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+                startPolling();
+                showError('Connection unstable. Using fallback mode...');
+            } else {
+                // Show "connection lost" message after 2 seconds
+                if (!connectionLostTimeout) {
+                    connectionLostTimeout = setTimeout(() => {
+                        if (eventSource && eventSource.readyState !== EventSource.OPEN) {
+                            showError('Connection lost. Trying to reconnect...');
+                        }
+                        connectionLostTimeout = null;
+                    }, 2000);
+                }
+                // EventSource will automatically reconnect
+            }
+        };
+    }
+
+    // Stop polling and clear interval
+    function stopPolling() {
+        if (pollingInterval) {
+            console.log('🛑 Stopping polling (SSE restored)');
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
+    }
+
+    // Start polling fallback
+    function startPolling() {
+        if (pollingInterval) {
+            console.log('📊 Polling already active');
+            return; // Already polling
+        }
+
+        console.log('📊 Starting polling fallback (every 3s)');
+        pollingInterval = setInterval(async () => {
+            try {
+                await pollGameState();
+
+                // Periodically try to restore SSE
+                if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS && reconnectAttempts < MAX_RECONNECT_ATTEMPTS * 2) {
+                    attemptSSEReconnect();
+                }
+            } catch (error) {
+                console.error('Polling error:', error);
+            }
+        }, POLL_INTERVAL);
+    }
+
+    // Poll game state from server
+    async function pollGameState() {
+        try {
+            const response = await fetch(`/api/rooms/${roomId}/state`);
+            if (!response.ok) {
+                console.error('Failed to poll game state:', response.status);
+                return;
             }
 
-            // Reconnection is automatic with EventSource
-        };
+            const state = await response.json();
+            updateFromPolledState(state);
+        } catch (error) {
+            console.error('Error polling game state:', error);
+        }
+    }
+
+    // Update game from polled state
+    function updateFromPolledState(state) {
+        console.log('📊 Polled state:', state);
+
+        // Update turn if changed
+        if (state.current_turn !== gameState.currentTurn) {
+            console.log('🔄 Turn changed via polling:', state.current_turn);
+            gameState.currentTurn = state.current_turn;
+            updateUI();
+        }
+
+        // Update question if changed
+        if (state.current_question_data &&
+            (!currentQuestion || currentQuestion.id !== state.current_question_data.id)) {
+            console.log('📩 New question via polling:', state.current_question_data);
+            displayQuestion(state.current_question_data);
+        }
+
+        // Update status if changed
+        if (state.status !== gameState.status) {
+            console.log('🎮 Status changed via polling:', state.status);
+            gameState.status = state.status;
+            if (state.status === 'finished') {
+                window.location.href = `/game/finished/${roomId}`;
+            }
+        }
+
+        lastPolledState = state;
+    }
+
+    // Attempt to reconnect SSE
+    function attemptSSEReconnect() {
+        if (isSSEActive) {
+            console.log('✅ SSE already active, skipping reconnect');
+            return; // Already connected
+        }
+
+        console.log('🔄 Attempting to restore SSE connection...');
+        reconnectAttempts = 0; // Reset for new attempt
+        connectSSE();
     }
 
     // Track if game state has loaded successfully
@@ -430,10 +585,26 @@
 
     // Display question on screen
     function displayQuestion(question) {
+        console.log('🎯 displayQuestion called with:', question);
+        console.log('🎯 Question text:', question?.text);
+        console.log('🎯 Question question_text:', question?.question_text);
+
         currentQuestion = question;
-        document.getElementById('questionText').textContent = question.text;
+        const questionTextEl = document.getElementById('questionText');
+        console.log('🎯 questionText element:', questionTextEl);
+        console.log('🎯 questionText current content:', questionTextEl?.textContent);
+
+        // Try both 'text' and 'question_text' fields
+        const questionText = question.text || question.question_text;
+        console.log('🎯 Setting text to:', questionText);
+
+        questionTextEl.textContent = questionText;
+        console.log('🎯 questionText after update:', questionTextEl?.textContent);
+
         document.getElementById('loadingIndicator').style.display = 'none';
+        console.log('🎯 Calling updateUI()');
         updateUI();
+        console.log('🎯 Question displayed successfully');
     }
 
     // Submit answer
@@ -441,6 +612,12 @@
         const answerText = document.getElementById('answerText').value.trim();
 
         console.log(`📝 Submitting answer with action: ${actionType}`);
+
+        // Debug: Log the current question object structure
+        console.log('🔍 DEBUG currentQuestion:', currentQuestion);
+        console.log('🔍 DEBUG currentQuestion.id:', currentQuestion?.id);
+        console.log('🔍 DEBUG currentQuestion.ID:', currentQuestion?.ID);
+        console.log('🔍 DEBUG currentQuestion keys:', currentQuestion ? Object.keys(currentQuestion) : 'null');
 
         try {
             // Stop sending typing indicator
@@ -560,7 +737,12 @@
         const waitingUI = document.getElementById('waitingUI');
         const otherPlayerAnswer = document.getElementById('otherPlayerAnswer');
 
-        console.log('🔄 Updating UI - isMyTurn:', isMyTurn, 'currentTurn:', gameState.currentTurn, 'userId:', currentUserId);
+        console.log('🔄 Updating UI:');
+        console.log('   Game Status:', gameState.status);
+        console.log('   Is My Turn:', isMyTurn);
+        console.log('   Current Turn User ID:', gameState.currentTurn);
+        console.log('   My User ID:', currentUserId);
+        console.log('   Current Question:', currentQuestion);
 
         if (isMyTurn) {
             // Active player - show answer form with enabled textarea

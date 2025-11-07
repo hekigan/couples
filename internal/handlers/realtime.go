@@ -36,7 +36,17 @@ func (h *RealtimeHandler) StreamRoomEvents(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	// Safe type assertion to prevent panics
+	userIDVal := r.Context().Value(middleware.UserIDKey)
+	if userIDVal == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	userID, ok := userIDVal.(uuid.UUID)
+	if !ok {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
 
 	// Set SSE headers
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -106,7 +116,17 @@ func (h *RealtimeHandler) StreamRoomEvents(w http.ResponseWriter, r *http.Reques
 
 // StreamUserNotifications streams user-specific notifications via SSE
 func (h *RealtimeHandler) StreamUserNotifications(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	// Safe type assertion to prevent panics
+	userIDVal := r.Context().Value(middleware.UserIDKey)
+	if userIDVal == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	userID, ok := userIDVal.(uuid.UUID)
+	if !ok {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
 
 	// Set SSE headers
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -187,7 +207,18 @@ func (h *RealtimeHandler) GetRoomState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	// Safe type assertion to prevent panics
+	userIDVal := r.Context().Value(middleware.UserIDKey)
+	if userIDVal == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	userID, ok := userIDVal.(uuid.UUID)
+	if !ok {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
 
 	// Get the room
 	room, err := h.handler.RoomService.GetRoomByID(ctx, roomID)

@@ -241,11 +241,18 @@ function connectJoinRequestsStream(roomId) {
         }
     });
 
+    console.log('📡 Setting up game_started listener, SSE state:', joinRequestsEventSource.readyState);
+
     joinRequestsEventSource.addEventListener('game_started', (event) => {
         try {
-            console.log('🎮 Game started via SSE:', event.data);
+            console.log('🎮 Game started event received (RAW):', event);
+            console.log('🎮 Game started data (string):', event.data);
             const data = JSON.parse(event.data);
+            console.log('🎮 Parsed game started data:', data);
             const gameRoomId = data.room_id || roomId; // Use event data or fallback to parameter
+            console.log('🎮 Room ID from event:', data.room_id);
+            console.log('🎮 Room ID from parameter:', roomId);
+            console.log('🎮 Final room ID:', gameRoomId);
             console.log('🎮 Redirecting to game page:', `/game/play/${gameRoomId}`);
             // Redirect both owner and guest to the game page
             window.location.href = `/game/play/${gameRoomId}`;

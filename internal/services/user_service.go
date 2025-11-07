@@ -49,11 +49,7 @@ func (s *UserService) CreateAnonymousUser(ctx context.Context) (*models.User, er
 	// Try to insert into Supabase
 	data, count, err := s.client.From("users").Insert(userMap, false, "", "", "").Execute()
 	if err != nil {
-		// If database insert fails, still return the user object
-		// This allows the app to work even without proper database setup
-		fmt.Printf("WARNING: Failed to create user in database: %v\n", err)
-		fmt.Printf("Continuing with in-memory user session...\n")
-		return &user, nil
+		return nil, fmt.Errorf("failed to create user in database: %w", err)
 	}
 
 	// Log success

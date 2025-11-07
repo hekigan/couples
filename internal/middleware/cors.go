@@ -10,7 +10,8 @@ import (
 func CORSMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
-		allowedOrigins := strings.Split(os.Getenv("CORS_ALLOWED_ORIGINS"), ",")
+		// Fixed: Use ALLOWED_ORIGINS to match .env file
+		allowedOrigins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
 		
 		// Check if origin is allowed
 		allowed := false

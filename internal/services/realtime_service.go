@@ -89,14 +89,30 @@ func (s *RealtimeService) BroadcastToUser(userID uuid.UUID, event RealtimeEvent)
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
+	fmt.Printf("📢 Broadcasting to user %s: event type '%s'\n", userID, event.Type)
+
+	matchedClients := 0
+	sentCount := 0
+	skippedCount := 0
+
 	for _, client := range s.clients {
 		if client.UserID == userID {
+			matchedClients++
 			select {
 			case client.Channel <- event:
+				sentCount++
+				fmt.Printf("  ✅ Sent to client %s (room: %s)\n", client.ID, client.RoomID)
 			default:
-				// Channel full, skip this client
+				skippedCount++
+				fmt.Printf("  ⚠️ Channel full for client %s - event dropped!\n", client.ID)
 			}
 		}
+	}
+
+	if matchedClients == 0 {
+		fmt.Printf("  ⚠️ No clients found for user %s\n", userID)
+	} else {
+		fmt.Printf("  📊 Summary: %d matched, %d sent, %d skipped\n", matchedClients, sentCount, skippedCount)
 	}
 }
 
@@ -140,7 +156,9 @@ func (s *RealtimeService) BroadcastGameStarted(roomID uuid.UUID) {
 func (s *RealtimeService) BroadcastQuestionDrawn(roomID uuid.UUID, question interface{}) {
 	s.Broadcast(roomID, RealtimeEvent{
 		Type: "question_drawn",
-		Data: question,
+		Data: map[string]interface{}{
+			"question": question,
+		},
 	})
 }
 
