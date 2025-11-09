@@ -6,14 +6,14 @@ INSERT INTO users (id, email, name, username, is_admin, is_anonymous) VALUES
 ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'admin@example.com', 'Admin', 'admin', TRUE, FALSE)
 ON CONFLICT (id) DO NOTHING;
 
--- Insert categories
-INSERT INTO categories (id, key) VALUES
-('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'couples'),
-('b2eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'friends'),
-('b3eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'sex'),
-('b4eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'family'),
-('b5eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'deep'),
-('b6eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'fun')
+-- Insert categories (with human-readable labels)
+INSERT INTO categories (id, key, label) VALUES
+('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'couples', 'Couples'),
+('b2eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'friends', 'Friends'),
+('b3eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'sex', 'Intimacy'),
+('b4eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'family', 'Family'),
+('b5eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'deep', 'Deep Questions'),
+('b6eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'fun', 'Fun')
 ON CONFLICT (key) DO NOTHING;
 
 -- Insert sample questions in English

@@ -113,42 +113,38 @@ func (h *Handler) ListRoomsHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("DEBUG ListRooms: Fetching rooms for user %s", userID)
 
-	rooms, err := h.RoomService.GetRoomsByUserID(ctx, userID)
+	// Use database view to get rooms with player info
+	// This eliminates N+1 queries (2 room queries + N user queries → 2 room queries with player info)
+	roomsWithPlayers, err := h.RoomService.GetRoomsByUserIDWithPlayers(ctx, userID)
 	if err != nil {
 		http.Error(w, "Failed to load rooms", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("DEBUG ListRooms: Found %d rooms", len(rooms))
+	log.Printf("DEBUG ListRooms: Found %d rooms (via view)", len(roomsWithPlayers))
 
-	// Enrich rooms with the other player's username and ownership info
-	enrichedRooms := make([]RoomWithUsername, 0, len(rooms))
-	for _, room := range rooms {
+	// Convert to RoomWithUsername format for template
+	enrichedRooms := make([]RoomWithUsername, 0, len(roomsWithPlayers))
+	for _, roomWithPlayers := range roomsWithPlayers {
 		log.Printf("DEBUG ListRooms: Room %s - OwnerID: %s, GuestID: %v, Status: %s",
-			room.ID, room.OwnerID, room.GuestID, room.Status)
+			roomWithPlayers.ID, roomWithPlayers.OwnerID, roomWithPlayers.GuestID, roomWithPlayers.Status)
 
+		isOwner := roomWithPlayers.OwnerID == userID
 		enrichedRoom := RoomWithUsername{
-			Room:    &room,
-			IsOwner: room.OwnerID == userID,
+			Room:    &roomWithPlayers.Room,
+			IsOwner: isOwner,
 		}
 
-		// Determine who the "other player" is
-		var otherPlayerID uuid.UUID
-		if room.OwnerID == userID {
+		// Determine other player's username from the view data (no extra query needed!)
+		if isOwner {
 			// Current user is owner, so other player is guest
-			if room.GuestID != nil {
-				otherPlayerID = *room.GuestID
+			if roomWithPlayers.GuestUsername != nil {
+				enrichedRoom.OtherPlayerUsername = *roomWithPlayers.GuestUsername
 			}
-		} else if room.GuestID != nil && *room.GuestID == userID {
+		} else {
 			// Current user is guest, so other player is owner
-			otherPlayerID = room.OwnerID
-		}
-
-		// Fetch the other player's username
-		if otherPlayerID != uuid.Nil {
-			otherPlayer, err := h.UserService.GetUserByID(ctx, otherPlayerID)
-			if err == nil && otherPlayer != nil {
-				enrichedRoom.OtherPlayerUsername = otherPlayer.Username
+			if roomWithPlayers.OwnerUsername != nil {
+				enrichedRoom.OtherPlayerUsername = *roomWithPlayers.OwnerUsername
 			}
 		}
 
@@ -252,41 +248,39 @@ func (h *Handler) RoomHandler(w http.ResponseWriter, r *http.Request) {
 	roomID, _ := uuid.Parse(vars["id"])
 
 	ctx := context.Background()
-	room, err := h.RoomService.GetRoomByID(ctx, roomID)
+
+	// Get current user ID from context
+	currentUserID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	// Use database view to get room with player info in single query
+	// This replaces 3 queries (room + owner + guest) with 1 query
+	roomWithPlayers, err := h.RoomService.GetRoomWithPlayers(ctx, roomID)
 	if err != nil {
 		http.Error(w, "Room not found", http.StatusNotFound)
 		return
 	}
 
-	// Get current user ID from context
-	currentUserID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
-
-	// Get owner username
-	owner, err := h.UserService.GetUserByID(ctx, room.OwnerID)
-	var ownerUsername string
-	if err == nil && owner != nil {
-		ownerUsername = owner.Username
+	// Extract usernames from the view result
+	ownerUsername := ""
+	if roomWithPlayers.OwnerUsername != nil {
+		ownerUsername = *roomWithPlayers.OwnerUsername
 	}
 
-	// Get guest username if present
-	var guestUsername string
-	if room.GuestID != nil {
-		guest, err := h.UserService.GetUserByID(ctx, *room.GuestID)
-		if err == nil && guest != nil {
-			guestUsername = guest.Username
-		}
+	guestUsername := ""
+	if roomWithPlayers.GuestUsername != nil {
+		guestUsername = *roomWithPlayers.GuestUsername
 	}
 
 	// Check if current user is the owner
-	isOwner := currentUserID == room.OwnerID
+	isOwner := currentUserID == roomWithPlayers.OwnerID
 
 	// Debug logging
-	log.Printf("🔍 DEBUG RoomHandler: roomID=%s, currentUserID=%s, ownerID=%s, isOwner=%v, status=%s, guestReady=%v",
-		room.ID, currentUserID, room.OwnerID, isOwner, room.Status, room.GuestReady)
+	log.Printf("🔍 DEBUG RoomHandler: roomID=%s, currentUserID=%s, ownerID=%s, isOwner=%v, status=%s, guestReady=%v (fetched via view)",
+		roomWithPlayers.ID, currentUserID, roomWithPlayers.OwnerID, isOwner, roomWithPlayers.Status, roomWithPlayers.GuestReady)
 
 	data := &TemplateData{
-		Title:          "Room - " + room.Name,
-		Data:           room,
+		Title:          "Room - " + roomWithPlayers.Name,
+		Data:           &roomWithPlayers.Room, // Pass the embedded Room struct
 		OwnerUsername:  ownerUsername,
 		GuestUsername:  guestUsername,
 		IsOwner:        isOwner,

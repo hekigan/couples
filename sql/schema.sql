@@ -50,6 +50,7 @@ COMMENT ON TABLE friends IS 'User friendships and friend requests';
 CREATE TABLE IF NOT EXISTS categories (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     key VARCHAR(100) NOT NULL UNIQUE,
+    label VARCHAR(100) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -57,6 +58,8 @@ CREATE TABLE IF NOT EXISTS categories (
 CREATE INDEX IF NOT EXISTS idx_categories_key ON categories(key);
 
 COMMENT ON TABLE categories IS 'Question categories (e.g., romance, dreams, past)';
+COMMENT ON COLUMN categories.key IS 'Internal key for category (e.g., couples, friends, sex)';
+COMMENT ON COLUMN categories.label IS 'Human-readable display name for the category';
 
 -- Questions table
 CREATE TABLE IF NOT EXISTS questions (

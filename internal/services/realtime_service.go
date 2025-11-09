@@ -264,11 +264,83 @@ func (s *RealtimeService) BroadcastPlayerTyping(roomID, userID uuid.UUID, isTypi
 	})
 }
 
-// EventToSSE converts an event to Server-Sent Events format
+// EventToSSE converts an event to Server-Sent Events format (JSON)
 func EventToSSE(event RealtimeEvent) string {
 	data, _ := json.Marshal(event.Data)
 	// Include event type in SSE format for proper event handling
 	return fmt.Sprintf("event: %s\ndata: %s\n\n", event.Type, string(data))
+}
+
+// HTMLFragmentEvent represents an SSE event with HTML content
+type HTMLFragmentEvent struct {
+	Type       string // Event type (e.g., "join_request", "question_drawn")
+	Target     string // HTMX target selector (e.g., "#join-requests", "#current-question")
+	SwapMethod string // HTMX swap method (e.g., "innerHTML", "outerHTML", "beforeend")
+	HTML       string // The HTML fragment to insert
+}
+
+// BroadcastHTMLFragment broadcasts an HTML fragment to all clients in a room
+// This is the HTMX-compatible version that sends HTML instead of JSON
+func (s *RealtimeService) BroadcastHTMLFragment(roomID uuid.UUID, fragment HTMLFragmentEvent) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	broadcastCount := 0
+	for _, client := range s.clients {
+		if client.RoomID == roomID {
+			// Create a JSON wrapper that HTMX SSE extension can understand
+			data := map[string]interface{}{
+				"target": fragment.Target,
+				"swap":   fragment.SwapMethod,
+				"html":   fragment.HTML,
+			}
+
+			// Send as a RealtimeEvent that will be converted to SSE
+			event := RealtimeEvent{
+				Type: fragment.Type,
+				Data: data,
+			}
+
+			select {
+			case client.Channel <- event:
+				broadcastCount++
+			default:
+				fmt.Printf("⚠️ Client channel full, skipping\n")
+			}
+		}
+	}
+	if broadcastCount > 0 {
+		fmt.Printf("📡 Broadcasted HTML fragment (%s) to %d clients in room %s\n", fragment.Type, broadcastCount, roomID)
+	}
+}
+
+// HTMLFragmentToSSE converts an HTML fragment event to SSE format
+// Format compatible with HTMX SSE extension
+func HTMLFragmentToSSE(fragment HTMLFragmentEvent) string {
+	// HTMX SSE extension expects this format:
+	// event: <type>
+	// data: <html content>
+	// Or with targets:
+	// event: <type>
+	// data: {"target": "#id", "swap": "innerHTML", "html": "<div>...</div>"}
+
+	if fragment.Target != "" {
+		// Include targeting information for HTMX
+		data := fmt.Sprintf(`{"target":"%s","swap":"%s","html":%s}`,
+			fragment.Target,
+			fragment.SwapMethod,
+			jsonEscape(fragment.HTML))
+		return fmt.Sprintf("event: %s\ndata: %s\n\n", fragment.Type, data)
+	}
+
+	// Simple HTML fragment without targeting
+	return fmt.Sprintf("event: %s\ndata: %s\n\n", fragment.Type, fragment.HTML)
+}
+
+// jsonEscape escapes a string for use in JSON
+func jsonEscape(s string) string {
+	b, _ := json.Marshal(s)
+	return string(b)
 }
 
 

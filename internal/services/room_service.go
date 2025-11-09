@@ -33,21 +33,89 @@ func (s *RoomService) GetRoomByID(ctx context.Context, id uuid.UUID) (*models.Ro
 		Eq("id", id.String()).
 		Single().
 		Execute()
-	
+
 	if err != nil {
 		fmt.Printf("ERROR: Failed to fetch room %s: %v\n", id.String(), err)
 		return nil, fmt.Errorf("room not found: %w", err)
 	}
-	
+
 	// Parse the response
 	var room models.Room
 	if err := json.Unmarshal(data, &room); err != nil {
 		fmt.Printf("ERROR: Failed to parse room data: %v\n", err)
 		return nil, fmt.Errorf("failed to parse room: %w", err)
 	}
-	
+
 	fmt.Printf("DEBUG: Room found: %s (owner: %s, status: %s)\n", room.ID, room.OwnerID, room.Status)
 	return &room, nil
+}
+
+// GetRoomWithPlayers fetches a room with player information using the database view
+// This eliminates N+1 queries (3 queries → 1 query)
+func (s *RoomService) GetRoomWithPlayers(ctx context.Context, id uuid.UUID) (*models.RoomWithPlayers, error) {
+	// Query the rooms_with_players view - single query includes all player info
+	data, _, err := s.client.From("rooms_with_players").
+		Select("*", "", false).
+		Eq("id", id.String()).
+		Single().
+		Execute()
+
+	if err != nil {
+		fmt.Printf("❌ Failed to fetch room with players %s: %v\n", id.String(), err)
+		return nil, fmt.Errorf("room not found: %w", err)
+	}
+
+	// Parse the response
+	var roomWithPlayers models.RoomWithPlayers
+	if err := json.Unmarshal(data, &roomWithPlayers); err != nil {
+		fmt.Printf("❌ Failed to parse room with players data: %v\n", err)
+		return nil, fmt.Errorf("failed to parse room: %w", err)
+	}
+
+	fmt.Printf("📊 Room with players found: %s (owner: %s, guest: %s, status: %s) - single query via view\n",
+		roomWithPlayers.ID,
+		safeString(roomWithPlayers.OwnerUsername),
+		safeString(roomWithPlayers.GuestUsername),
+		roomWithPlayers.Status)
+	return &roomWithPlayers, nil
+}
+
+// Helper function to safely dereference string pointers
+func safeString(s *string) string {
+	if s == nil {
+		return "<nil>"
+	}
+	return *s
+}
+
+// GetActiveGame fetches an active game with all related info using the database view
+// This eliminates multiple queries (room + owner + guest + question + category → 1 query)
+func (s *RoomService) GetActiveGame(ctx context.Context, id uuid.UUID) (*models.ActiveGame, error) {
+	// Query the active_games view - single query includes all game state
+	data, _, err := s.client.From("active_games").
+		Select("*", "", false).
+		Eq("id", id.String()).
+		Single().
+		Execute()
+
+	if err != nil {
+		fmt.Printf("❌ Failed to fetch active game %s: %v\n", id.String(), err)
+		return nil, fmt.Errorf("active game not found: %w", err)
+	}
+
+	// Parse the response
+	var activeGame models.ActiveGame
+	if err := json.Unmarshal(data, &activeGame); err != nil {
+		fmt.Printf("❌ Failed to parse active game data: %v\n", err)
+		return nil, fmt.Errorf("failed to parse active game: %w", err)
+	}
+
+	fmt.Printf("📊 Active game found: %s (owner: %s, guest: %s, question: %s) - single query via view\n",
+		activeGame.ID,
+		safeString(activeGame.OwnerUsername),
+		safeString(activeGame.GuestUsername),
+		safeString(activeGame.CurrentQuestionText))
+	return &activeGame, nil
 }
 
 // CreateRoom creates a new room in Supabase
@@ -215,35 +283,72 @@ func (s *RoomService) CountUserRooms(ctx context.Context, userID uuid.UUID) (int
 // GetRoomsByUserID gets all rooms for a user from Supabase (where user is owner OR guest)
 func (s *RoomService) GetRoomsByUserID(ctx context.Context, userID uuid.UUID) ([]models.Room, error) {
 	userIDStr := userID.String()
-	
+
 	// Query for rooms where user is owner
 	ownerData, _, err := s.client.From("rooms").
 		Select("*", "", false).
 		Eq("owner_id", userIDStr).
 		Execute()
-	
+
 	var ownerRooms []models.Room
 	if err == nil {
 		json.Unmarshal(ownerData, &ownerRooms)
 	}
-	
+
 	// Query for rooms where user is guest
 	guestData, _, err := s.client.From("rooms").
 		Select("*", "", false).
 		Eq("guest_id", userIDStr).
 		Execute()
-	
+
 	var guestRooms []models.Room
 	if err == nil {
 		json.Unmarshal(guestData, &guestRooms)
 	}
-	
+
 	// Combine both lists
 	allRooms := append(ownerRooms, guestRooms...)
-	
-	fmt.Printf("DEBUG: Found %d rooms for user %s (owner: %d, guest: %d)\n", 
+
+	fmt.Printf("DEBUG: Found %d rooms for user %s (owner: %d, guest: %d)\n",
 		len(allRooms), userID, len(ownerRooms), len(guestRooms))
-	
+
+	return allRooms, nil
+}
+
+// GetRoomsByUserIDWithPlayers gets all rooms with player info using database view
+// This eliminates N+1 queries - instead of 1 query for rooms + N queries for users,
+// we get everything in 2 queries (owner rooms + guest rooms, both with player info)
+func (s *RoomService) GetRoomsByUserIDWithPlayers(ctx context.Context, userID uuid.UUID) ([]models.RoomWithPlayers, error) {
+	userIDStr := userID.String()
+
+	// Query for rooms where user is owner (using view)
+	ownerData, _, err := s.client.From("rooms_with_players").
+		Select("*", "", false).
+		Eq("owner_id", userIDStr).
+		Execute()
+
+	var ownerRooms []models.RoomWithPlayers
+	if err == nil {
+		json.Unmarshal(ownerData, &ownerRooms)
+	}
+
+	// Query for rooms where user is guest (using view)
+	guestData, _, err := s.client.From("rooms_with_players").
+		Select("*", "", false).
+		Eq("guest_id", userIDStr).
+		Execute()
+
+	var guestRooms []models.RoomWithPlayers
+	if err == nil {
+		json.Unmarshal(guestData, &guestRooms)
+	}
+
+	// Combine both lists
+	allRooms := append(ownerRooms, guestRooms...)
+
+	fmt.Printf("📊 Found %d rooms with player info for user %s (owner: %d, guest: %d) - using view\n",
+		len(allRooms), userID, len(ownerRooms), len(guestRooms))
+
 	return allRooms, nil
 }
 
@@ -387,47 +492,28 @@ func (s *RoomService) GetJoinRequestByID(ctx context.Context, requestID uuid.UUI
 }
 
 // GetJoinRequestsWithUserInfo gets join requests with user information
+// Uses the join_requests_with_users database view for optimal performance
+// Before: 1 + N queries (1 for requests, N for user info)
+// After: 1 query (view includes JOIN)
 func (s *RoomService) GetJoinRequestsWithUserInfo(ctx context.Context, roomID uuid.UUID) ([]JoinRequestWithUserInfo, error) {
-	// Get join requests
-	requests, err := s.GetJoinRequestsByRoom(ctx, roomID)
+	// Query the database view - single query with user info already joined
+	data, _, err := s.client.From("join_requests_with_users").
+		Select("*", "", false).
+		Eq("room_id", roomID.String()).
+		Eq("status", "pending").
+		Execute()
+
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch join requests: %w", err)
 	}
-	
-	// Fetch user info for each request
+
+	// Parse the response
 	var result []JoinRequestWithUserInfo
-	for _, req := range requests {
-		// Query user from Supabase
-		userData, _, err := s.client.From("users").
-			Select("username", "", false).
-			Eq("id", req.UserID.String()).
-			Single().
-			Execute()
-		
-		if err != nil {
-			fmt.Printf("WARNING: Failed to fetch user info for request %s: %v\n", req.ID, err)
-			continue
-		}
-		
-		var userInfo struct {
-			Username string `json:"username"`
-		}
-		if err := json.Unmarshal(userData, &userInfo); err != nil {
-			fmt.Printf("WARNING: Failed to parse user info: %v\n", err)
-			continue
-		}
-		
-		result = append(result, JoinRequestWithUserInfo{
-			ID:        req.ID,
-			RoomID:    req.RoomID,
-			UserID:    req.UserID,
-			Username:  userInfo.Username,
-			Status:    req.Status,
-			CreatedAt: req.CreatedAt,
-			UpdatedAt: req.UpdatedAt,
-		})
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse join requests: %w", err)
 	}
-	
+
+	fmt.Printf("📊 Fetched %d join requests with user info (single query via view)\n", len(result))
 	return result, nil
 }
 

@@ -1,0 +1,23 @@
+{{/* Notification Item Partial - SSE HTML Fragment */}}
+{{/* Usage: Displays a new notification */}}
+<div class="notification-item {{.Type}}" id="notification-{{.ID}}" data-notification-id="{{.ID}}">
+    <div class="notification-icon">
+        {{if eq .Type "room_invitation"}}🎮{{end}}
+        {{if eq .Type "friend_request"}}👥{{end}}
+        {{if eq .Type "game_start"}}🎯{{end}}
+    </div>
+    <div class="notification-content">
+        <div class="notification-title">{{.Title}}</div>
+        {{if .Message}}
+        <div class="notification-message">{{.Message}}</div>
+        {{end}}
+        {{if .Link}}
+        <a href="{{.Link}}" class="notification-link">View</a>
+        {{end}}
+    </div>
+    <button
+        hx-post="/api/notifications/{{.ID}}/mark-read"
+        hx-swap="outerHTML"
+        hx-target="#notification-{{.ID}}"
+        class="notification-close">×</button>
+</div>

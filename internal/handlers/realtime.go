@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -72,7 +73,15 @@ func (h *RealtimeHandler) StreamRoomEvents(w http.ResponseWriter, r *http.Reques
 	// Send initial join requests (if user is room owner)
 	ctx := r.Context()
 	room, err := h.handler.RoomService.GetRoomByID(ctx, roomID)
-	if err == nil && room.OwnerID == userID {
+	if err != nil {
+		// Room doesn't exist (deleted or invalid) - close connection gracefully
+		log.Printf("⚠️ SSE connection attempted for non-existent room %s, closing connection", roomID)
+		fmt.Fprintf(w, "event: error\ndata: {\"type\":\"room_not_found\",\"message\":\"Room no longer exists\"}\n\n")
+		flusher.Flush()
+		return
+	}
+
+	if room.OwnerID == userID {
 		// Get pending join requests with user info
 		requests, err := h.handler.RoomService.GetJoinRequestsWithUserInfo(ctx, roomID)
 		if err == nil && len(requests) > 0 {

@@ -9,7 +9,11 @@
       "Bash(make sass:*)",
       "Bash(make build:*)",
       "Bash(find:*)",
-      "WebFetch(domain:code.claude.com)"
+      "WebFetch(domain:code.claude.com)",
+      "Bash(curl:*)",
+      "Bash(psql:*)",
+      "Bash(make run:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []
