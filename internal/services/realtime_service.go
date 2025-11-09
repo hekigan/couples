@@ -147,7 +147,7 @@ func (s *RealtimeService) BroadcastGameStarted(roomID uuid.UUID) {
 	s.Broadcast(roomID, RealtimeEvent{
 		Type: "game_started",
 		Data: map[string]interface{}{
-			"room_id": roomID,
+			"room_id": roomID.String(), // Convert UUID to string for proper JSON serialization
 		},
 	})
 }
@@ -270,5 +270,6 @@ func EventToSSE(event RealtimeEvent) string {
 	// Include event type in SSE format for proper event handling
 	return fmt.Sprintf("event: %s\ndata: %s\n\n", event.Type, string(data))
 }
+
 
 

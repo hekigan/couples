@@ -745,40 +745,41 @@ func (h *Handler) SubmitAnswerAPIHandler(w http.ResponseWriter, r *http.Request)
 
 	log.Printf("✅ Answer submitted by user %s in room %s (action: %s)", userID, roomID, actionType)
 
-	// Handle action based on type
+	// Clear the current question ID after answer submission
+	// This allows the next player to draw a fresh question
+	room, err = h.RoomService.GetRoomByID(ctx, roomID)
+	if err != nil {
+		log.Printf("⚠️ Failed to fetch room for clearing question: %v", err)
+	} else {
+		room.CurrentQuestionID = nil
+		if err := h.RoomService.UpdateRoom(ctx, room); err != nil {
+			log.Printf("⚠️ Failed to clear current_question_id: %v", err)
+			// Don't fail the request - answer is already saved
+		} else {
+			log.Printf("✅ Cleared current_question_id for room %s", roomID)
+		}
+	}
+
+	// Change turn immediately after answer submission
+	// The new active player will draw the next question when they click "Next Question"
 	if actionType == "answered" {
-		// Switch turn to the other player
 		log.Printf("🔄 Switching turn after answer in room %s", roomID)
 		if err := h.GameService.ChangeTurn(ctx, roomID); err != nil {
 			log.Printf("❌ Failed to change turn: %v", err)
 			http.Error(w, "Failed to change turn: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		// Draw a new question for the new active player
-		log.Printf("🎴 Drawing new question after turn change in room %s", roomID)
-		if _, err := h.GameService.DrawQuestion(ctx, roomID); err != nil {
-			log.Printf("❌ Failed to draw question: %v", err)
-			http.Error(w, "Failed to draw question: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-	} else if actionType == "passed" {
-		// Same player continues, just draw a new question
-		log.Printf("⏭️ Passing question, drawing new card for same player in room %s", roomID)
-		if _, err := h.GameService.DrawQuestion(ctx, roomID); err != nil {
-			log.Printf("❌ Failed to draw question after pass: %v", err)
-			http.Error(w, "Failed to draw question: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
+		log.Printf("✅ Turn switched. New active player will draw next question.")
 	}
+	// Note: For "passed" action, turn doesn't change but question drawing is deferred to next question click
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status":"success","message":"Answer submitted"}`))
 }
 
-// NextCardAPIHandler changes turn and draws the next question
-func (h *Handler) NextCardAPIHandler(w http.ResponseWriter, r *http.Request) {
+// NextQuestionAPIHandler draws the next question (called by new active player after seeing answer)
+func (h *Handler) NextQuestionAPIHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	roomID, err := uuid.Parse(vars["id"])
 	if err != nil {
@@ -802,21 +803,30 @@ func (h *Handler) NextCardAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify it's NOT the user's turn (the other player clicks "Next Card")
-	if room.CurrentTurn != nil && *room.CurrentTurn == userID {
-		http.Error(w, "You cannot draw the next card on your own turn", http.StatusBadRequest)
+	// Verify it IS the user's turn (only the active player can draw next question)
+	if room.CurrentTurn == nil || *room.CurrentTurn != userID {
+		http.Error(w, "It's not your turn to draw the next question", http.StatusBadRequest)
 		return
 	}
 
-	// Change turn to this user
-	if err := h.GameService.ChangeTurn(ctx, roomID); err != nil {
-		http.Error(w, "Failed to change turn: "+err.Error(), http.StatusInternalServerError)
+	// Draw a new question for the active player
+	log.Printf("🎴 Drawing next question for active player %s in room %s", userID, roomID)
+	question, err := h.GameService.DrawQuestion(ctx, roomID)
+	if err != nil {
+		log.Printf("❌ Failed to draw question: %v", err)
+		http.Error(w, "Failed to draw question: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	log.Printf("✅ Next question drawn: %s", question.Text)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"success","message":"Turn changed, ready to draw next card"}`))
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":   "success",
+		"message":  "Next question drawn",
+		"question": question,
+	})
 }
 
 // FinishGameAPIHandler ends the game

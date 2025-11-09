@@ -196,6 +196,28 @@
             </div>
         </div>
 
+        <!-- Answer review section (shown to both players after answer submission) -->
+        <div id="answerReviewUI" class="answer-review" style="display: none;">
+            <div style="padding: 20px; background-color: #f0f9ff; border-radius: 8px; border: 2px solid #3b82f6;">
+                <h3 style="margin-top: 0; color: #1e40af;">📝 Answer:</h3>
+                <p id="reviewAnswerText" style="font-size: 18px; white-space: pre-wrap; margin: 15px 0;"></p>
+
+                <!-- Show "Next Question" button only to new active player -->
+                <div id="nextQuestionSection" style="display: none; margin-top: 20px;">
+                    <button id="nextQuestionBtn" onclick="nextQuestion()" class="btn btn-primary btn-lg" style="width: 100%;">
+                        ➡️ Next Question
+                    </button>
+                </div>
+
+                <!-- Show waiting message to previous active player (who answered) -->
+                <div id="waitingForNextSection" style="display: none; margin-top: 20px; text-align: center;">
+                    <p style="color: #6b7280; font-style: italic;">
+                        ⏳ Waiting for <span id="otherPlayerName">other player</span> to draw next question...
+                    </p>
+                </div>
+            </div>
+        </div>
+
         <div class="button-group" style="margin-top: 30px;">
             <button class="btn btn-danger" onclick="finishGame()">
                 Finish Game
@@ -293,8 +315,9 @@
 
         eventSource.addEventListener('answer_submitted', function(e) {
             const data = JSON.parse(e.data);
-            console.log('Answer submitted:', data);
-            displayOtherPlayerAnswer(data.answer);
+            console.log('📝 Answer submitted event received:', data);
+            // Data is the answer object directly, not nested under 'answer'
+            displayAnswer(data);
         });
 
         eventSource.addEventListener('turn_changed', function(e) {
@@ -678,6 +701,84 @@
         document.getElementById('waitingUI').style.display = 'block';
     }
 
+    // Display answer to both players after submission
+    function displayAnswer(answer) {
+        console.log('📋 Displaying answer:', answer);
+        console.log('📋 Answer submitted by user:', answer.user_id);
+        console.log('📋 Current user ID:', currentUserId);
+
+        // Hide answer forms
+        document.getElementById('answerForm').style.display = 'none';
+        document.getElementById('waitingUI').style.display = 'none';
+
+        // Show answer review UI
+        const reviewUI = document.getElementById('answerReviewUI');
+        const reviewText = document.getElementById('reviewAnswerText');
+        const nextQuestionSection = document.getElementById('nextQuestionSection');
+        const waitingSection = document.getElementById('waitingForNextSection');
+
+        // Set answer text
+        if (answer.action_type === 'passed') {
+            reviewText.textContent = '(Question was passed)';
+            reviewText.style.fontStyle = 'italic';
+            reviewText.style.color = '#6b7280';
+        } else {
+            reviewText.textContent = answer.answer_text || '(No answer provided)';
+            reviewText.style.fontStyle = 'normal';
+            reviewText.style.color = 'inherit';
+        }
+
+        // Determine who sees what based on who submitted the answer
+        // The person who answered should see the waiting message
+        // The other person (new active player) should see the Next Question button
+        const iAnswered = answer.user_id === currentUserId;
+        const isMyTurn = !iAnswered; // If I didn't answer, it's now my turn
+
+        console.log('📋 I answered:', iAnswered);
+        console.log('📋 Is now my turn:', isMyTurn);
+
+        if (isMyTurn) {
+            // New active player (didn't answer) - show "Next Question" button
+            console.log('   ✅ I am the new active player - showing Next Question button');
+            nextQuestionSection.style.display = 'block';
+            waitingSection.style.display = 'none';
+        } else {
+            // Previous active player (who answered) - show waiting message
+            console.log('   ⏳ I just answered - showing waiting message');
+            nextQuestionSection.style.display = 'none';
+            waitingSection.style.display = 'block';
+        }
+
+        reviewUI.style.display = 'block';
+    }
+
+    // Next question (called by new active player)
+    async function nextQuestion() {
+        console.log('➡️ Drawing next question...');
+
+        try {
+            const response = await fetch(`/api/rooms/${roomId}/next-question`, {
+                method: 'POST'
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(error);
+            }
+
+            console.log('✅ Next question request sent');
+
+            // Hide answer review UI
+            document.getElementById('answerReviewUI').style.display = 'none';
+
+            // The question_drawn event will be received via SSE and will update the UI
+
+        } catch (error) {
+            console.error('❌ Error drawing next question:', error);
+            showError('Failed to draw next question: ' + error.message);
+        }
+    }
+
     // Next card (change turn)
     async function nextCard() {
         try {
@@ -795,4 +896,5 @@
     });
 </script>
 {{end}}
+
 

@@ -132,15 +132,125 @@ function copyRoomId() {
 let joinRequestsEventSource = null;
 let joinRequestsPollInterval = null;
 
+// Room status polling for game start detection (resilient fallback)
+let roomStatusPollInterval = null;
+let sseHealthCheckInterval = null;
+let lastSSEMessageTime = Date.now();
+
+// Fallback: Poll room status to detect if game has started
+function startRoomStatusPolling(roomId, isOwner) {
+    // Only poll for guests (owners know when they start the game)
+    if (isOwner) {
+        console.log('🎮 Owner detected - skipping room status polling');
+        return;
+    }
+
+    console.log('🔄 Starting room status polling for game start detection...');
+
+    roomStatusPollInterval = setInterval(async () => {
+        try {
+            const response = await fetch(`/api/rooms/${roomId}/state`);
+            if (response.ok) {
+                const data = await response.json();
+                console.log('📊 Room status poll:', data.status);
+
+                if (data.status === 'playing') {
+                    console.log('🎮 Game started detected via polling! Redirecting...');
+                    clearInterval(roomStatusPollInterval);
+                    showGameStartingNotification();
+                    window.location.href = `/game/play/${roomId}`;
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error polling room status:', error);
+        }
+    }, 2000); // Poll every 2 seconds
+}
+
+// Monitor SSE connection health
+function setupSSEHealthMonitoring() {
+    console.log('💓 Setting up SSE health monitoring...');
+
+    sseHealthCheckInterval = setInterval(() => {
+        const timeSinceLastMessage = Date.now() - lastSSEMessageTime;
+        if (timeSinceLastMessage > 30000) { // 30 seconds without any message
+            console.warn('⚠️ SSE connection may be stale - no messages for 30+ seconds');
+            // SSE should send ping every 15 seconds, so 30s means possible connection issue
+        }
+    }, 5000); // Check every 5 seconds
+}
+
+// Update SSE message timestamp (called when any SSE message received)
+function updateSSEMessageTimestamp() {
+    lastSSEMessageTime = Date.now();
+}
+
+// Show visual notification when game is starting
+function showGameStartingNotification() {
+    const notification = document.getElementById('game-starting-notification');
+    if (notification) {
+        notification.style.display = 'block';
+    }
+}
+
+// Cleanup intervals on page unload
+function cleanupIntervals() {
+    if (roomStatusPollInterval) {
+        clearInterval(roomStatusPollInterval);
+    }
+    if (sseHealthCheckInterval) {
+        clearInterval(sseHealthCheckInterval);
+    }
+    if (joinRequestsPollInterval) {
+        clearInterval(joinRequestsPollInterval);
+    }
+}
+
 // Load join requests and friends on page load
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const roomId = document.querySelector('[data-room-id]').dataset.roomId;
+    const isOwner = {{.IsOwner}};
 
     // Debug: Log template values
-    console.log('🔍 DEBUG: IsOwner =', {{.IsOwner}});
+    console.log('🔍 DEBUG: IsOwner =', isOwner);
     console.log('🔍 DEBUG: Room Status =', '{{.Data.Status}}');
     console.log('🔍 DEBUG: GuestReady =', {{.Data.GuestReady}});
     console.log('🔍 DEBUG: Start Game button exists?', document.getElementById('start-game-btn') !== null);
+
+    // ALWAYS fetch fresh state from database on page load
+    // This fixes race conditions where template state is stale
+    try {
+        console.log('📡 Fetching fresh room state from database...');
+        const response = await fetch(`/api/rooms/${roomId}/state`);
+        if (response.ok) {
+            const state = await response.json();
+            console.log('📊 Fresh state loaded:', state);
+
+            // Update UI based on database state (not template state)
+            // This fixes Bug 1: Start Game button not enabling when guest clicks Ready
+            if (isOwner) {
+                const startBtn = document.getElementById('start-game-btn');
+                const waitingHint = document.querySelector('.waiting-hint');
+
+                // Check if guest is ready AND game hasn't started yet
+                if (state.guest_ready && state.status === 'ready' && startBtn) {
+                    startBtn.disabled = false;
+                    console.log('✅ Start button enabled from state sync (guest is ready)');
+                    if (waitingHint) waitingHint.style.display = 'none';
+                }
+            }
+
+            // If game has already started, redirect to game page
+            if (state.status === 'playing') {
+                console.log('🎮 Game already started, redirecting...');
+                window.location.href = `/game/play/${roomId}`;
+                return; // Don't continue initialization
+            }
+        }
+    } catch (error) {
+        console.error('❌ Failed to load initial state:', error);
+        // Continue with normal flow even if state fetch fails
+    }
 
     // Don't load join requests here - let SSE handle it
     // loadJoinRequests(roomId); // REMOVED - SSE will trigger this
@@ -156,11 +266,26 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('✅ SSE supported - using real-time join requests');
         connectJoinRequestsStream(roomId);
         // Initial join requests will be sent via SSE after connection
+
+        // Setup SSE health monitoring
+        setupSSEHealthMonitoring();
     } else {
         console.log('⚠️ SSE not supported - falling back to polling');
         // Load initial join requests before starting polling
         loadJoinRequests(roomId);
         startPolling(roomId);
+    }
+
+    // Start room status polling for game start detection (resilient fallback)
+    // This runs regardless of SSE support to ensure guests never get stuck
+    startRoomStatusPolling(roomId, isOwner);
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    cleanupIntervals();
+    if (joinRequestsEventSource) {
+        joinRequestsEventSource.close();
     }
 });
 
@@ -179,12 +304,14 @@ function connectJoinRequestsStream(roomId) {
     joinRequestsEventSource.addEventListener('connected', (event) => {
         console.log('✅ SSE connected event received:', event.data);
         console.log('📊 SSE readyState after connected:', joinRequestsEventSource.readyState);
+        updateSSEMessageTimestamp();
     });
-    
+
     joinRequestsEventSource.addEventListener('join_request', (event) => {
         try {
             console.log('📬 New join request received via SSE:', event.data);
             const requestData = JSON.parse(event.data);
+            updateSSEMessageTimestamp();
 
             // Add the new request directly to the UI without making an HTTP request
             addJoinRequestToUI(roomId, requestData);
@@ -197,6 +324,7 @@ function connectJoinRequestsStream(roomId) {
         try {
             console.log('✅ Join request accepted via SSE:', event.data);
             const data = JSON.parse(event.data);
+            updateSSEMessageTimestamp();
             if (data.guest_username) {
                 updateUIAfterAccept(data.guest_username);
             }
@@ -209,6 +337,7 @@ function connectJoinRequestsStream(roomId) {
         try {
             console.log('🎯 Categories updated via SSE:', event.data);
             const data = JSON.parse(event.data);
+            updateSSEMessageTimestamp();
             const categoryIds = data.category_ids || [];
             console.log('Category IDs received:', categoryIds);
             console.log('Current selected categories:', selectedCategories);
@@ -225,6 +354,7 @@ function connectJoinRequestsStream(roomId) {
             console.log('🏠 Room update via SSE (RAW):', event);
             console.log('🏠 Room update data (string):', event.data);
             const data = JSON.parse(event.data);
+            updateSSEMessageTimestamp();
             console.log('🏠 Parsed room update data:', data);
             console.log('🏠 Type of data:', typeof data);
             console.log('🏠 Data keys:', Object.keys(data));
@@ -247,22 +377,47 @@ function connectJoinRequestsStream(roomId) {
         try {
             console.log('🎮 Game started event received (RAW):', event);
             console.log('🎮 Game started data (string):', event.data);
+            updateSSEMessageTimestamp();
+
             const data = JSON.parse(event.data);
             console.log('🎮 Parsed game started data:', data);
-            const gameRoomId = data.room_id || roomId; // Use event data or fallback to parameter
+            console.log('🎮 Data type:', typeof data);
+            console.log('🎮 Data keys:', Object.keys(data));
+
+            const gameRoomId = data.room_id || roomId;
             console.log('🎮 Room ID from event:', data.room_id);
+            console.log('🎮 Room ID type:', typeof data.room_id);
             console.log('🎮 Room ID from parameter:', roomId);
             console.log('🎮 Final room ID:', gameRoomId);
-            console.log('🎮 Redirecting to game page:', `/game/play/${gameRoomId}`);
-            // Redirect both owner and guest to the game page
-            window.location.href = `/game/play/${gameRoomId}`;
+
+            // Stop polling since SSE worked
+            if (roomStatusPollInterval) {
+                console.log('✅ Stopping room status polling - SSE game_started received');
+                clearInterval(roomStatusPollInterval);
+            }
+
+            // Validate room ID before redirecting
+            if (!gameRoomId || gameRoomId === 'undefined' || gameRoomId === 'null') {
+                console.error('❌ Invalid room ID received, using fallback:', roomId);
+                showGameStartingNotification();
+                window.location.href = `/game/play/${roomId}`;
+            } else {
+                console.log('🎮 Redirecting to game page:', `/game/play/${gameRoomId}`);
+                showGameStartingNotification();
+                window.location.href = `/game/play/${gameRoomId}`;
+            }
         } catch (error) {
-            console.error('Error handling game_started event:', error);
+            console.error('❌ Error handling game_started event:', error);
+            // Fallback: Still redirect using room ID from page
+            console.log('🔄 Attempting fallback redirect to:', `/game/play/${roomId}`);
+            showGameStartingNotification();
+            window.location.href = `/game/play/${roomId}`;
         }
     });
 
     joinRequestsEventSource.addEventListener('ping', (event) => {
         console.log('💓 SSE keepalive ping received');
+        updateSSEMessageTimestamp();
     });
     
     joinRequestsEventSource.onerror = (error) => {
@@ -1228,6 +1383,58 @@ async function startGame() {
     .category-checkbox input[type="checkbox"]:disabled + .category-label {
         color: #9ca3af;
     }
+
+    /* Game Starting Notification */
+    #game-starting-notification {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        z-index: 9999;
+        text-align: center;
+        min-width: 300px;
+    }
+
+    #game-starting-notification h2 {
+        margin: 0 0 1rem 0;
+        color: #111827;
+        font-size: 1.5rem;
+    }
+
+    #game-starting-notification p {
+        color: #6b7280;
+        margin: 0 0 1rem 0;
+    }
+
+    .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
 </style>
+
+<!-- Game Starting Notification (shown when redirecting to game) -->
+<div id="game-starting-notification" style="display: none;">
+    <div style="font-size: 3rem; margin-bottom: 1rem;">🎮</div>
+    <h2>Game Starting...</h2>
+    <p>Redirecting to game page...</p>
+    <div>
+        <div class="spinner"></div>
+    </div>
+</div>
+
 {{end}}
 

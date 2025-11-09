@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/supabase-community/supabase-go"
@@ -78,7 +79,9 @@ func (s *QuestionService) GetRandomQuestion(ctx context.Context, roomID uuid.UUI
 
 	// Exclude already asked questions
 	if len(askedQuestionIDs) > 0 {
-		query = query.Not("id", "in", fmt.Sprintf("(%s)", joinStrings(askedQuestionIDs, ",")))
+		// Use string interpolation format for NOT IN clause
+		// Format: NOT id IN ('uuid1','uuid2',...)
+		query = query.Not("id", "in", "("+strings.Join(askedQuestionIDs, ",")+")")
 	}
 
 	// Execute query with limit 1 to get one random question

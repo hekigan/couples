@@ -156,3 +156,4 @@ Edit `/templates/auth/login.html` to customize OAuth buttons with your brand col
 **OAuth Setup Complete!** 🎉 Users can now sign in with their preferred provider.
 
 
+
