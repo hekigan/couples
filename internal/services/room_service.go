@@ -25,6 +25,11 @@ func NewRoomService(client *supabase.Client, realtimeService *RealtimeService) *
 	}
 }
 
+// GetRealtimeService returns the realtime service
+func (s *RoomService) GetRealtimeService() *RealtimeService {
+	return s.realtimeService
+}
+
 // GetRoomByID retrieves a room by ID from Supabase
 func (s *RoomService) GetRoomByID(ctx context.Context, id uuid.UUID) (*models.Room, error) {
 	// Query Supabase for the room

@@ -72,6 +72,11 @@ type PlayerJoinedData struct {
 	UserID   string
 }
 
+// RequestAcceptedData represents data for request accepted partial
+type RequestAcceptedData struct {
+	GuestUsername string
+}
+
 // QuestionDrawnData represents data for question drawn partial
 type QuestionDrawnData struct {
 	RoomID                string

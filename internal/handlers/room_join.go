@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/yourusername/couple-card-game/internal/middleware"
 	"github.com/yourusername/couple-card-game/internal/models"
+	"github.com/yourusername/couple-card-game/internal/services"
 )
 
 // ListJoinRequestsHandler lists join requests for a room
@@ -92,8 +94,26 @@ func (h *Handler) CreateJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 		username = "Unknown"
 	}
 
-	// Broadcast to SSE that a new join request was created with full details
-	h.RoomService.BroadcastJoinRequestWithDetails(roomID, request.ID, userID, username, request.CreatedAt)
+	// Render HTML fragment for the join request
+	html, err := h.TemplateService.RenderFragment("join_request.html", services.JoinRequestData{
+		ID:        request.ID.String(),
+		RoomID:    roomID.String(),
+		Username:  username,
+		CreatedAt: request.CreatedAt.Format("3:04 PM"),
+	})
+	if err != nil {
+		log.Printf("⚠️ Failed to render join request template: %v (falling back to JSON SSE)", err)
+		// Fall back to JSON SSE if template rendering fails
+		h.RoomService.BroadcastJoinRequestWithDetails(roomID, request.ID, userID, username, request.CreatedAt)
+	} else {
+		// Broadcast HTML fragment via SSE
+		h.RoomService.GetRealtimeService().BroadcastHTMLFragment(roomID, services.HTMLFragmentEvent{
+			Type:       "join_request",
+			Target:     "#join-requests",
+			SwapMethod: "beforeend", // Append to the list of join requests
+			HTML:       html,
+		})
+	}
 
 	// Return success response
 	w.Header().Set("Content-Type", "application/json")
@@ -133,10 +153,25 @@ func (h *Handler) AcceptJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 		guestUsername = guestUser.Username
 	}
 
-	// Broadcast to room that request was accepted
-	h.RoomService.BroadcastRequestAccepted(joinRequest.RoomID, guestUsername)
+	// Render HTML fragment for request accepted (shown to room owner)
+	html, err := h.TemplateService.RenderFragment("request_accepted.html", services.RequestAcceptedData{
+		GuestUsername: guestUsername,
+	})
+	if err != nil {
+		log.Printf("⚠️ Failed to render request_accepted template: %v (falling back to JSON SSE)", err)
+		// Fall back to JSON SSE
+		h.RoomService.BroadcastRequestAccepted(joinRequest.RoomID, guestUsername)
+	} else {
+		// Broadcast HTML fragment to room owner
+		h.RoomService.GetRealtimeService().BroadcastHTMLFragment(joinRequest.RoomID, services.HTMLFragmentEvent{
+			Type:       "request_accepted",
+			Target:     "#guest-info",
+			SwapMethod: "innerHTML", // Replace guest info section
+			HTML:       html,
+		})
+	}
 
-	// Notify the guest user that their request was accepted
+	// Notify the guest user that their request was accepted (use JSON for now, will enhance later)
 	h.RoomService.BroadcastRequestAcceptedToGuest(joinRequest.UserID, joinRequest.RoomID)
 
 	w.Header().Set("Content-Type", "application/json")

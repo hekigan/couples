@@ -17,6 +17,7 @@ type Handler struct {
 	FriendService       *services.FriendService
 	I18nService         *services.I18nService
 	NotificationService *services.NotificationService
+	TemplateService     *services.TemplateService // For SSE HTML fragments
 	Templates           *template.Template
 }
 
@@ -36,6 +37,7 @@ func NewHandler(
 	friendService *services.FriendService,
 	i18nService *services.I18nService,
 	notificationService *services.NotificationService,
+	templateService *services.TemplateService,
 ) *Handler {
 	return &Handler{
 		UserService:         userService,
@@ -46,6 +48,7 @@ func NewHandler(
 		FriendService:       friendService,
 		I18nService:         i18nService,
 		NotificationService: notificationService,
+		TemplateService:     templateService,
 		Templates:           nil, // We'll parse templates on demand
 	}
 }

@@ -20,6 +20,7 @@ type Question struct {
 type Category struct {
 	ID        uuid.UUID `json:"id"`
 	Key       string    `json:"key"`
+	Label     string    `json:"label"`
 	Icon      string    `json:"icon"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

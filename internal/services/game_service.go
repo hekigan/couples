@@ -18,6 +18,7 @@ type GameService struct {
 	questionService *QuestionService
 	answerService   *AnswerService
 	realtimeService *RealtimeService
+	templateService *TemplateService
 }
 
 // NewGameService creates a new game service
@@ -27,6 +28,7 @@ func NewGameService(
 	questionService *QuestionService,
 	answerService *AnswerService,
 	realtimeService *RealtimeService,
+	templateService *TemplateService,
 ) *GameService {
 	return &GameService{
 		client:          client,
@@ -34,6 +36,7 @@ func NewGameService(
 		questionService: questionService,
 		answerService:   answerService,
 		realtimeService: realtimeService,
+		templateService: templateService,
 	}
 }
 
@@ -142,7 +145,71 @@ func (s *GameService) DrawQuestion(ctx context.Context, roomID uuid.UUID) (*mode
 		return nil, err
 	}
 
-	s.realtimeService.BroadcastQuestionDrawn(roomID, question)
+	// Get room with players to have usernames for HTML fragment
+	roomWithPlayers, err := s.roomService.GetRoomWithPlayers(ctx, roomID)
+	if err != nil {
+		fmt.Printf("⚠️ Failed to get room with players: %v (falling back to JSON SSE)\n", err)
+		s.realtimeService.BroadcastQuestionDrawn(roomID, question)
+		return question, nil
+	}
+
+	// Get category for the question
+	categories, err := s.questionService.GetCategories(ctx)
+	var categoryKey string
+	var categoryLabel string
+	if err == nil {
+		for _, cat := range categories {
+			if cat.ID == question.CategoryID {
+				categoryKey = cat.Key
+				categoryLabel = cat.Label
+				break
+			}
+		}
+	}
+	if categoryKey == "" {
+		categoryKey = "unknown"
+		categoryLabel = "Unknown"
+	}
+
+	// Determine current player username
+	var currentPlayerUsername string
+	if room.CurrentTurn != nil {
+		if *room.CurrentTurn == roomWithPlayers.OwnerID && roomWithPlayers.OwnerUsername != nil {
+			currentPlayerUsername = *roomWithPlayers.OwnerUsername
+		} else if roomWithPlayers.GuestID != nil && *room.CurrentTurn == *roomWithPlayers.GuestID && roomWithPlayers.GuestUsername != nil {
+			currentPlayerUsername = *roomWithPlayers.GuestUsername
+		}
+	}
+
+	// Render HTML fragment for question drawn
+	if s.templateService != nil {
+		html, err := s.templateService.RenderFragment("question_drawn.html", QuestionDrawnData{
+			RoomID:                roomID.String(),
+			QuestionNumber:        room.CurrentQuestion,
+			MaxQuestions:          room.MaxQuestions,
+			Category:              categoryKey,
+			CategoryLabel:         categoryLabel,
+			QuestionText:          question.Text,
+			IsMyTurn:              false, // Will be determined client-side or per-user
+			CurrentPlayerUsername: currentPlayerUsername,
+		})
+		if err != nil {
+			fmt.Printf("⚠️ Failed to render question_drawn template: %v (falling back to JSON SSE)\n", err)
+			s.realtimeService.BroadcastQuestionDrawn(roomID, question)
+		} else {
+			// Broadcast HTML fragment via SSE
+			s.realtimeService.BroadcastHTMLFragment(roomID, HTMLFragmentEvent{
+				Type:       "question_drawn",
+				Target:     "#current-question",
+				SwapMethod: "outerHTML", // Replace entire question card
+				HTML:       html,
+			})
+		}
+	} else {
+		// No template service, fall back to JSON
+		s.realtimeService.BroadcastQuestionDrawn(roomID, question)
+	}
+
 	return question, nil
 }
 
