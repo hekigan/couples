@@ -1,31 +1,37 @@
 {{define "content"}}
-<div class="room-setup">
+<div class="room-setup"
+     hx-ext="sse"
+     sse-connect="/api/user/events">
     <div class="room-card">
         <h1>Join a Room</h1>
         <p class="room-subtitle">Enter the room ID to join or request access</p>
 
-        <!-- Join Method Toggle -->
+        <!-- Join Method Toggle (CSS-only, no JavaScript needed) -->
         <div class="join-method-toggle">
-            <button class="method-btn active" onclick="showDirectJoin()" id="direct-btn">
+            <input type="radio" name="join-method" id="direct-radio" checked style="display: none;">
+            <input type="radio" name="join-method" id="request-radio" style="display: none;">
+
+            <label for="direct-radio" class="method-btn" aria-label="Direct join method">
                 🎮 Direct Join
-            </button>
-            <button class="method-btn" onclick="showRequestJoin()" id="request-btn">
+            </label>
+            <label for="request-radio" class="method-btn" aria-label="Request to join method">
                 📬 Request to Join
-            </button>
+            </label>
         </div>
 
         <!-- Direct Join Form (Default) -->
-        <div id="direct-join-form">
+        <div id="direct-join-form" class="join-form">
             <form action="/game/join-room" method="POST">
                 <div class="form-group">
                     <label class="form-label" for="room_id">Room ID:</label>
-                    <input 
-                        type="text" 
-                        id="room_id" 
-                        name="room_id" 
-                        class="form-input" 
+                    <input
+                        type="text"
+                        id="room_id"
+                        name="room_id"
+                        class="form-input"
                         placeholder="Enter room ID"
                         required
+                        aria-required="true"
                     >
                     <span class="form-help">Join instantly if the room is open</span>
                 </div>
@@ -36,23 +42,34 @@
             </form>
         </div>
 
-        <!-- Request to Join Form (Hidden by default) -->
-        <div id="request-join-form" style="display: none;">
-            <form id="join-request-form" onsubmit="handleJoinRequest(event)">
+        <!-- Request to Join Form -->
+        <div id="request-join-form" class="join-form">
+            <form hx-post="/api/rooms/join-request"
+                  hx-target="#request-result"
+                  hx-swap="innerHTML"
+                  hx-disabled-elt="button[type='submit']"
+                  hx-indicator="#request-loading"
+                  hx-on::after-request="
+                      if(event.detail.successful) {
+                          this.reset();
+                          htmx.trigger('#pending-requests-list', 'load');
+                      }
+                  ">
                 <div class="form-group">
                     <label class="form-label" for="request_room_id">Room ID:</label>
-                    <input 
-                        type="text" 
-                        id="request_room_id" 
-                        name="room_id" 
-                        class="form-input" 
+                    <input
+                        type="text"
+                        id="request_room_id"
+                        name="room_id"
+                        class="form-input"
                         placeholder="Enter room ID"
                         required
+                        aria-required="true"
                     >
                     <span class="form-help">Send a request to the room owner</span>
                 </div>
 
-                <div class="info-box">
+                <div class="info-box" role="note">
                     <p><strong>Request to Join:</strong></p>
                     <ul>
                         <li>Send a request to the room owner</li>
@@ -61,8 +78,12 @@
                     </ul>
                 </div>
 
+                <!-- Result messages -->
+                <div id="request-result" role="alert" aria-live="polite"></div>
+
                 <button type="submit" class="btn btn-primary btn-block">
-                    Send Join Request
+                    <span>Send Join Request</span>
+                    <span id="request-loading" class="htmx-indicator">⏳</span>
                 </button>
             </form>
         </div>
@@ -70,323 +91,64 @@
         <a href="/" class="btn btn-secondary btn-block" style="margin-top: 16px;">Cancel</a>
 
         <!-- Pending Requests Section -->
-        <div id="pending-requests" style="display: none; margin-top: 2rem;">
+        <div id="pending-requests" style="margin-top: 2rem;">
             <h3>📬 Pending Join Requests</h3>
-            <div id="pending-requests-list"></div>
+            <div id="pending-requests-list"
+                 hx-get="/api/rooms/my-join-requests"
+                 hx-trigger="load, sse:my_request_accepted, sse:my_request_rejected"
+                 hx-swap="innerHTML"
+                 hx-on::sse-my_request_accepted="
+                     const data = JSON.parse(event.detail.data);
+                     setTimeout(() => window.location.href = '/game/room/' + data.room_id, 1500);
+                 "
+                 role="region"
+                 aria-label="Join request status">
+                <p style="color: #6b7280;">Loading requests...</p>
+            </div>
         </div>
     </div>
 </div>
 
-<script>
-// SSE connection for real-time request status updates
-let userEventsSource = null;
-
-// Check for accepted requests on page load and setup SSE
-document.addEventListener('DOMContentLoaded', async () => {
-    await checkAcceptedRequests();
-    setupSSE();
-});
-
-// Setup SSE connection for user notifications
-function setupSSE() {
-    if (typeof(EventSource) === "undefined") {
-        console.log('⚠️ SSE not supported');
-        return;
-    }
-
-    const sseUrl = '/api/user/events';
-    console.log('🔌 Connecting to user events SSE:', sseUrl);
-
-    userEventsSource = new EventSource(sseUrl);
-
-    userEventsSource.onopen = () => {
-        console.log('✅ User events SSE connection opened');
-    };
-
-    userEventsSource.addEventListener('connected', (event) => {
-        console.log('✅ User events SSE connected:', event.data);
-    });
-
-    userEventsSource.addEventListener('my_request_accepted', (event) => {
-        try {
-            console.log('✅ My join request was accepted via SSE!');
-            console.log('   Raw event data:', event.data);
-            const data = JSON.parse(event.data);
-            console.log('   Parsed data:', data);
-            console.log('   Room ID:', data.room_id);
-            console.log('   Calling updateRequestAccepted...');
-            updateRequestAccepted(data.room_id);
-        } catch (error) {
-            console.error('❌ Error handling my_request_accepted:', error);
-        }
-    });
-
-    userEventsSource.addEventListener('my_request_rejected', (event) => {
-        try {
-            console.log('❌ My join request was rejected via SSE:', event.data);
-            const data = JSON.parse(event.data);
-            updateRequestRejected(data.room_id);
-        } catch (error) {
-            console.error('Error handling my_request_rejected:', error);
-        }
-    });
-
-    userEventsSource.addEventListener('ping', (event) => {
-        console.log('💓 User events SSE keepalive');
-    });
-
-    userEventsSource.onerror = (error) => {
-        console.error('❌ User events SSE error:', error);
-        console.log('   EventSource readyState:', userEventsSource.readyState);
-        console.log('   0=CONNECTING, 1=OPEN, 2=CLOSED');
-
-        if (userEventsSource.readyState === EventSource.CLOSED) {
-            console.log('   Connection closed, EventSource will attempt to reconnect...');
-        } else if (userEventsSource.readyState === EventSource.CONNECTING) {
-            console.log('   Reconnecting...');
-        }
-    };
-}
-
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    if (userEventsSource) {
-        userEventsSource.close();
-    }
-});
-
-async function checkAcceptedRequests() {
-    try {
-        const response = await fetch('/api/rooms/my-accepted-requests');
-        if (response.ok) {
-            const requests = await response.json();
-            
-            if (requests && requests.length > 0) {
-                const pendingSection = document.getElementById('pending-requests');
-                const pendingList = document.getElementById('pending-requests-list');
-                pendingSection.style.display = 'block';
-                
-                requests.forEach(req => {
-                    const requestCard = document.createElement('div');
-                    requestCard.className = 'request-card';
-                    requestCard.id = `request-${req.room_id}`;
-                    requestCard.innerHTML = `
-                        <div class="request-info">
-                            <strong>Room: ${req.room_id}</strong>
-                            <span class="request-status accepted">✅ Request accepted!</span>
-                            <a href="/game/room/${req.room_id}" class="btn btn-success btn-sm" style="margin-top: 1rem; display: inline-block; padding: 0.5rem 1rem; background: #10b981; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
-                                Go to Room →
-                            </a>
-                        </div>
-                    `;
-                    pendingList.appendChild(requestCard);
-                });
-            }
-        }
-    } catch (error) {
-        console.error('Error checking accepted requests:', error);
-    }
-}
-
-function showDirectJoin() {
-    document.getElementById('direct-join-form').style.display = 'block';
-    document.getElementById('request-join-form').style.display = 'none';
-    document.getElementById('direct-btn').classList.add('active');
-    document.getElementById('request-btn').classList.remove('active');
-}
-
-function showRequestJoin() {
-    document.getElementById('direct-join-form').style.display = 'none';
-    document.getElementById('request-join-form').style.display = 'block';
-    document.getElementById('direct-btn').classList.remove('active');
-    document.getElementById('request-btn').classList.add('active');
-}
-
-async function handleJoinRequest(event) {
-    event.preventDefault();
-    
-    const form = event.target;
-    const formData = new FormData(form);
-    const roomId = formData.get('room_id');
-    const message = formData.get('message');
-    
-    try {
-        const response = await fetch('/api/rooms/join-request', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams(formData)
-        });
-        
-        if (!response.ok) {
-            const error = await response.text();
-            showNotification(error, 'error');
-            return;
-        }
-        
-        const data = await response.json();
-        
-        // Show success notification
-        showNotification('✅ Join request sent! Waiting for owner approval...', 'success');
-        
-        // Add to pending requests list
-        addPendingRequest(roomId, message || 'No message');
-        
-        // Clear form
-        form.reset();
-        
-        // SSE will handle status updates automatically - no polling needed
-        
-    } catch (error) {
-        showNotification('❌ Failed to send join request', 'error');
-    }
-}
-
-function addPendingRequest(roomId, message) {
-    const pendingSection = document.getElementById('pending-requests');
-    const pendingList = document.getElementById('pending-requests-list');
-    
-    pendingSection.style.display = 'block';
-    
-    const requestCard = document.createElement('div');
-    requestCard.className = 'request-card';
-    requestCard.id = `request-${roomId}`;
-    requestCard.innerHTML = `
-        <div class="request-info">
-            <strong>Room: ${roomId}</strong>
-            <p class="request-message">${message}</p>
-            <span class="request-status pending">⏳ Request sent, waiting for approval...</span>
-        </div>
-        <button onclick="cancelRequest('${roomId}')" class="btn-cancel">Cancel Request</button>
-    `;
-    
-    pendingList.appendChild(requestCard);
-}
-
-// REMOVED: Polling replaced with SSE real-time updates
-// function startPollingRequest(roomId) { ... }
-
-function updateRequestAccepted(roomId) {
-    console.log('🎯 updateRequestAccepted called with roomId:', roomId);
-
-    const requestCard = document.getElementById(`request-${roomId}`);
-    console.log('   Request card element:', requestCard);
-
-    if (requestCard) {
-        console.log('   ✅ Found request card, updating UI...');
-        requestCard.innerHTML = `
-            <div class="request-info">
-                <strong>Room: ${roomId}</strong>
-                <span class="request-status accepted">✅ Request accepted! Joining room...</span>
-            </div>
-        `;
-
-        showNotification('🎉 Your join request was accepted! Redirecting...', 'success');
-
-        console.log('   🚀 Scheduling redirect in 1 second...');
-        // Automatically redirect to the room after a brief delay
-        setTimeout(() => {
-            console.log('   ➡️ Redirecting to /game/room/' + roomId);
-            window.location.href = `/game/room/${roomId}`;
-        }, 1000);
-    } else {
-        console.warn('   ⚠️ Request card not found for roomId:', roomId);
-        console.log('   Available request cards:', document.querySelectorAll('[id^="request-"]'));
-    }
-}
-
-function updateRequestRejected(roomId) {
-    const requestCard = document.getElementById(`request-${roomId}`);
-    if (requestCard) {
-        requestCard.innerHTML = `
-            <div class="request-info">
-                <strong>Room: ${roomId}</strong>
-                <span class="request-status rejected">❌ Request rejected by owner</span>
-                <p style="color: #6b7280; font-size: 0.875rem; margin-top: 0.5rem;">
-                    The room owner declined your request.
-                </p>
-            </div>
-        `;
-        
-        showNotification('❌ Your join request was rejected', 'error');
-        
-        // Remove the card after 5 seconds
-        setTimeout(() => {
-            requestCard.remove();
-            
-            // Hide section if no more requests
-            const pendingList = document.getElementById('pending-requests-list');
-            if (pendingList.children.length === 0) {
-                document.getElementById('pending-requests').style.display = 'none';
-            }
-        }, 5000);
-    }
-}
-
-function updateRequestCancelled(roomId) {
-    const requestCard = document.getElementById(`request-${roomId}`);
-    if (requestCard) {
-        requestCard.remove();
-        showNotification('Request cancelled', 'success');
-        
-        // Hide section if no more requests
-        const pendingList = document.getElementById('pending-requests-list');
-        if (pendingList.children.length === 0) {
-            document.getElementById('pending-requests').style.display = 'none';
-        }
-    }
-}
-
-async function cancelRequest(roomId) {
-    if (!confirm('Cancel this join request?')) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/rooms/${roomId}/cancel-my-request`, {
-            method: 'POST'
-        });
-
-        if (response.ok) {
-            updateRequestCancelled(roomId);
-        } else {
-            showNotification('Failed to cancel request', 'error');
-        }
-    } catch (error) {
-        console.error('Error cancelling request:', error);
-        showNotification('Failed to cancel request', 'error');
-    }
-}
-
-function showNotification(message, type) {
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.textContent = message;
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 1rem 1.5rem;
-        background: ${type === 'success' ? '#10b981' : '#ef4444'};
-        color: white;
-        border-radius: 8px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        z-index: 10000;
-        animation: slideIn 0.3s ease-out;
-        max-width: 400px;
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease-out';
-        setTimeout(() => notification.remove(), 300);
-    }, 5000);
-}
-</script>
-
 <style>
+/* CSS-only tab switcher */
+#direct-radio:checked ~ .join-method-toggle label[for="direct-radio"],
+#request-radio:checked ~ .join-method-toggle label[for="request-radio"] {
+    background: white;
+    color: #6B4CE6;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+#direct-radio:checked ~ #direct-join-form {
+    display: block;
+}
+
+#direct-radio:checked ~ #request-join-form {
+    display: none;
+}
+
+#request-radio:checked ~ #direct-join-form {
+    display: none;
+}
+
+#request-radio:checked ~ #request-join-form {
+    display: block;
+}
+
+.join-form {
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @keyframes slideIn {
     from {
         transform: translateX(400px);
@@ -415,6 +177,11 @@ function showNotification(message, type) {
     border-radius: 8px;
     padding: 1.5rem;
     margin-bottom: 1rem;
+    animation: slideIn 0.3s ease-out;
+}
+
+.request-card.htmx-swapping {
+    animation: slideOut 0.3s ease-out;
 }
 
 .request-info strong {
@@ -494,17 +261,12 @@ function showNotification(message, type) {
     color: #6b7280;
     cursor: pointer;
     transition: all 0.2s;
+    text-align: center;
 }
 
 .method-btn:hover {
     background: white;
     color: #374151;
-}
-
-.method-btn.active {
-    background: white;
-    color: #6B4CE6;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .info-box {
@@ -537,22 +299,37 @@ function showNotification(message, type) {
     font-size: 0.875rem;
     color: #6b7280;
 }
+
+/* HTMX Loading Indicators */
+.htmx-indicator {
+    display: none;
+    margin-left: 0.5rem;
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+    display: inline;
+}
+
+/* Success/Error Messages */
+#request-result {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
+
+#request-result:empty {
+    display: none;
+}
+
+/* Accessibility */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+}
 </style>
-
-<script>
-function showDirectJoin() {
-    document.getElementById('direct-join-form').style.display = 'block';
-    document.getElementById('request-join-form').style.display = 'none';
-    document.getElementById('direct-btn').classList.add('active');
-    document.getElementById('request-btn').classList.remove('active');
-}
-
-function showRequestJoin() {
-    document.getElementById('direct-join-form').style.display = 'none';
-    document.getElementById('request-join-form').style.display = 'block';
-    document.getElementById('direct-btn').classList.remove('active');
-    document.getElementById('request-btn').classList.add('active');
-}
-</script>
 {{end}}
-

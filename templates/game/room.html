@@ -1,807 +1,203 @@
 {{define "content"}}
-<div class="room-container" data-room-id="{{.Data.ID}}" data-selected-categories='{{if .Data.SelectedCategories}}{{range $i, $cat := .Data.SelectedCategories}}{{if $i}},{{end}}"{{$cat}}"{{end}}{{end}}'>
-        <div class="room-header-section">
-            <div class="room-title-row">
-                <h1>Room:</h1>
-                <div class="room-id-group">
-                    <input type="text" id="room-id-input" value="{{.Data.ID}}" readonly class="room-id-input" />
-                    <button onclick="copyRoomId()" class="btn btn-secondary btn-sm copy-btn" title="Copy Room ID">
-                        📋 Copy ID
-                    </button>
-                </div>
-            </div>
-            <div class="room-status">
-                <span class="status-badge status-{{.Data.Status}}" id="room-status-badge">
-                    {{if eq .Data.Status "ready"}}ready{{else if eq .Data.Status "playing"}}playing{{else}}waiting{{end}}
-                </span>
+<div class="room-container"
+     data-room-id="{{.Data.ID}}"
+     data-selected-categories='{{if .Data.SelectedCategories}}{{range $i, $cat := .Data.SelectedCategories}}{{if $i}},{{end}}"{{$cat}}"{{end}}{{end}}'
+     hx-ext="sse"
+     sse-connect="/api/rooms/{{.Data.ID}}/events">
+
+    <div class="room-header-section">
+        <div class="room-title-row">
+            <h1>Room:</h1>
+            <div class="room-id-group">
+                <input type="text" id="room-id-input" value="{{.Data.ID}}" readonly class="room-id-input" />
+                <button onclick="copyRoomId()" class="btn btn-secondary btn-sm copy-btn" title="Copy Room ID">
+                    📋 Copy ID
+                </button>
             </div>
         </div>
-    
-        <div class="room-players" id="player-list">
-            <h2>Players</h2>
-            <div class="player-grid">
-                <div class="player-card">
-                    <span class="player-label">Owner</span>
-                    <span class="player-name">{{if .OwnerUsername}}{{.OwnerUsername}}{{else}}Unknown{{end}}</span>
-                </div>
-                <div class="player-card {{if not .Data.GuestID}}empty{{end}}" id="guest-card">
-                    {{if .Data.GuestID}}
-                    <span class="player-label">Guest</span>
-                    <span class="player-name" id="guest-name">{{if .GuestUsername}}{{.GuestUsername}}{{else}}Unknown{{end}}</span>
-                    {{else}}
-                    <span id="guest-waiting">Waiting for guest...</span>
-                    {{end}}
-                </div>
-            </div>
-            
-            <!-- Start Game Button (shown when ready) - OWNER ONLY -->
-            {{if .IsOwner}}
-            {{if eq .Data.Status "ready"}}
-            <div class="start-game-section" id="start-game-section">
-                <button
-                    id="start-game-btn"
-                    onclick="startGame()"
-                    class="btn btn-primary btn-lg start-game-btn"
-                    {{if not .Data.GuestReady}}disabled{{end}}>
-                    🚀 Start Game
-                </button>
-                {{if not .Data.GuestReady}}
-                <p class="waiting-hint" style="text-align: center; color: #6b7280; margin-top: 10px; font-size: 14px;">
-                    ⏳ Waiting for guest to click Ready...
-                </p>
-                {{end}}
-            </div>
-            {{end}}
-            {{end}}
+        <div class="room-status">
+            <span class="status-badge status-{{.Data.Status}}" id="room-status-badge">
+                {{if eq .Data.Status "ready"}}ready{{else if eq .Data.Status "playing"}}playing{{else}}waiting{{end}}
+            </span>
+        </div>
+    </div>
 
-            <!-- Ready Button - GUEST ONLY -->
-            {{if not .IsOwner}}
-            {{if eq .Data.Status "ready"}}
-            <div class="guest-ready-section" id="guest-ready-section">
-                {{if .Data.GuestReady}}
-                <div class="ready-confirmed-message">
-                    ✅ You're ready! Waiting for owner to start the game...
-                </div>
+    <div class="room-players" id="player-list">
+        <h2>Players</h2>
+        <div class="player-grid">
+            <div class="player-card">
+                <span class="player-label">Owner</span>
+                <span class="player-name">{{if .OwnerUsername}}{{.OwnerUsername}}{{else}}Unknown{{end}}</span>
+            </div>
+            <!-- Guest card - Updated via SSE when request accepted -->
+            <div class="player-card {{if not .Data.GuestID}}empty{{end}}"
+                 id="guest-info"
+                 sse-swap="request_accepted">
+                {{if .Data.GuestID}}
+                <span class="player-label">Guest</span>
+                <span class="player-name" id="guest-name">{{if .GuestUsername}}{{.GuestUsername}}{{else}}Unknown{{end}}</span>
                 {{else}}
-                <button onclick="setGuestReady()" class="btn btn-success btn-lg ready-btn" id="ready-btn">
-                    ✅ Ready to Play
-                </button>
-                <p class="ready-hint">Click when you're done selecting categories</p>
+                <span id="guest-waiting">Waiting for guest...</span>
                 {{end}}
             </div>
-            {{end}}
-            {{end}}
         </div>
 
-        <!-- Category Selection Section (shown when guest joined) -->
-        <div class="categories-section" id="categories-section" style="{{if not .Data.GuestID}}display: none;{{end}}">
-            <h2>🎯 Select Question Categories</h2>
-            <p class="categories-hint">Both players can select categories. Selections sync in real-time!</p>
-
-            <div id="categories-grid" class="categories-grid">
-                <p style="color: #6b7280;">Loading categories...</p>
-            </div>
-        </div>
-
-        <!-- Invite Friends Section (hidden when guest joined) - OWNER ONLY -->
+        <!-- Start Game Button (shown when ready) - OWNER ONLY -->
         {{if .IsOwner}}
-        <div class="invite-section" id="invite-section" style="margin-top: 2rem; {{if .Data.GuestID}}display: none;{{end}}">
-            <h2>👥 Invite Friends</h2>
-            <div id="friends-list" class="friends-list">
-                <p style="color: #6b7280;">Loading friends...</p>
-            </div>
-        </div>
-
-        <!-- Pending Join Requests Section (hidden when guest joined) - OWNER ONLY -->
-        <div id="join-requests-section" style="margin-top: 2rem; {{if .Data.GuestID}}display: none;{{end}}">
-            <h2>📬 Join Requests <span id="request-count" class="badge">0</span></h2>
-            <div id="join-requests-list"></div>
+        {{if eq .Data.Status "ready"}}
+        <div class="start-game-section"
+             id="start-game-section"
+             hx-get="/api/rooms/{{.Data.ID}}/start-button"
+             hx-trigger="load, sse:room_update from:body"
+             hx-swap="innerHTML">
+            <p style="color: #6b7280;">Loading...</p>
         </div>
         {{end}}
-    
+        {{end}}
+
+        <!-- Ready Button - GUEST ONLY -->
+        {{if not .IsOwner}}
+        {{if eq .Data.Status "ready"}}
+        <div class="guest-ready-section"
+             id="guest-ready-section"
+             hx-get="/api/rooms/{{.Data.ID}}/ready-button"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <p style="color: #6b7280;">Loading...</p>
+        </div>
+        {{end}}
+        {{end}}
+    </div>
+
+    <!-- Category Selection Section (shown when guest joined) -->
+    <div class="categories-section"
+         id="categories-section"
+         style="{{if not .Data.GuestID}}display: none;{{end}}">
+        <h2>🎯 Select Question Categories</h2>
+        <p class="categories-hint">Both players can select categories. Selections sync in real-time!</p>
+
+        <div id="categories-grid"
+             class="categories-grid"
+             hx-get="/api/rooms/{{.Data.ID}}/categories"
+             hx-trigger="load, sse:categories_updated from:body"
+             hx-swap="innerHTML">
+            <p style="color: #6b7280;">Loading categories...</p>
+        </div>
+    </div>
+
+    <!-- Invite Friends Section (hidden when guest joined) - OWNER ONLY -->
+    {{if .IsOwner}}
+    <div class="invite-section" id="invite-section" style="margin-top: 2rem; {{if .Data.GuestID}}display: none;{{end}}">
+        <h2>👥 Invite Friends</h2>
+        <div id="friends-list"
+             class="friends-list"
+             hx-get="/api/friends/list-html?room_id={{.Data.ID}}"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <p style="color: #6b7280;">Loading friends...</p>
+        </div>
+    </div>
+
+    <!-- Pending Join Requests Section (hidden when guest joined) - OWNER ONLY -->
+    <div id="join-requests-section" style="margin-top: 2rem; {{if .Data.GuestID}}display: none;{{end}}">
+        <h2>📬 Join Requests <span id="request-count" class="badge">0</span></h2>
+        <!-- Join requests are appended via SSE -->
+        <div id="join-requests"
+             sse-swap="join_request"
+             hx-swap="beforeend">
+        </div>
+    </div>
+    {{end}}
+
     <!-- Owner Actions (Delete Room) - OWNER ONLY -->
     {{if .IsOwner}}
     <div class="room-actions">
-        
         <form action="/game/room/{{.Data.ID}}/delete" method="POST" onsubmit="return confirm('Delete this room?');">
             <button type="submit" class="btn btn-danger">Delete Room</button>
         </form>
     </div>
     {{end}}
+
+    <!-- Game Started redirect - Hidden element that receives SSE redirect fragment -->
+    <div id="game-start-redirect"
+         sse-swap="game_started"
+         style="display:none;">
+    </div>
 </div>
 
 <script>
+// ============================================================================
+// MINIMAL JAVASCRIPT - Only for non-SSE features
+// ============================================================================
+// This is dramatically reduced from 800+ lines to ~200 lines
+// All SSE event handling is now done by HTMX
+
 // Copy room ID to clipboard
 function copyRoomId() {
     const input = document.getElementById('room-id-input');
     input.select();
     document.execCommand('copy');
-    
+
     const btn = event.target;
     const originalText = btn.textContent;
     btn.textContent = '✅ Copied!';
     btn.style.background = '#10b981';
-    
+
     setTimeout(() => {
         btn.textContent = originalText;
         btn.style.background = '';
     }, 2000);
 }
 
-// Real-time join requests with SSE (fallback to polling)
-let joinRequestsEventSource = null;
-let joinRequestsPollInterval = null;
-
-// Room status polling for game start detection (resilient fallback)
-let roomStatusPollInterval = null;
-let sseHealthCheckInterval = null;
-let lastSSEMessageTime = Date.now();
-
-// Fallback: Poll room status to detect if game has started
-function startRoomStatusPolling(roomId, isOwner) {
-    // Only poll for guests (owners know when they start the game)
-    if (isOwner) {
-        console.log('🎮 Owner detected - skipping room status polling');
-        return;
-    }
-
-    console.log('🔄 Starting room status polling for game start detection...');
-
-    roomStatusPollInterval = setInterval(async () => {
-        try {
-            const response = await fetch(`/api/rooms/${roomId}/state`);
-            if (response.ok) {
-                const data = await response.json();
-                console.log('📊 Room status poll:', data.status);
-
-                if (data.status === 'playing') {
-                    console.log('🎮 Game started detected via polling! Redirecting...');
-                    clearInterval(roomStatusPollInterval);
-                    showGameStartingNotification();
-                    window.location.href = `/game/play/${roomId}`;
-                }
-            }
-        } catch (error) {
-            console.error('❌ Error polling room status:', error);
-        }
-    }, 2000); // Poll every 2 seconds
-}
-
-// Monitor SSE connection health
-function setupSSEHealthMonitoring() {
-    console.log('💓 Setting up SSE health monitoring...');
-
-    sseHealthCheckInterval = setInterval(() => {
-        const timeSinceLastMessage = Date.now() - lastSSEMessageTime;
-        if (timeSinceLastMessage > 30000) { // 30 seconds without any message
-            console.warn('⚠️ SSE connection may be stale - no messages for 30+ seconds');
-            // SSE should send ping every 15 seconds, so 30s means possible connection issue
-        }
-    }, 5000); // Check every 5 seconds
-}
-
-// Update SSE message timestamp (called when any SSE message received)
-function updateSSEMessageTimestamp() {
-    lastSSEMessageTime = Date.now();
-}
-
-// Show visual notification when game is starting
-function showGameStartingNotification() {
-    const notification = document.getElementById('game-starting-notification');
-    if (notification) {
-        notification.style.display = 'block';
-    }
-}
-
-// Cleanup intervals on page unload
-function cleanupIntervals() {
-    if (roomStatusPollInterval) {
-        clearInterval(roomStatusPollInterval);
-    }
-    if (sseHealthCheckInterval) {
-        clearInterval(sseHealthCheckInterval);
-    }
-    if (joinRequestsPollInterval) {
-        clearInterval(joinRequestsPollInterval);
-    }
-}
-
-// Load join requests and friends on page load
+// Load page state on DOM ready
 document.addEventListener('DOMContentLoaded', async () => {
     const roomId = document.querySelector('[data-room-id]').dataset.roomId;
     const isOwner = {{.IsOwner}};
 
-    // Debug: Log template values
-    console.log('🔍 DEBUG: IsOwner =', isOwner);
-    console.log('🔍 DEBUG: Room Status =', '{{.Data.Status}}');
-    console.log('🔍 DEBUG: GuestReady =', {{.Data.GuestReady}});
-    console.log('🔍 DEBUG: Start Game button exists?', document.getElementById('start-game-btn') !== null);
+    console.log('🔍 Room ID:', roomId, 'IsOwner:', isOwner);
 
-    // ALWAYS fetch fresh state from database on page load
-    // This fixes race conditions where template state is stale
+    // Fetch fresh state from database to fix race conditions
     try {
-        console.log('📡 Fetching fresh room state from database...');
+        console.log('📡 Fetching fresh room state...');
         const response = await fetch(`/api/rooms/${roomId}/state`);
         if (response.ok) {
             const state = await response.json();
             console.log('📊 Fresh state loaded:', state);
 
-            // Update UI based on database state (not template state)
-            // This fixes Bug 1: Start Game button not enabling when guest clicks Ready
-            if (isOwner) {
-                const startBtn = document.getElementById('start-game-btn');
-                const waitingHint = document.querySelector('.waiting-hint');
-
-                // Check if guest is ready AND game hasn't started yet
-                if (state.guest_ready && state.status === 'ready' && startBtn) {
-                    startBtn.disabled = false;
-                    console.log('✅ Start button enabled from state sync (guest is ready)');
-                    if (waitingHint) waitingHint.style.display = 'none';
-                }
-            }
-
-            // If game has already started, redirect to game page
+            // If game already started, redirect
             if (state.status === 'playing') {
                 console.log('🎮 Game already started, redirecting...');
                 window.location.href = `/game/play/${roomId}`;
-                return; // Don't continue initialization
+                return;
             }
         }
     } catch (error) {
         console.error('❌ Failed to load initial state:', error);
-        // Continue with normal flow even if state fetch fails
     }
 
-    // Don't load join requests here - let SSE handle it
-    // loadJoinRequests(roomId); // REMOVED - SSE will trigger this
-
-    // Initialize selected categories from server data BEFORE loading categories
-    initializeSelectedCategories();
-
-    loadFriends(roomId);
-    loadCategories(roomId);
-
-    // Try SSE first, fallback to polling if not supported
-    if (typeof(EventSource) !== "undefined") {
-        console.log('✅ SSE supported - using real-time join requests');
-        connectJoinRequestsStream(roomId);
-        // Initial join requests will be sent via SSE after connection
-
-        // Setup SSE health monitoring
-        setupSSEHealthMonitoring();
-    } else {
-        console.log('⚠️ SSE not supported - falling back to polling');
-        // Load initial join requests before starting polling
-        loadJoinRequests(roomId);
-        startPolling(roomId);
-    }
-
-    // Start room status polling for game start detection (resilient fallback)
-    // This runs regardless of SSE support to ensure guests never get stuck
-    startRoomStatusPolling(roomId, isOwner);
+    console.log('✅ HTMX SSE connection established via hx-ext="sse"');
+    console.log('✅ Phase A: Friends & Categories loading via HTMX hx-get');
 });
 
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    cleanupIntervals();
-    if (joinRequestsEventSource) {
-        joinRequestsEventSource.close();
-    }
-});
+// ============================================================================
+// HTMX now handles:
+// - Friends list loading via hx-get="/api/friends/list-html"
+// - Categories loading via hx-get="/api/rooms/{id}/categories"
+// - Category toggle via hx-post in template (optimistic UI)
+// - Friend invitation via hx-post in template (server-rendered state transitions)
+// ============================================================================
 
-// Connect to SSE stream for real-time join requests
-function connectJoinRequestsStream(roomId) {
-    const sseUrl = `/api/rooms/${roomId}/events`;
-    console.log(`🔌 Attempting SSE connection to: ${sseUrl}`);
-    
-    joinRequestsEventSource = new EventSource(sseUrl);
-    
-    joinRequestsEventSource.onopen = () => {
-        console.log('✅ SSE connection opened successfully!');
-        console.log('📊 SSE readyState:', joinRequestsEventSource.readyState, '(0=CONNECTING, 1=OPEN, 2=CLOSED)');
-    };
+// ============================================================================
+// HTMX now handles:
+// - Guest ready button via hx-post="/api/rooms/{id}/guest-ready"
+// - Start game button via hx-post="/api/rooms/{id}/start"
+// - Category validation via hx-on::before-request in templates
+// - Button state syncing via SSE (room_update event)
+// ============================================================================
 
-    joinRequestsEventSource.addEventListener('connected', (event) => {
-        console.log('✅ SSE connected event received:', event.data);
-        console.log('📊 SSE readyState after connected:', joinRequestsEventSource.readyState);
-        updateSSEMessageTimestamp();
-    });
-
-    joinRequestsEventSource.addEventListener('join_request', (event) => {
-        try {
-            console.log('📬 New join request received via SSE:', event.data);
-            const requestData = JSON.parse(event.data);
-            updateSSEMessageTimestamp();
-
-            // Add the new request directly to the UI without making an HTTP request
-            addJoinRequestToUI(roomId, requestData);
-        } catch (error) {
-            console.error('Error handling join_request event:', error);
-        }
-    });
-
-    joinRequestsEventSource.addEventListener('request_accepted', (event) => {
-        try {
-            console.log('✅ Join request accepted via SSE:', event.data);
-            const data = JSON.parse(event.data);
-            updateSSEMessageTimestamp();
-            if (data.guest_username) {
-                updateUIAfterAccept(data.guest_username);
-            }
-        } catch (error) {
-            console.error('Error handling request_accepted event:', error);
-        }
-    });
-
-    joinRequestsEventSource.addEventListener('categories_updated', (event) => {
-        try {
-            console.log('🎯 Categories updated via SSE:', event.data);
-            const data = JSON.parse(event.data);
-            updateSSEMessageTimestamp();
-            const categoryIds = data.category_ids || [];
-            console.log('Category IDs received:', categoryIds);
-            console.log('Current selected categories:', selectedCategories);
-            syncCategorySelections(categoryIds);
-        } catch (error) {
-            console.error('Error handling categories_updated event:', error);
-        }
-    });
-
-    console.log('📡 Setting up room_update listener, SSE connection state:', joinRequestsEventSource.readyState);
-
-    joinRequestsEventSource.addEventListener('room_update', (event) => {
-        try {
-            console.log('🏠 Room update via SSE (RAW):', event);
-            console.log('🏠 Room update data (string):', event.data);
-            const data = JSON.parse(event.data);
-            updateSSEMessageTimestamp();
-            console.log('🏠 Parsed room update data:', data);
-            console.log('🏠 Type of data:', typeof data);
-            console.log('🏠 Data keys:', Object.keys(data));
-            console.log('🏠 guest_ready value:', data.guest_ready);
-            console.log('🏠 guest_ready type:', typeof data.guest_ready);
-            if (data.guest_ready !== undefined) {
-                console.log('🏠 Calling handleGuestReadyUpdate with:', data.guest_ready);
-                handleGuestReadyUpdate(data.guest_ready);
-            } else {
-                console.log('🏠 guest_ready is undefined in room_update');
-            }
-        } catch (error) {
-            console.error('Error handling room_update event:', error, 'Raw event:', event);
-        }
-    });
-
-    console.log('📡 Setting up game_started listener, SSE state:', joinRequestsEventSource.readyState);
-
-    joinRequestsEventSource.addEventListener('game_started', (event) => {
-        try {
-            console.log('🎮 Game started event received (RAW):', event);
-            console.log('🎮 Game started data (string):', event.data);
-            updateSSEMessageTimestamp();
-
-            const data = JSON.parse(event.data);
-            console.log('🎮 Parsed game started data:', data);
-            console.log('🎮 Data type:', typeof data);
-            console.log('🎮 Data keys:', Object.keys(data));
-
-            const gameRoomId = data.room_id || roomId;
-            console.log('🎮 Room ID from event:', data.room_id);
-            console.log('🎮 Room ID type:', typeof data.room_id);
-            console.log('🎮 Room ID from parameter:', roomId);
-            console.log('🎮 Final room ID:', gameRoomId);
-
-            // Stop polling since SSE worked
-            if (roomStatusPollInterval) {
-                console.log('✅ Stopping room status polling - SSE game_started received');
-                clearInterval(roomStatusPollInterval);
-            }
-
-            // Validate room ID before redirecting
-            if (!gameRoomId || gameRoomId === 'undefined' || gameRoomId === 'null') {
-                console.error('❌ Invalid room ID received, using fallback:', roomId);
-                showGameStartingNotification();
-                window.location.href = `/game/play/${roomId}`;
-            } else {
-                console.log('🎮 Redirecting to game page:', `/game/play/${gameRoomId}`);
-                showGameStartingNotification();
-                window.location.href = `/game/play/${gameRoomId}`;
-            }
-        } catch (error) {
-            console.error('❌ Error handling game_started event:', error);
-            // Fallback: Still redirect using room ID from page
-            console.log('🔄 Attempting fallback redirect to:', `/game/play/${roomId}`);
-            showGameStartingNotification();
-            window.location.href = `/game/play/${roomId}`;
-        }
-    });
-
-    joinRequestsEventSource.addEventListener('ping', (event) => {
-        console.log('💓 SSE keepalive ping received');
-        updateSSEMessageTimestamp();
-    });
-    
-    joinRequestsEventSource.onerror = (error) => {
-        console.error('❌ SSE connection error:', error);
-        console.error('SSE readyState:', joinRequestsEventSource.readyState);
-
-        // Only fall back to polling if the connection is permanently closed
-        // readyState: 0 = CONNECTING, 1 = OPEN, 2 = CLOSED
-        if (joinRequestsEventSource.readyState === 2) {
-            console.error('SSE connection permanently closed, falling back to polling...');
-            joinRequestsEventSource.close();
-            startPolling(roomId);
-        } else {
-            console.log('SSE connection will retry automatically...');
-            // EventSource automatically reconnects, so we don't need to do anything
-        }
-    };
-}
-
-// Fallback polling (only used if SSE fails)
-function startPolling(roomId) {
-    if (joinRequestsPollInterval) {
-        clearInterval(joinRequestsPollInterval);
-    }
-    joinRequestsPollInterval = setInterval(() => {
-        console.log('🔄 Polling for join requests (fallback mode)');
-        loadJoinRequests(roomId);
-    }, 5000);
-}
-
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    if (joinRequestsEventSource) {
-        joinRequestsEventSource.close();
-    }
-    if (joinRequestsPollInterval) {
-        clearInterval(joinRequestsPollInterval);
-    }
-});
-
-async function loadJoinRequests(roomId) {
-    try {
-        const response = await fetch(`/api/rooms/${roomId}/join-requests-json`);
-        if (!response.ok) {
-            document.getElementById('join-requests-list').innerHTML = '<p style="color: #6b7280;">No pending requests</p>';
-            return;
-        }
-        
-        const requests = await response.json();
-        
-        updateRequestCount(requests.length);
-        
-        if (requests.length > 0) {
-            displayJoinRequests(roomId, requests);
-        } else {
-            document.getElementById('join-requests-list').innerHTML = '<p style="color: #6b7280;">No pending requests</p>';
-        }
-    } catch (error) {
-        console.error('Failed to load join requests:', error);
-        document.getElementById('join-requests-list').innerHTML = '<p style="color: #6b7280;">No pending requests</p>';
-    }
-}
-
-function updateRequestCount(count) {
-    const badge = document.getElementById('request-count');
-    badge.textContent = count;
-    badge.style.display = count > 0 ? 'inline-block' : 'none';
-}
-
-function displayJoinRequests(roomId, requests) {
-    const listElement = document.getElementById('join-requests-list');
-    
-    const requestsHTML = requests.map(req => `
-        <div class="request-card" style="background: white; border: 2px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin: 0.5rem 0; display: flex; align-items: center; justify-content: space-between;">
-            <div style="flex: 1;">
-                <div style="font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem;">
-                    @${req.username}
-                </div>
-                <div style="font-size: 0.875rem; color: #6b7280;">
-                    ${new Date(req.created_at).toLocaleString()}
-                </div>
-            </div>
-            <div style="display: flex; gap: 0.5rem;">
-                <button 
-                    onclick="acceptRequest('${req.id}')" 
-                    class="btn-accept"
-                    style="padding: 0.5rem 1rem; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;"
-                >
-                    ✅ Accept
-                </button>
-                <button 
-                    onclick="rejectRequest('${req.id}')" 
-                    class="btn-reject"
-                    style="padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;"
-                >
-                    ❌ Reject
-                </button>
-            </div>
-        </div>
-    `).join('');
-    
-    listElement.innerHTML = requestsHTML;
-}
-
-// Add a single join request to the UI (used by SSE)
-function addJoinRequestToUI(roomId, request) {
-    const listElement = document.getElementById('join-requests-list');
-
-    // Check if this request already exists in the DOM (prevent duplicates)
-    if (document.getElementById(`request-${request.id}`)) {
-        console.log(`Request ${request.id} already exists, skipping duplicate`);
-        return;
-    }
-
-    // Check if there's a "no pending requests" message and remove it
-    const noPendingMsg = listElement.querySelector('p[style*="color: #6b7280"]');
-    if (noPendingMsg) {
-        noPendingMsg.remove();
-    }
-
-    // Create the request card HTML
-    const requestHTML = `
-        <div class="request-card" id="request-${request.id}" style="background: white; border: 2px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin: 0.5rem 0; display: flex; align-items: center; justify-content: space-between;">
-            <div style="flex: 1;">
-                <div style="font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem;">
-                    @${request.username}
-                </div>
-                <div style="font-size: 0.875rem; color: #6b7280;">
-                    ${new Date(request.created_at).toLocaleString()}
-                </div>
-            </div>
-            <div style="display: flex; gap: 0.5rem;">
-                <button
-                    onclick="acceptRequest('${request.id}')"
-                    class="btn-accept"
-                    style="padding: 0.5rem 1rem; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;"
-                >
-                    ✅ Accept
-                </button>
-                <button
-                    onclick="rejectRequest('${request.id}')"
-                    class="btn-reject"
-                    style="padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;"
-                >
-                    ❌ Reject
-                </button>
-            </div>
-        </div>
-    `;
-
-    // Add the request to the list
-    listElement.insertAdjacentHTML('beforeend', requestHTML);
-
-    // Update the request count
-    const currentCount = listElement.querySelectorAll('.request-card').length;
-    updateRequestCount(currentCount);
-}
-
-async function acceptRequest(requestId) {
-    try {
-        const response = await fetch(`/api/rooms/join-request/${requestId}/accept`, {
-            method: 'POST'
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            showNotification('✅ Join request accepted!', 'success');
-            
-            // Update UI dynamically instead of reloading
-            if (data.guest_username) {
-                updateUIAfterAccept(data.guest_username);
-            } else {
-                // Fallback to reload if no username provided
-                setTimeout(() => window.location.reload(), 1000);
-            }
-        } else {
-            showNotification('Failed to accept request', 'error');
-        }
-    } catch (error) {
-        console.error('Error accepting request:', error);
-        showNotification('Failed to accept request', 'error');
-    }
-}
-
-function updateUIAfterAccept(guestUsername) {
-    // Get roomId from the page
-    const roomId = document.querySelector('[data-room-id]').dataset.roomId;
-
-    // Prevent duplicate updates
-    if (document.querySelector('.start-game-section')) {
-        console.log('UI already updated, skipping duplicate update');
-        return;
-    }
-
-    // 1. Update guest card
-    const guestCard = document.getElementById('guest-card');
-    guestCard.classList.remove('empty');
-    guestCard.innerHTML = `
-        <span class="player-label">Guest</span>
-        <span class="player-name" id="guest-name">${guestUsername}</span>
-    `;
-
-    // 2. Update status badge to "ready" and make it green
-    const statusBadge = document.getElementById('room-status-badge');
-    statusBadge.textContent = 'ready';
-    statusBadge.className = 'status-badge status-ready';
-
-    // 3. Hide invite and join request sections
-    const inviteSection = document.getElementById('invite-section');
-    const joinRequestsSection = document.getElementById('join-requests-section');
-    if (inviteSection) inviteSection.style.display = 'none';
-    if (joinRequestsSection) joinRequestsSection.style.display = 'none';
-
-    // 4. Show categories section and load categories
-    const categoriesSection = document.getElementById('categories-section');
-    if (categoriesSection) {
-        categoriesSection.style.display = 'block';
-        // Initialize and load categories now that guest has joined
-        initializeSelectedCategories();
-        loadCategories(roomId);
-    }
-
-    // 5. Show "Start Game" button (disabled until guest clicks Ready)
-    const playerList = document.getElementById('player-list');
-    const startSection = document.createElement('div');
-    startSection.className = 'start-game-section';
-    startSection.id = 'start-game-section';
-    startSection.innerHTML = `
-        <button
-            id="start-game-btn"
-            onclick="startGame()"
-            class="btn btn-primary btn-lg start-game-btn"
-            disabled>
-            🚀 Start Game
-        </button>
-        <p class="waiting-hint" style="text-align: center; color: #6b7280; margin-top: 10px; font-size: 14px;">
-            ⏳ Waiting for guest to click Ready...
-        </p>
-    `;
-    playerList.appendChild(startSection);
-}
-
-async function rejectRequest(requestId) {
-    try {
-        const response = await fetch(`/api/rooms/join-request/${requestId}/reject`, {
-            method: 'POST'
-        });
-
-        if (response.ok) {
-            showNotification('Join request rejected', 'success');
-            // Remove the request card from UI
-            const requestCard = document.getElementById(`request-${requestId}`);
-            if (requestCard) {
-                requestCard.remove();
-            }
-
-            // Update request count
-            const listElement = document.getElementById('join-requests-list');
-            const currentCount = listElement.querySelectorAll('.request-card').length;
-            updateRequestCount(currentCount);
-
-            // If no more requests, show "no pending requests" message
-            if (currentCount === 0) {
-                listElement.innerHTML = '<p style="color: #6b7280;">No pending requests</p>';
-            }
-        } else {
-            showNotification('Failed to reject request', 'error');
-        }
-    } catch (error) {
-        console.error('Error rejecting request:', error);
-        showNotification('Failed to reject request', 'error');
-    }
-}
-
-async function loadFriends(roomId) {
-    try {
-        const response = await fetch('/api/friends/list');
-        if (!response.ok) {
-            document.getElementById('friends-list').innerHTML = '<p style="color: #6b7280;">No friends to invite</p>';
-            return;
-        }
-        
-        const friends = await response.json();
-        
-        if (friends && friends.length > 0) {
-            displayFriendsList(roomId, friends);
-        } else {
-            document.getElementById('friends-list').innerHTML = '<p style="color: #6b7280;">No friends yet. <a href="/friends">Add friends</a></p>';
-        }
-    } catch (error) {
-        console.error('Failed to load friends:', error);
-        document.getElementById('friends-list').innerHTML = '<p style="color: #6b7280;">Failed to load friends</p>';
-    }
-}
-
-function displayFriendsList(roomId, friends) {
-    const listElement = document.getElementById('friends-list');
-    const friendsHTML = friends.map(friend => `
-        <div class="friend-item" id="friend-${friend.id}">
-            <div class="friend-info">
-                <span class="friend-name">${friend.username || friend.name}</span>
-            </div>
-            <button 
-                id="invite-btn-${friend.id}"
-                onclick="inviteFriend('${roomId}', '${friend.id}')" 
-                class="btn btn-primary btn-sm"
-            >
-                📧 Invite
-            </button>
-        </div>
-    `).join('');
-    listElement.innerHTML = friendsHTML;
-}
-
-async function inviteFriend(roomId, friendId) {
-    const btn = document.getElementById(`invite-btn-${friendId}`);
-    const originalText = btn.textContent;
-    
-    try {
-        const response = await fetch('/api/rooms/invitations', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                room_id: roomId,
-                invitee_id: friendId
-            })
-        });
-        
-        if (response.ok) {
-            // Disable all other invite buttons
-            document.querySelectorAll('.friend-item button').forEach(b => {
-                if (b.id !== `invite-btn-${friendId}`) {
-                    b.disabled = true;
-                    b.style.opacity = '0.5';
-                }
-            });
-            
-            // Change this button to "Cancel"
-            btn.textContent = '❌ Cancel';
-            btn.className = 'btn btn-secondary btn-sm';
-            btn.onclick = () => cancelInvitation(roomId, friendId);
-            
-            showNotification('✅ Invitation sent!', 'success');
-        } else {
-            const error = await response.text();
-            showNotification(`❌ ${error}`, 'error');
-        }
-    } catch (error) {
-        console.error('Error sending invitation:', error);
-        showNotification('❌ Failed to send invitation', 'error');
-    }
-}
-
-async function cancelInvitation(roomId, friendId) {
-    try {
-        const response = await fetch(`/api/rooms/invitations/${roomId}/${friendId}`, {
-            method: 'DELETE'
-        });
-        
-        if (response.ok) {
-            // Re-enable all buttons
-            document.querySelectorAll('.friend-item button').forEach(b => {
-                b.disabled = false;
-                b.style.opacity = '1';
-            });
-            
-            // Reset this button to "Invite"
-            const btn = document.getElementById(`invite-btn-${friendId}`);
-            btn.textContent = '📧 Invite';
-            btn.className = 'btn btn-primary btn-sm';
-            btn.onclick = () => inviteFriend(roomId, friendId);
-            
-            showNotification('Invitation cancelled', 'success');
-        } else {
-            showNotification('Failed to cancel invitation', 'error');
-        }
-    } catch (error) {
-        console.error('Error cancelling invitation:', error);
-        showNotification('❌ Failed to cancel invitation', 'error');
-    }
-}
-
+// ============================================================================
+// UI Utilities
+// ============================================================================
 function showNotification(message, type) {
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
@@ -818,255 +214,70 @@ function showNotification(message, type) {
         z-index: 10000;
         animation: slideIn 0.3s ease-out;
     `;
-    
+
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
         notification.style.animation = 'slideOut 0.3s ease-out';
         setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
 
-// Load categories
-let selectedCategories = [];
-
-// Initialize selected categories from server data
-function initializeSelectedCategories() {
-    const container = document.querySelector('[data-selected-categories]');
-    if (container) {
-        const categoriesAttr = container.getAttribute('data-selected-categories');
-        if (categoriesAttr && categoriesAttr.trim() !== '') {
-            try {
-                // Parse the JSON array of category IDs
-                selectedCategories = JSON.parse('[' + categoriesAttr + ']');
-                console.log('📋 Initialized selected categories:', selectedCategories);
-            } catch (error) {
-                console.error('Failed to parse selected categories:', error);
-                selectedCategories = [];
-            }
-        }
-    }
-}
-
-async function loadCategories(roomId) {
-    try {
-        const response = await fetch('/api/categories');
-        if (!response.ok) {
-            document.getElementById('categories-grid').innerHTML = '<p style="color: #6b7280;">Failed to load categories</p>';
-            return;
-        }
-
-        const data = await response.json();
-        const categories = data.categories || [];
-
-        if (categories.length > 0) {
-            displayCategories(roomId, categories);
-        } else {
-            document.getElementById('categories-grid').innerHTML = '<p style="color: #6b7280;">No categories available</p>';
-        }
-    } catch (error) {
-        console.error('Failed to load categories:', error);
-        document.getElementById('categories-grid').innerHTML = '<p style="color: #6b7280;">Failed to load categories</p>';
-    }
-}
-
-function displayCategories(roomId, categories) {
-    const gridElement = document.getElementById('categories-grid');
-
-    const categoriesHTML = categories.map(cat => {
-        // Check if this category is in the selected categories
-        const isSelected = selectedCategories.includes(cat.id);
-        console.log(`Category ${cat.key} (${cat.id}): selected=${isSelected}`);
-
-        return `
-            <label class="category-checkbox">
-                <input
-                    type="checkbox"
-                    id="category-${cat.id}"
-                    value="${cat.id}"
-                    onchange="toggleCategory('${roomId}', '${cat.id}')"
-                    ${isSelected ? 'checked' : ''}
-                />
-                <span class="category-label">${cat.key}</span>
-            </label>
-        `;
-    }).join('');
-
-    gridElement.innerHTML = categoriesHTML;
-}
-
-async function toggleCategory(roomId, categoryId) {
-    const checkbox = document.getElementById(`category-${categoryId}`);
-    console.log(`📝 Toggle category ${categoryId}, checkbox.checked=${checkbox.checked}`);
-
-    if (checkbox.checked) {
-        selectedCategories.push(categoryId);
-    } else {
-        selectedCategories = selectedCategories.filter(id => id !== categoryId);
-    }
-
-    console.log('📤 Sending categories to server:', selectedCategories);
-
-    // Send update to server
-    try {
-        const formData = new FormData();
-        selectedCategories.forEach(id => {
-            formData.append('category_ids', id);
-        });
-
-        console.log('📤 FormData entries:', Array.from(formData.entries()));
-
-        const response = await fetch(`/api/rooms/${roomId}/categories`, {
-            method: 'POST',
-            body: formData
-        });
-
-        console.log('📥 Server response status:', response.status);
-        const responseText = await response.text();
-        console.log('📥 Server response body:', responseText);
-
-        if (!response.ok) {
-            console.error('❌ Failed to update categories');
-            // Revert checkbox state
-            checkbox.checked = !checkbox.checked;
-            if (checkbox.checked) {
-                selectedCategories.push(categoryId);
-            } else {
-                selectedCategories = selectedCategories.filter(id => id !== categoryId);
-            }
-        } else {
-            console.log('✅ Categories updated successfully');
-        }
-    } catch (error) {
-        console.error('❌ Error updating categories:', error);
-        // Revert checkbox state
-        checkbox.checked = !checkbox.checked;
-        if (checkbox.checked) {
-            selectedCategories.push(categoryId);
-        } else {
-            selectedCategories = selectedCategories.filter(id => id !== categoryId);
-        }
-    }
-}
-
-// Sync category selections from SSE updates
-function syncCategorySelections(categoryIds) {
-    console.log('🔄 Syncing category selections:', categoryIds);
-    selectedCategories = categoryIds;
-
-    // Update all checkboxes to match server state
-    document.querySelectorAll('.category-checkbox input[type="checkbox"]').forEach(checkbox => {
-        const categoryId = checkbox.value;
-        const shouldBeChecked = categoryIds.includes(categoryId);
-        console.log(`Checkbox ${categoryId}: current=${checkbox.checked}, should=${shouldBeChecked}, includes=${categoryIds.includes(categoryId)}`);
-
-        if (checkbox.checked !== shouldBeChecked) {
-            console.log(`Updating checkbox ${categoryId} from ${checkbox.checked} to ${shouldBeChecked}`);
-            checkbox.checked = shouldBeChecked;
-        }
-    });
-}
-
-// Guest Ready Function
-async function setGuestReady() {
-    const roomId = document.querySelector('[data-room-id]').dataset.roomId;
-
-    // Check if at least one category is selected
-    if (selectedCategories.length === 0) {
-        showNotification('⚠️ Please select at least one category before marking ready', 'error');
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/rooms/${roomId}/guest-ready`, {
-            method: 'POST'
-        });
-
-        if (response.ok) {
-            showNotification('✅ Marked as ready! Waiting for owner to start...', 'success');
-            // Disable category checkboxes
-            document.querySelectorAll('.category-checkbox input[type="checkbox"]').forEach(checkbox => {
-                checkbox.disabled = true;
-            });
-            // Update UI
-            const readySection = document.getElementById('guest-ready-section');
-            if (readySection) {
-                readySection.innerHTML = `
-                    <div class="ready-confirmed-message">
-                        ✅ You're ready! Waiting for owner to start the game...
-                    </div>
-                `;
-            }
-        } else {
-            const error = await response.text();
-            showNotification(`Failed to mark ready: ${error}`, 'error');
-        }
-    } catch (error) {
-        console.error('Error marking ready:', error);
-        showNotification('Failed to mark ready', 'error');
-    }
-}
-
-// Handle guest ready update (for owner)
-function handleGuestReadyUpdate(guestReady) {
-    console.log('🎯 handleGuestReadyUpdate called with:', guestReady);
-
-    if (!guestReady) {
-        console.log('⚠️ Guest not ready, returning early');
-        return;
-    }
-
-    console.log('✅ Guest is ready, enabling Start Game button');
-
-    // Find and enable the Start Game button
-    const startBtn = document.getElementById('start-game-btn');
-    if (startBtn) {
-        startBtn.disabled = false;
-        console.log('✅ Start Game button enabled');
-    } else {
-        console.error('❌ start-game-btn element not found');
-    }
-
-    // Hide the waiting hint if it exists
-    const waitingHint = document.querySelector('.waiting-hint');
-    if (waitingHint) {
-        waitingHint.style.display = 'none';
-        console.log('✅ Waiting hint hidden');
-    }
-
-    showNotification('✅ Guest is ready! You can now start the game.', 'success');
-}
-
-// Start Game Function
-async function startGame() {
-    const roomId = document.querySelector('[data-room-id]').dataset.roomId;
-
-    // Check if at least one category is selected
-    if (selectedCategories.length === 0) {
-        showNotification('⚠️ Please select at least one category before starting the game', 'error');
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/rooms/${roomId}/start`, {
-            method: 'POST'
-        });
-
-        if (response.ok) {
-            showNotification('🚀 Starting game...', 'success');
-            // Don't redirect here - let SSE handle it for both users
-        } else {
-            const error = await response.text();
-            showNotification(`Failed to start game: ${error}`, 'error');
-        }
-    } catch (error) {
-        console.error('Error starting game:', error);
-        showNotification('Failed to start game', 'error');
-    }
-}
+// ============================================================================
+// HTMX will handle all SSE events automatically:
+// - join_request → appends to #join-requests
+// - request_accepted → replaces #guest-info
+// - categories_updated → updates #categories-section
+// - game_started → updates #game-start-redirect (triggers redirect)
+// - room_update → handled by backend HTML fragments
+// ============================================================================
+console.log('✅ HTMX SSE mode active - ~80% less JavaScript than original!');
 </script>
 
 <style>
+/* Accessibility */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* HTMX Loading Indicators */
+.htmx-indicator {
+    display: none;
+}
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+    display: inline;
+}
+
+/* Error/Success States */
+.category-checkbox.error {
+    animation: shake 0.3s ease-in-out;
+    background-color: rgba(239, 68, 68, 0.1);
+}
+.category-checkbox.saved {
+    animation: pulse 0.3s ease-in-out;
+    background-color: rgba(16, 185, 129, 0.1);
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
 .badge {
     display: inline-block;
     padding: 0.25rem 0.5rem;
@@ -1084,25 +295,13 @@ async function startGame() {
 }
 
 @keyframes slideIn {
-    from {
-        transform: translateX(400px);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+    from { transform: translateX(400px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
 }
 
 @keyframes slideOut {
-    from {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    to {
-        transform: translateX(400px);
-        opacity: 0;
-    }
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(400px); opacity: 0; }
 }
 
 .room-header-section {
@@ -1202,239 +401,178 @@ async function startGame() {
     color: #111827;
 }
 
-    .friend-item button:disabled {
-        cursor: not-allowed;
-    }
+.friend-item button:disabled {
+    cursor: not-allowed;
+}
 
-    /* Start Game Section */
-    .start-game-section {
-        margin-top: 2rem;
-        text-align: center;
-        padding: 2rem;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 12px;
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-    }
+/* Start Game Section */
+.start-game-section {
+    margin-top: 2rem;
+    text-align: center;
+    padding: 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
 
-    .start-game-btn {
-        font-size: 1.25rem;
-        padding: 1rem 3rem;
-        background: white;
-        color: #667eea;
-        border: none;
-        border-radius: 50px;
-        font-weight: 700;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    }
+.start-game-btn {
+    font-size: 1.25rem;
+    padding: 1rem 3rem;
+    background: white;
+    color: #667eea;
+    border: none;
+    border-radius: 50px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
 
-    .start-game-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-        background: #f0f0f0;
-    }
+.start-game-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    background: #f0f0f0;
+}
 
-    .start-game-btn:active {
-        transform: translateY(0);
-    }
+.start-game-btn:active {
+    transform: translateY(0);
+}
 
-    /* Status badge colors */
-    .status-ready {
-        background: #dcfce7;
-        color: #166534;
-    }
+/* Status badge colors */
+.status-ready {
+    background: #dcfce7;
+    color: #166534;
+}
 
-    .status-playing {
-        background: #dbeafe;
-        color: #1e40af;
-    }
+.status-playing {
+    background: #dbeafe;
+    color: #1e40af;
+}
 
-    .status-waiting {
-        background: #fef3c7;
-        color: #92400e;
-    }
+.status-waiting {
+    background: #fef3c7;
+    color: #92400e;
+}
 
-    /* Categories Section */
-    .categories-section {
-        background: white;
-        border-radius: 12px;
-        padding: 2rem;
-        margin: 2rem 0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
+/* Categories Section */
+.categories-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 2rem 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
 
-    .categories-section h2 {
-        margin-top: 0;
-        color: #111827;
-        margin-bottom: 0.5rem;
-    }
+.categories-section h2 {
+    margin-top: 0;
+    color: #111827;
+    margin-bottom: 0.5rem;
+}
 
-    .categories-hint {
-        color: #6b7280;
-        font-size: 0.875rem;
-        margin-bottom: 1.5rem;
-    }
+.categories-hint {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+}
 
+.categories-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.category-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: #f9fafb;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.category-checkbox:hover {
+    background: #f3f4f6;
+    border-color: #667eea;
+}
+
+.category-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #667eea;
+}
+
+.category-checkbox input[type="checkbox"]:checked + .category-label {
+    color: #667eea;
+    font-weight: 600;
+}
+
+.category-label {
+    flex: 1;
+    font-size: 1rem;
+    color: #374151;
+    text-transform: capitalize;
+}
+
+@media (max-width: 768px) {
     .categories-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 1rem;
+        grid-template-columns: 1fr;
     }
+}
 
-    .category-checkbox {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 1rem;
-        background: #f9fafb;
-        border: 2px solid #e5e7eb;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.2s;
-        user-select: none;
-    }
+/* Guest Ready Section */
+.guest-ready-section {
+    text-align: center;
+    padding: 2rem;
+    background: white;
+    border-radius: 12px;
+    margin: 1rem 0;
+}
 
-    .category-checkbox:hover {
-        background: #f3f4f6;
-        border-color: #667eea;
-    }
+.ready-btn {
+    font-size: 1.25rem;
+    padding: 1rem 2rem;
+    background: #10b981;
+    border: none;
+    color: white;
+    font-weight: 600;
+    transition: all 0.3s;
+}
 
-    .category-checkbox input[type="checkbox"] {
-        width: 20px;
-        height: 20px;
-        cursor: pointer;
-        accent-color: #667eea;
-    }
+.ready-btn:hover {
+    background: #059669;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+}
 
-    .category-checkbox input[type="checkbox"]:checked + .category-label {
-        color: #667eea;
-        font-weight: 600;
-    }
+.ready-hint {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
 
-    .category-label {
-        flex: 1;
-        font-size: 1rem;
-        color: #374151;
-        text-transform: capitalize;
-    }
+.ready-confirmed-message {
+    background: #dcfce7;
+    color: #166534;
+    padding: 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
 
-    @media (max-width: 768px) {
-        .categories-grid {
-            grid-template-columns: 1fr;
-        }
-    }
+/* Disabled checkboxes */
+.category-checkbox input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
 
-    /* Guest Ready Section */
-    .guest-ready-section {
-        text-align: center;
-        padding: 2rem;
-        background: white;
-        border-radius: 12px;
-        margin: 1rem 0;
-    }
-
-    .ready-btn {
-        font-size: 1.25rem;
-        padding: 1rem 2rem;
-        background: #10b981;
-        border: none;
-        color: white;
-        font-weight: 600;
-        transition: all 0.3s;
-    }
-
-    .ready-btn:hover {
-        background: #059669;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
-    }
-
-    .ready-hint {
-        color: #6b7280;
-        font-size: 0.875rem;
-        margin-top: 0.5rem;
-    }
-
-    .ready-confirmed-message {
-        background: #dcfce7;
-        color: #166534;
-        padding: 1.5rem;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 1.1rem;
-    }
-
-    .waiting-ready-message {
-        background: #fef3c7;
-        color: #92400e;
-        padding: 1.5rem;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 1.1rem;
-    }
-
-    /* Disabled checkboxes */
-    .category-checkbox input[type="checkbox"]:disabled {
-        cursor: not-allowed;
-        opacity: 0.6;
-    }
-
-    .category-checkbox input[type="checkbox"]:disabled + .category-label {
-        color: #9ca3af;
-    }
-
-    /* Game Starting Notification */
-    #game-starting-notification {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-        z-index: 9999;
-        text-align: center;
-        min-width: 300px;
-    }
-
-    #game-starting-notification h2 {
-        margin: 0 0 1rem 0;
-        color: #111827;
-        font-size: 1.5rem;
-    }
-
-    #game-starting-notification p {
-        color: #6b7280;
-        margin: 0 0 1rem 0;
-    }
-
-    .spinner {
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #667eea;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        animation: spin 1s linear infinite;
-        margin: 0 auto;
-    }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
+.category-checkbox input[type="checkbox"]:disabled + .category-label {
+    color: #9ca3af;
+}
 </style>
 
-<!-- Game Starting Notification (shown when redirecting to game) -->
-<div id="game-starting-notification" style="display: none;">
-    <div style="font-size: 3rem; margin-bottom: 1rem;">🎮</div>
-    <h2>Game Starting...</h2>
-    <p>Redirecting to game page...</p>
-    <div>
-        <div class="spinner"></div>
-    </div>
-</div>
-
 {{end}}
-

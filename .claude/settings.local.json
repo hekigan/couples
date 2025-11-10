@@ -15,7 +15,8 @@
       "Bash(make run:*)",
       "Bash(pkill:*)",
       "WebFetch(domain:htmx.org)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []

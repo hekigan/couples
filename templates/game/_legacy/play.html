@@ -1,0 +1,900 @@
+{{define "content"}}
+<style>
+    .game-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .game-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .game-progress {
+        font-size: 14px;
+        color: #666;
+        margin-top: 10px;
+    }
+
+    .turn-indicator {
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: bold;
+    }
+
+    .turn-indicator.your-turn {
+        background-color: #d4edda;
+        color: #155724;
+        border: 2px solid #c3e6cb;
+    }
+
+    .turn-indicator.waiting {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 2px solid #f5c6cb;
+    }
+
+    .question-card {
+        background: #fff;
+        border: 2px solid #dee2e6;
+        border-radius: 12px;
+        padding: 40px;
+        margin: 20px 0;
+        text-align: center;
+        min-height: 150px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .question-text {
+        font-size: 20px;
+        line-height: 1.6;
+        color: #333;
+    }
+
+    .answer-form {
+        margin-top: 30px;
+    }
+
+    .answer-form textarea {
+        width: 100%;
+        padding: 15px;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        font-size: 16px;
+        resize: vertical;
+        min-height: 100px;
+    }
+
+    .form-check {
+        margin: 15px 0;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s;
+        flex: 1;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background-color: #218838;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background-color: #c82333;
+    }
+
+    .btn:disabled {
+        background-color: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .answer-display {
+        background: #e9ecef;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+
+    .answer-display h3 {
+        margin-top: 0;
+        color: #495057;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 20px;
+        color: #6c757d;
+    }
+
+    .error {
+        background-color: #f8d7da;
+        color: #721c24;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+</style>
+
+<div class="game-container" data-room-id="{{.Data.Room.ID}}">
+    <div class="game-header">
+        <h1>{{.Data.Room.Name}}</h1>
+        <div class="game-progress" id="progress">
+            Question <span id="currentQuestion">{{.Data.Room.CurrentQuestion}}</span> of <span id="maxQuestions">{{.Data.Room.MaxQuestions}}</span>
+        </div>
+    </div>
+
+    <div id="turnIndicator" class="turn-indicator">
+        <span id="turnText">Loading...</span>
+    </div>
+
+    <div id="gameContent" class="game-content">
+        <div class="question-card">
+            <p class="question-text" id="questionText">Waiting to start...</p>
+        </div>
+
+        <!-- Active player form -->
+        <div id="answerForm" class="answer-form" style="display: none;">
+            <textarea id="answerText" placeholder="Write your answer here (optional)..." rows="4"></textarea>
+
+            <div class="button-group" style="display: flex; gap: 10px; justify-content: center;">
+                <button id="answeredBtn" class="btn btn-primary" onclick="submitAnswer('answered')" style="flex: 1; max-width: 200px;">
+                    ✅ Answered
+                </button>
+                <button id="passBtn" class="btn btn-secondary" onclick="submitAnswer('passed')" style="flex: 1; max-width: 200px;">
+                    ⏭️ Pass
+                </button>
+            </div>
+        </div>
+
+        <!-- Passive player UI -->
+        <div id="waitingUI" class="answer-form" style="display: none;">
+            <textarea id="passiveAnswerText" placeholder="" rows="4" disabled style="background-color: #f5f5f5;"></textarea>
+
+            <div id="typingIndicator" class="typing-indicator" style="display: none; text-align: center; padding: 10px; font-style: italic; color: #666;">
+                💬 Other player is typing...
+            </div>
+
+            <div id="otherPlayerAnswer" class="answer-display" style="display: none; margin-top: 15px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+                <h3 style="margin-top: 0;">Other player's response:</h3>
+                <p id="otherAnswerText" style="white-space: pre-wrap;"></p>
+            </div>
+        </div>
+
+        <!-- Answer review section (shown to both players after answer submission) -->
+        <div id="answerReviewUI" class="answer-review" style="display: none;">
+            <div style="padding: 20px; background-color: #f0f9ff; border-radius: 8px; border: 2px solid #3b82f6;">
+                <h3 style="margin-top: 0; color: #1e40af;">📝 Answer:</h3>
+                <p id="reviewAnswerText" style="font-size: 18px; white-space: pre-wrap; margin: 15px 0;"></p>
+
+                <!-- Show "Next Question" button only to new active player -->
+                <div id="nextQuestionSection" style="display: none; margin-top: 20px;">
+                    <button id="nextQuestionBtn" onclick="nextQuestion()" class="btn btn-primary btn-lg" style="width: 100%;">
+                        ➡️ Next Question
+                    </button>
+                </div>
+
+                <!-- Show waiting message to previous active player (who answered) -->
+                <div id="waitingForNextSection" style="display: none; margin-top: 20px; text-align: center;">
+                    <p style="color: #6b7280; font-style: italic;">
+                        ⏳ Waiting for <span id="otherPlayerName">other player</span> to draw next question...
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="button-group" style="margin-top: 30px;">
+            <button class="btn btn-danger" onclick="finishGame()">
+                Finish Game
+            </button>
+        </div>
+    </div>
+
+    <div id="loadingIndicator" class="loading">
+        Loading game...
+    </div>
+
+    <div id="errorMessage" class="error" style="display: none;"></div>
+</div>
+
+<script>
+    const roomId = '{{.Data.Room.ID}}';
+    let eventSource = null;
+    let currentUserId = '{{.Data.CurrentUserID}}'; // Current logged-in user's ID
+    let currentQuestion = null;
+    let gameState = {
+        currentTurn: null,
+        status: 'loading'
+    };
+    let typingTimeout = null; // For debouncing typing indicator
+
+    // SSE and polling state management
+    let pollingInterval = null;
+    let isSSEActive = false;
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 3;
+    const POLL_INTERVAL = 3000; // Poll every 3 seconds
+    let lastPolledState = null;
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🎮 Game initialized for user:', currentUserId, 'in room:', roomId);
+
+        // Connect to SSE
+        connectSSE();
+
+        // Load initial game state
+        loadGameState();
+
+        // Add typing indicator listener for active player
+        const answerTextarea = document.getElementById('answerText');
+        if (answerTextarea) {
+            answerTextarea.addEventListener('input', function() {
+                // Debounce typing indicator - only send after user stops typing for 300ms
+                clearTimeout(typingTimeout);
+                sendTypingStatus(true);
+
+                typingTimeout = setTimeout(() => {
+                    sendTypingStatus(false);
+                }, 300);
+            });
+        }
+    });
+
+    // Send typing status to server
+    async function sendTypingStatus(isTyping) {
+        try {
+            await fetch(`/api/rooms/${roomId}/typing`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ is_typing: isTyping })
+            });
+        } catch (error) {
+            console.error('Error sending typing status:', error);
+        }
+    }
+
+    // Connect to Server-Sent Events for real-time updates
+    function connectSSE() {
+        eventSource = new EventSource(`/api/rooms/${roomId}/events`);
+
+        eventSource.addEventListener('game_started', function(e) {
+            const data = JSON.parse(e.data);
+            console.log('Game started:', data);
+            gameState.status = 'playing';
+            loadGameState();
+        });
+
+        eventSource.addEventListener('question_drawn', function(e) {
+            console.log('📩 question_drawn event received (RAW):', e);
+            console.log('📩 question_drawn data (string):', e.data);
+            const data = JSON.parse(e.data);
+            console.log('📩 Parsed question data:', data);
+            console.log('📩 Question object:', data.question);
+            console.log('📩 Current user ID:', currentUserId);
+            console.log('📩 Current turn:', gameState.currentTurn);
+            displayQuestion(data.question);
+        });
+
+        eventSource.addEventListener('answer_submitted', function(e) {
+            const data = JSON.parse(e.data);
+            console.log('📝 Answer submitted event received:', data);
+            // Data is the answer object directly, not nested under 'answer'
+            displayAnswer(data);
+        });
+
+        eventSource.addEventListener('turn_changed', function(e) {
+            const data = JSON.parse(e.data);
+            console.log('🔄 Turn changed:', data);
+            gameState.currentTurn = data.current_turn;
+            console.log('🔄 New current turn:', gameState.currentTurn);
+            updateUI();
+        });
+
+        eventSource.addEventListener('player_typing', function(e) {
+            const data = JSON.parse(e.data);
+            console.log('Player typing:', data);
+
+            // Only show typing indicator if it's not the current user typing
+            if (data.user_id !== currentUserId) {
+                const typingIndicator = document.getElementById('typingIndicator');
+                if (typingIndicator) {
+                    typingIndicator.style.display = data.is_typing ? 'block' : 'none';
+                }
+            }
+        });
+
+        eventSource.addEventListener('room_update', function(e) {
+            const data = JSON.parse(e.data);
+            console.log('🏠 Room update received:', data);
+
+            // Update turn if it changed
+            if (data.current_turn !== undefined) {
+                console.log('🏠 Updating currentTurn from', gameState.currentTurn, 'to', data.current_turn);
+                gameState.currentTurn = data.current_turn;
+                updateUI();
+            }
+
+            // Update status if it changed
+            if (data.status !== undefined && data.status !== gameState.status) {
+                console.log('🏠 Status changed from', gameState.status, 'to', data.status);
+                gameState.status = data.status;
+
+                // Redirect if game finished
+                if (data.status === 'finished') {
+                    window.location.href = `/game/finished/${roomId}`;
+                }
+            }
+        });
+
+        eventSource.addEventListener('game_finished', function(e) {
+            const data = JSON.parse(e.data);
+            console.log('Game finished:', data);
+            window.location.href = `/game/finished/${roomId}`;
+        });
+
+        // Track connection state
+        let connectionLostTimeout = null;
+        let isConnected = false;
+
+        eventSource.addEventListener('connected', function(e) {
+            console.log('SSE connected');
+            isConnected = true;
+            // Clear any pending "connection lost" message
+            if (connectionLostTimeout) {
+                clearTimeout(connectionLostTimeout);
+                connectionLostTimeout = null;
+            }
+            // Hide error message if it's showing
+            const errorDiv = document.getElementById('errorMessage');
+            if (errorDiv && errorDiv.textContent.includes('Connection lost')) {
+                errorDiv.style.display = 'none';
+            }
+        });
+
+        eventSource.onopen = function() {
+            console.log('✅ SSE connection opened successfully!');
+            isSSEActive = true;
+            reconnectAttempts = 0;
+            stopPolling(); // Stop polling if it was active
+
+            // Clear any pending "connection lost" message
+            if (connectionLostTimeout) {
+                clearTimeout(connectionLostTimeout);
+                connectionLostTimeout = null;
+            }
+            // Hide error message
+            const errorDiv = document.getElementById('errorMessage');
+            if (errorDiv && errorDiv.textContent.includes('Connection lost')) {
+                errorDiv.style.display = 'none';
+            }
+        };
+
+        eventSource.onerror = function(e) {
+            console.error('SSE connection error:', e);
+            isSSEActive = false;
+            reconnectAttempts++;
+
+            console.log(`⚠️ SSE error, attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`);
+
+            if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                console.error('❌ SSE failed after max attempts, switching to polling');
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+                startPolling();
+                showError('Connection unstable. Using fallback mode...');
+            } else {
+                // Show "connection lost" message after 2 seconds
+                if (!connectionLostTimeout) {
+                    connectionLostTimeout = setTimeout(() => {
+                        if (eventSource && eventSource.readyState !== EventSource.OPEN) {
+                            showError('Connection lost. Trying to reconnect...');
+                        }
+                        connectionLostTimeout = null;
+                    }, 2000);
+                }
+                // EventSource will automatically reconnect
+            }
+        };
+    }
+
+    // Stop polling and clear interval
+    function stopPolling() {
+        if (pollingInterval) {
+            console.log('🛑 Stopping polling (SSE restored)');
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
+    }
+
+    // Start polling fallback
+    function startPolling() {
+        if (pollingInterval) {
+            console.log('📊 Polling already active');
+            return; // Already polling
+        }
+
+        console.log('📊 Starting polling fallback (every 3s)');
+        pollingInterval = setInterval(async () => {
+            try {
+                await pollGameState();
+
+                // Periodically try to restore SSE
+                if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS && reconnectAttempts < MAX_RECONNECT_ATTEMPTS * 2) {
+                    attemptSSEReconnect();
+                }
+            } catch (error) {
+                console.error('Polling error:', error);
+            }
+        }, POLL_INTERVAL);
+    }
+
+    // Poll game state from server
+    async function pollGameState() {
+        try {
+            const response = await fetch(`/api/rooms/${roomId}/state`);
+            if (!response.ok) {
+                console.error('Failed to poll game state:', response.status);
+                return;
+            }
+
+            const state = await response.json();
+            updateFromPolledState(state);
+        } catch (error) {
+            console.error('Error polling game state:', error);
+        }
+    }
+
+    // Update game from polled state
+    function updateFromPolledState(state) {
+        console.log('📊 Polled state:', state);
+
+        // Update turn if changed
+        if (state.current_turn !== gameState.currentTurn) {
+            console.log('🔄 Turn changed via polling:', state.current_turn);
+            gameState.currentTurn = state.current_turn;
+            updateUI();
+        }
+
+        // Update question if changed
+        if (state.current_question_data &&
+            (!currentQuestion || currentQuestion.id !== state.current_question_data.id)) {
+            console.log('📩 New question via polling:', state.current_question_data);
+            displayQuestion(state.current_question_data);
+        }
+
+        // Update status if changed
+        if (state.status !== gameState.status) {
+            console.log('🎮 Status changed via polling:', state.status);
+            gameState.status = state.status;
+            if (state.status === 'finished') {
+                window.location.href = `/game/finished/${roomId}`;
+            }
+        }
+
+        lastPolledState = state;
+    }
+
+    // Attempt to reconnect SSE
+    function attemptSSEReconnect() {
+        if (isSSEActive) {
+            console.log('✅ SSE already active, skipping reconnect');
+            return; // Already connected
+        }
+
+        console.log('🔄 Attempting to restore SSE connection...');
+        reconnectAttempts = 0; // Reset for new attempt
+        connectSSE();
+    }
+
+    // Track if game state has loaded successfully
+    let gameStateLoaded = false;
+    let loadGameStateTimeout = null;
+
+    // Load current game state from API
+    async function loadGameState() {
+        try {
+            const response = await fetch(`/api/rooms/${roomId}/state`);
+            if (!response.ok) throw new Error('Failed to load game state');
+
+            const data = await response.json();
+            gameState.currentTurn = data.current_turn;
+            gameState.status = data.status;
+            gameStateLoaded = true;
+
+            console.log('📊 Game state loaded:', gameState);
+            console.log('📊 Current question data:', data.current_question_data);
+
+            // Clear any pending error timeout since we loaded successfully
+            if (loadGameStateTimeout) {
+                clearTimeout(loadGameStateTimeout);
+                loadGameStateTimeout = null;
+            }
+
+            document.getElementById('currentQuestion').textContent = data.current_question || 0;
+
+            // If a current question exists in the state, display it
+            if (data.current_question_data) {
+                console.log('📋 Displaying existing question from state');
+                displayQuestion({
+                    id: data.current_question_data.id,
+                    text: data.current_question_data.question_text
+                });
+            }
+
+            updateUI();
+
+            // Only draw a new question if game is playing AND no question exists AND it's our turn
+            if (data.status === 'playing' && !currentQuestion && !data.current_question_data && gameState.currentTurn === currentUserId) {
+                console.log('🎴 No question exists and it\'s our turn, drawing new question');
+                drawQuestion();
+            }
+        } catch (error) {
+            console.error('Error loading game state:', error);
+
+            // Only show error after 10 seconds if game state hasn't loaded
+            if (!loadGameStateTimeout) {
+                loadGameStateTimeout = setTimeout(() => {
+                    if (!gameStateLoaded) {
+                        showError('Failed to load game state');
+                    }
+                    loadGameStateTimeout = null;
+                }, 10000);
+            }
+        }
+    }
+
+    // Draw a new question
+    async function drawQuestion() {
+        try {
+            const response = await fetch(`/api/rooms/${roomId}/draw`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(error);
+            }
+
+            const data = await response.json();
+            displayQuestion(data.question);
+        } catch (error) {
+            console.error('Error drawing question:', error);
+            showError('Failed to draw question: ' + error.message);
+        }
+    }
+
+    // Display question on screen
+    function displayQuestion(question) {
+        console.log('🎯 displayQuestion called with:', question);
+        console.log('🎯 Question text:', question?.text);
+        console.log('🎯 Question question_text:', question?.question_text);
+
+        currentQuestion = question;
+        const questionTextEl = document.getElementById('questionText');
+        console.log('🎯 questionText element:', questionTextEl);
+        console.log('🎯 questionText current content:', questionTextEl?.textContent);
+
+        // Try both 'text' and 'question_text' fields
+        const questionText = question.text || question.question_text;
+        console.log('🎯 Setting text to:', questionText);
+
+        questionTextEl.textContent = questionText;
+        console.log('🎯 questionText after update:', questionTextEl?.textContent);
+
+        document.getElementById('loadingIndicator').style.display = 'none';
+        console.log('🎯 Calling updateUI()');
+        updateUI();
+        console.log('🎯 Question displayed successfully');
+    }
+
+    // Submit answer
+    async function submitAnswer(actionType) {
+        const answerText = document.getElementById('answerText').value.trim();
+
+        console.log(`📝 Submitting answer with action: ${actionType}`);
+
+        // Debug: Log the current question object structure
+        console.log('🔍 DEBUG currentQuestion:', currentQuestion);
+        console.log('🔍 DEBUG currentQuestion.id:', currentQuestion?.id);
+        console.log('🔍 DEBUG currentQuestion.ID:', currentQuestion?.ID);
+        console.log('🔍 DEBUG currentQuestion keys:', currentQuestion ? Object.keys(currentQuestion) : 'null');
+
+        try {
+            // Stop sending typing indicator
+            if (typingTimeout) {
+                clearTimeout(typingTimeout);
+            }
+            sendTypingStatus(false);
+
+            const formData = new FormData();
+            formData.append('question_id', currentQuestion.id);
+            formData.append('answer_text', answerText);
+            formData.append('action_type', actionType);
+            formData.append('passed', actionType === 'passed' ? 'true' : 'false');
+
+            const response = await fetch(`/api/rooms/${roomId}/answer`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(error);
+            }
+
+            console.log(`✅ Answer submitted successfully (${actionType})`);
+
+            // Clear form
+            document.getElementById('answerText').value = '';
+
+            // Show message based on action type
+            if (actionType === 'answered') {
+                showMessage('Answer submitted! Turn switching to other player...');
+            } else {
+                showMessage('Question passed! Drawing new card...');
+            }
+
+            // Hide answer form while waiting for new question
+            document.getElementById('answerForm').style.display = 'none';
+
+        } catch (error) {
+            console.error('Error submitting answer:', error);
+            showError('Failed to submit answer: ' + error.message);
+        }
+    }
+
+    // Display other player's answer
+    function displayOtherPlayerAnswer(answer) {
+        const answerDiv = document.getElementById('otherPlayerAnswer');
+        const answerText = document.getElementById('otherAnswerText');
+
+        if (answer.action_type === 'passed') {
+            answerText.textContent = '(Passed)';
+        } else {
+            answerText.textContent = answer.answer_text || '(No answer provided)';
+        }
+
+        answerDiv.style.display = 'block';
+        document.getElementById('waitingUI').style.display = 'block';
+    }
+
+    // Display answer to both players after submission
+    function displayAnswer(answer) {
+        console.log('📋 Displaying answer:', answer);
+        console.log('📋 Answer submitted by user:', answer.user_id);
+        console.log('📋 Current user ID:', currentUserId);
+
+        // Hide answer forms
+        document.getElementById('answerForm').style.display = 'none';
+        document.getElementById('waitingUI').style.display = 'none';
+
+        // Show answer review UI
+        const reviewUI = document.getElementById('answerReviewUI');
+        const reviewText = document.getElementById('reviewAnswerText');
+        const nextQuestionSection = document.getElementById('nextQuestionSection');
+        const waitingSection = document.getElementById('waitingForNextSection');
+
+        // Set answer text
+        if (answer.action_type === 'passed') {
+            reviewText.textContent = '(Question was passed)';
+            reviewText.style.fontStyle = 'italic';
+            reviewText.style.color = '#6b7280';
+        } else {
+            reviewText.textContent = answer.answer_text || '(No answer provided)';
+            reviewText.style.fontStyle = 'normal';
+            reviewText.style.color = 'inherit';
+        }
+
+        // Determine who sees what based on who submitted the answer
+        // The person who answered should see the waiting message
+        // The other person (new active player) should see the Next Question button
+        const iAnswered = answer.user_id === currentUserId;
+        const isMyTurn = !iAnswered; // If I didn't answer, it's now my turn
+
+        console.log('📋 I answered:', iAnswered);
+        console.log('📋 Is now my turn:', isMyTurn);
+
+        if (isMyTurn) {
+            // New active player (didn't answer) - show "Next Question" button
+            console.log('   ✅ I am the new active player - showing Next Question button');
+            nextQuestionSection.style.display = 'block';
+            waitingSection.style.display = 'none';
+        } else {
+            // Previous active player (who answered) - show waiting message
+            console.log('   ⏳ I just answered - showing waiting message');
+            nextQuestionSection.style.display = 'none';
+            waitingSection.style.display = 'block';
+        }
+
+        reviewUI.style.display = 'block';
+    }
+
+    // Next question (called by new active player)
+    async function nextQuestion() {
+        console.log('➡️ Drawing next question...');
+
+        try {
+            const response = await fetch(`/api/rooms/${roomId}/next-question`, {
+                method: 'POST'
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(error);
+            }
+
+            console.log('✅ Next question request sent');
+
+            // Hide answer review UI
+            document.getElementById('answerReviewUI').style.display = 'none';
+
+            // The question_drawn event will be received via SSE and will update the UI
+
+        } catch (error) {
+            console.error('❌ Error drawing next question:', error);
+            showError('Failed to draw next question: ' + error.message);
+        }
+    }
+
+    // Next card (change turn)
+    async function nextCard() {
+        try {
+            const response = await fetch(`/api/rooms/${roomId}/next-card`, {
+                method: 'POST'
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(error);
+            }
+
+            // Draw next question
+            await drawQuestion();
+
+            // Hide answer display
+            document.getElementById('otherPlayerAnswer').style.display = 'none';
+
+        } catch (error) {
+            console.error('Error getting next card:', error);
+            showError('Failed to get next card: ' + error.message);
+        }
+    }
+
+    // Finish game
+    async function finishGame() {
+        if (!confirm('Are you sure you want to finish the game?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/rooms/${roomId}/finish`, {
+                method: 'POST'
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(error);
+            }
+
+            const data = await response.json();
+            if (data.redirect) {
+                window.location.href = data.redirect;
+            }
+        } catch (error) {
+            console.error('Error finishing game:', error);
+            showError('Failed to finish game: ' + error.message);
+        }
+    }
+
+    // Update UI based on game state
+    function updateUI() {
+        const isMyTurn = gameState.currentTurn === currentUserId;
+        const turnIndicator = document.getElementById('turnIndicator');
+        const turnText = document.getElementById('turnText');
+        const answerForm = document.getElementById('answerForm');
+        const waitingUI = document.getElementById('waitingUI');
+        const otherPlayerAnswer = document.getElementById('otherPlayerAnswer');
+
+        console.log('🔄 Updating UI:');
+        console.log('   Game Status:', gameState.status);
+        console.log('   Is My Turn:', isMyTurn);
+        console.log('   Current Turn User ID:', gameState.currentTurn);
+        console.log('   My User ID:', currentUserId);
+        console.log('   Current Question:', currentQuestion);
+
+        if (isMyTurn) {
+            // Active player - show answer form with enabled textarea
+            turnIndicator.className = 'turn-indicator your-turn';
+            turnText.textContent = "It's YOUR turn!";
+            answerForm.style.display = 'block';
+            waitingUI.style.display = 'none';
+        } else {
+            // Passive player - show disabled textarea and typing indicator
+            turnIndicator.className = 'turn-indicator waiting';
+            turnText.textContent = 'Waiting for other player...';
+            answerForm.style.display = 'none';
+            waitingUI.style.display = 'block';
+            // Hide answer display until answer is submitted
+            if (otherPlayerAnswer) {
+                otherPlayerAnswer.style.display = 'none';
+            }
+        }
+    }
+
+    // Show error message
+    function showError(message) {
+        const errorDiv = document.getElementById('errorMessage');
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+        }, 5000);
+    }
+
+    // Show success message
+    function showMessage(message) {
+        const errorDiv = document.getElementById('errorMessage');
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+        errorDiv.style.backgroundColor = '#d4edda';
+        errorDiv.style.color = '#155724';
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+            errorDiv.style.backgroundColor = '';
+            errorDiv.style.color = '';
+        }, 3000);
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+        if (eventSource) {
+            eventSource.close();
+        }
+    });
+</script>
+{{end}}
+
+

@@ -287,15 +287,8 @@ func (h *Handler) RoomHandler(w http.ResponseWriter, r *http.Request) {
 		IsOwner:        isOwner,
 	}
 
-	// Phase 6: HTMX mode - use HTMX version for testing
-	// Add ?htmx=true to URL to test HTMX version: /game/room/{id}?htmx=true
-	useHTMX := r.URL.Query().Get("htmx") == "true"
-	if useHTMX {
-		log.Printf("✨ Using HTMX version of room template")
-		h.RenderTemplate(w, "game/room_htmx.html", data)
-	} else {
-		h.RenderTemplate(w, "game/room.html", data)
-	}
+	// HTMX refactoring complete - using HTMX version as default
+	h.RenderTemplate(w, "game/room.html", data)
 }
 
 // PlayHandler handles the game play screen
