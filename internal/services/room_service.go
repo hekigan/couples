@@ -452,16 +452,35 @@ func (s *RoomService) GetAcceptedRequestsByUser(ctx context.Context, userID uuid
 		Eq("user_id", userID.String()).
 		Eq("status", "accepted").
 		Execute()
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch accepted requests: %w", err)
 	}
-	
+
 	var requests []models.RoomJoinRequest
 	if err := json.Unmarshal(data, &requests); err != nil {
 		return nil, fmt.Errorf("failed to parse accepted requests: %w", err)
 	}
-	
+
+	return requests, nil
+}
+
+// GetJoinRequestsByUser gets ALL join requests (any status) for a specific user
+func (s *RoomService) GetJoinRequestsByUser(ctx context.Context, userID uuid.UUID) ([]models.RoomJoinRequest, error) {
+	data, _, err := s.client.From("room_join_requests").
+		Select("*", "", false).
+		Eq("user_id", userID.String()).
+		Execute()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch user's join requests: %w", err)
+	}
+
+	var requests []models.RoomJoinRequest
+	if err := json.Unmarshal(data, &requests); err != nil {
+		return nil, fmt.Errorf("failed to parse user's join requests: %w", err)
+	}
+
 	return requests, nil
 }
 

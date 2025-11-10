@@ -3,11 +3,12 @@ package handlers
 import (
 	"log"
 	"net/http"
-	
+
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/yourusername/couple-card-game/internal/middleware"
 	"github.com/yourusername/couple-card-game/internal/models"
+	"github.com/yourusername/couple-card-game/internal/services"
 )
 
 // FriendsHandler displays the friends list
@@ -243,4 +244,54 @@ func (h *Handler) GetFriendsAPIHandler(w http.ResponseWriter, r *http.Request) {
 	jsonStr += `]`
 
 	w.Write([]byte(jsonStr))
+}
+
+// GetFriendsHTMLHandler returns friends list as HTML fragment (for HTMX)
+func (h *Handler) GetFriendsHTMLHandler(w http.ResponseWriter, r *http.Request) {
+	// Get user from context
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	// Get room ID from query parameter
+	roomID := r.URL.Query().Get("room_id")
+
+	// Get friends
+	friendsList, err := h.FriendService.GetFriends(r.Context(), userID)
+	if err != nil {
+		log.Printf("Error getting friends: %v", err)
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`<p style="color: #6b7280;">Failed to load friends</p>`))
+		return
+	}
+
+	// Build FriendsListData
+	friends := make([]services.FriendInfo, 0, len(friendsList))
+	for _, friend := range friendsList {
+		// Determine which ID is the actual friend (not the current user)
+		friendIDStr := friend.FriendID.String()
+		if friend.FriendID == userID {
+			friendIDStr = friend.UserID.String()
+		}
+		friends = append(friends, services.FriendInfo{
+			ID:       friendIDStr,
+			Username: friend.Username,
+		})
+	}
+
+	// Render HTML fragment
+	html, err := h.TemplateService.RenderFragment("friends_list.html", services.FriendsListData{
+		Friends: friends,
+		RoomID:  roomID,
+	})
+	if err != nil {
+		log.Printf("Error rendering friends list template: %v", err)
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`<p style="color: #6b7280;">Failed to load friends</p>`))
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(html))
 }

@@ -1,0 +1,9 @@
+{{if .IsMyTurn}}
+<div class="turn-indicator your-turn" role="status" aria-live="polite">
+    <span>✨ It's YOUR turn!</span>
+</div>
+{{else}}
+<div class="turn-indicator waiting" role="status" aria-live="polite">
+    <span>⏳ Waiting for {{.OtherPlayerName}}...</span>
+</div>
+{{end}}

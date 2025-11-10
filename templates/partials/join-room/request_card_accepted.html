@@ -1,0 +1,13 @@
+<div class="request-card" id="request-{{.RoomID}}">
+    <div class="request-info">
+        <strong>Room: {{.RoomID}}</strong>
+        <span class="request-status accepted" role="status" aria-live="assertive">✅ Request accepted! Redirecting...</span>
+    </div>
+</div>
+
+<script>
+// Auto-redirect after SSE acceptance
+setTimeout(() => {
+    window.location.href = '/game/room/{{.RoomID}}';
+}, 1500);
+</script>

@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/yourusername/couple-card-game/internal/middleware"
 	"github.com/yourusername/couple-card-game/internal/models"
+	"github.com/yourusername/couple-card-game/internal/services"
 )
 
 // DeleteRoomAPIHandler handles room deletion via API
@@ -285,7 +286,16 @@ func (h *Handler) RoomHandler(w http.ResponseWriter, r *http.Request) {
 		GuestUsername:  guestUsername,
 		IsOwner:        isOwner,
 	}
-	h.RenderTemplate(w, "game/room.html", data)
+
+	// Phase 6: HTMX mode - use HTMX version for testing
+	// Add ?htmx=true to URL to test HTMX version: /game/room/{id}?htmx=true
+	useHTMX := r.URL.Query().Get("htmx") == "true"
+	if useHTMX {
+		log.Printf("✨ Using HTMX version of room template")
+		h.RenderTemplate(w, "game/room_htmx.html", data)
+	} else {
+		h.RenderTemplate(w, "game/room.html", data)
+	}
 }
 
 // PlayHandler handles the game play screen
@@ -463,9 +473,9 @@ func (h *Handler) StartGameAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	// Return HTMX redirect header to navigate to play page
+	w.Header().Set("HX-Redirect", fmt.Sprintf("/game/play/%s", roomID))
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"success","message":"Game started"}`))
 }
 
 // SetGuestReadyAPIHandler marks the guest as ready
@@ -503,16 +513,28 @@ func (h *Handler) SetGuestReadyAPIHandler(w http.ResponseWriter, r *http.Request
 
 	log.Printf("✅ Guest %s marked as ready in room %s", userID, roomID)
 
-	// Broadcast guest ready event via SSE
+	// Render HTML fragment for updated button state
+	html, err := h.TemplateService.RenderFragment("guest_ready_button.html", services.GuestReadyButtonData{
+		RoomID:     roomID.String(),
+		GuestReady: true,
+	})
+	if err != nil {
+		log.Printf("Error rendering guest ready button template: %v", err)
+		http.Error(w, "Failed to render button", http.StatusInternalServerError)
+		return
+	}
+
+	// Broadcast guest ready event via SSE to update owner's start button
 	h.RoomService.BroadcastRoomUpdate(roomID, map[string]interface{}{
 		"guest_ready": true,
 	})
 
 	log.Printf("📡 Broadcasting guest_ready=true to room %s", roomID)
 
-	w.Header().Set("Content-Type", "application/json")
+	// Return HTML fragment for HTMX
+	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"success","message":"Guest marked as ready"}`))
+	w.Write([]byte(html))
 }
 
 // PlayerTypingAPIHandler broadcasts typing status to other players in the room
@@ -939,5 +961,210 @@ func (h *Handler) GetCategoriesAPIHandler(w http.ResponseWriter, r *http.Request
 	jsonStr += `]}`
 
 	w.Write([]byte(jsonStr))
+}
+
+// GetRoomCategoriesHTMLHandler returns room categories as HTML fragment (for HTMX)
+func (h *Handler) GetRoomCategoriesHTMLHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	roomID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid room ID", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+
+	// Get room to check guest_ready status
+	room, err := h.RoomService.GetRoomByID(ctx, roomID)
+	if err != nil {
+		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+
+	// Get all categories
+	allCategories, err := h.QuestionService.GetCategories(ctx)
+	if err != nil {
+		log.Printf("Error fetching categories: %v", err)
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`<p style="color: #6b7280;">Failed to load categories</p>`))
+		return
+	}
+
+	// Build CategoryInfo array with selection state
+	categoryInfos := make([]services.CategoryInfo, 0, len(allCategories))
+	for _, cat := range allCategories {
+		isSelected := false
+		// Check if this category is in room's selected categories
+		for _, selectedID := range room.SelectedCategories {
+			if selectedID == cat.ID {
+				isSelected = true
+				break
+			}
+		}
+
+		categoryInfos = append(categoryInfos, services.CategoryInfo{
+			ID:         cat.ID.String(),
+			Key:        cat.Key,
+			Label:      cat.Label,
+			IsSelected: isSelected,
+		})
+	}
+
+	// Render HTML fragment
+	html, err := h.TemplateService.RenderFragment("categories_grid.html", services.CategoriesGridData{
+		Categories: categoryInfos,
+		RoomID:     roomID.String(),
+		GuestReady: room.GuestReady,
+	})
+	if err != nil {
+		log.Printf("Error rendering categories grid template: %v", err)
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`<p style="color: #6b7280;">Failed to load categories</p>`))
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(html))
+}
+
+// ToggleCategoryAPIHandler toggles a single category selection (for HTMX)
+func (h *Handler) ToggleCategoryAPIHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	roomID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid room ID", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+
+	// Get category ID from form
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	categoryIDStr := r.FormValue("category_id")
+	categoryID, err := uuid.Parse(categoryIDStr)
+	if err != nil {
+		http.Error(w, "Invalid category ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get room to get current selected categories
+	room, err := h.RoomService.GetRoomByID(ctx, roomID)
+	if err != nil {
+		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+
+	// Toggle category - if exists, remove it; if not, add it
+	selectedCategories := room.SelectedCategories
+	found := false
+	newCategories := make([]uuid.UUID, 0, len(selectedCategories))
+	for _, id := range selectedCategories {
+		if id == categoryID {
+			found = true
+			// Don't add it (remove it)
+		} else {
+			newCategories = append(newCategories, id)
+		}
+	}
+
+	if !found {
+		// Add it
+		newCategories = append(newCategories, categoryID)
+	}
+
+	// Update room
+	room.SelectedCategories = newCategories
+	if err := h.RoomService.UpdateRoom(ctx, room); err != nil {
+		log.Printf("Failed to update categories: %v", err)
+		http.Error(w, "Failed to update categories", http.StatusInternalServerError)
+		return
+	}
+
+	// Broadcast categories update via SSE
+	h.RoomService.BroadcastCategoriesUpdated(roomID, newCategories)
+
+	// Return success (HTMX will handle via hx-swap="none")
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`<!-- Category toggled successfully -->`))
+}
+
+// GetStartGameButtonHTMLHandler returns start game button as HTML fragment (for HTMX)
+func (h *Handler) GetStartGameButtonHTMLHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	roomID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid room ID", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+
+	// Get room to check guest_ready status
+	room, err := h.RoomService.GetRoomByID(ctx, roomID)
+	if err != nil {
+		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+
+	// Render HTML fragment
+	html, err := h.TemplateService.RenderFragment("start_game_button.html", services.StartGameButtonData{
+		RoomID:     roomID.String(),
+		GuestReady: room.GuestReady,
+	})
+	if err != nil {
+		log.Printf("Error rendering start game button template: %v", err)
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`<p style="color: #6b7280;">Failed to load start button</p>`))
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(html))
+}
+
+// GetGuestReadyButtonHTMLHandler returns guest ready button as HTML fragment (for HTMX)
+func (h *Handler) GetGuestReadyButtonHTMLHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	roomID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid room ID", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+
+	// Get room to check guest_ready status
+	room, err := h.RoomService.GetRoomByID(ctx, roomID)
+	if err != nil {
+		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+
+	// Render HTML fragment
+	html, err := h.TemplateService.RenderFragment("guest_ready_button.html", services.GuestReadyButtonData{
+		RoomID:     roomID.String(),
+		GuestReady: room.GuestReady,
+	})
+	if err != nil {
+		log.Printf("Error rendering guest ready button template: %v", err)
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`<p style="color: #6b7280;">Failed to load ready button</p>`))
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(html))
 }
 

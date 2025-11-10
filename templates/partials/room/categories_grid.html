@@ -1,0 +1,46 @@
+{{if .Categories}}
+<fieldset style="border: none; padding: 0; margin: 0;">
+    <legend class="sr-only">Select question categories</legend>
+    {{range .Categories}}
+    <label class="category-checkbox" for="category-{{.ID}}">
+        <input type="checkbox"
+               id="category-{{.ID}}"
+               name="category_id"
+               value="{{.ID}}"
+               {{if .IsSelected}}checked{{end}}
+               {{if $.GuestReady}}
+               disabled
+               aria-disabled="true"
+               title="Categories locked - guest is ready"
+               {{end}}
+               hx-post="/api/rooms/{{$.RoomID}}/categories/toggle"
+               hx-vals='{"category_id": "{{.ID}}"}'
+               hx-trigger="change"
+               hx-swap="none"
+               hx-disabled-elt="this"
+               hx-indicator=".category-saving-{{.ID}}"
+               hx-on::after-request="
+                   if(!event.detail.successful) {
+                       this.checked = !this.checked;
+                       this.parentElement.classList.add('error');
+                       this.setAttribute('aria-invalid', 'true');
+                       setTimeout(() => {
+                           this.parentElement.classList.remove('error');
+                           this.removeAttribute('aria-invalid');
+                       }, 2000);
+                   } else {
+                       this.parentElement.classList.add('saved');
+                       setTimeout(() => this.parentElement.classList.remove('saved'), 300);
+                   }
+               "
+               aria-label="{{.Label}} category"/>
+        <span class="category-label">{{.Label}}</span>
+        <span class="category-saving-{{.ID}} htmx-indicator" style="margin-left: 0.25rem; font-size: 0.75rem;">
+            💾
+        </span>
+    </label>
+    {{end}}
+</fieldset>
+{{else}}
+    <p role="status" style="color: #6b7280;">No categories available</p>
+{{end}}

@@ -13,7 +13,9 @@
       "Bash(curl:*)",
       "Bash(psql:*)",
       "Bash(make run:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "WebFetch(domain:htmx.org)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

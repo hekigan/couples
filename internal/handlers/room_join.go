@@ -115,10 +115,10 @@ func (h *Handler) CreateJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 		})
 	}
 
-	// Return success response
-	w.Header().Set("Content-Type", "application/json")
+	// Return success message for HTMX
+	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(`{"status":"success","message":"Join request sent"}`))
+	w.Write([]byte(`<div style="color: #10b981; background: #dcfce7; padding: 0.75rem 1rem; border-radius: 6px;">✅ Join request sent! Waiting for owner approval...</div>`))
 }
 
 // AcceptJoinRequestHandler accepts a join request
@@ -340,5 +340,75 @@ func (h *Handler) GetMyAcceptedRequestsHandler(w http.ResponseWriter, r *http.Re
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(requests)
+}
+
+// GetMyJoinRequestsHTMLHandler returns HTML fragment for all user's join requests
+func (h *Handler) GetMyJoinRequestsHTMLHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	// Get all join requests for this user (pending, accepted, rejected)
+	allRequests, err := h.RoomService.GetJoinRequestsByUser(ctx, userID)
+	if err != nil {
+		log.Printf("Error fetching user's join requests: %v", err)
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`<!-- No pending requests -->`))
+		return
+	}
+
+	// Convert to template data format
+	var requestsData []services.JoinRequestData
+	for _, req := range allRequests {
+		message := ""
+		if req.Message != nil {
+			message = *req.Message
+		}
+		requestsData = append(requestsData, services.JoinRequestData{
+			RoomID:  req.RoomID.String(),
+			UserID:  req.UserID.String(),
+			Message: message,
+			Status:  req.Status,
+		})
+	}
+
+	// Render HTML fragment
+	html, err := h.TemplateService.RenderFragment("pending_requests_list.html", requestsData)
+	if err != nil {
+		log.Printf("Error rendering pending_requests_list template: %v", err)
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`<p style="color: #6b7280;">Failed to load pending requests</p>`))
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(html))
+}
+
+// CancelMyJoinRequestHTMLHandler cancels request and returns empty (for HTMX swap removal)
+func (h *Handler) CancelMyJoinRequestHTMLHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	roomID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid room ID", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	// Find and delete the user's request
+	if err := h.RoomService.CancelJoinRequest(ctx, roomID, userID); err != nil {
+		log.Printf("Error cancelling join request: %v", err)
+		http.Error(w, "Failed to cancel request", http.StatusInternalServerError)
+		return
+	}
+
+	// Return empty response - HTMX will remove the element
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(``))
 }
 

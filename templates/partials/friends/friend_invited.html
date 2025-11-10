@@ -1,0 +1,25 @@
+<li class="friend-item" id="friend-{{.Friend.ID}}">
+    <div class="friend-info">
+        <span class="friend-name">{{.Friend.Username}}</span>
+        <span class="invited-badge" role="status" aria-live="polite" style="color: #10b981; font-size: 0.875rem; margin-left: 0.5rem;">✉️ Invited</span>
+    </div>
+    <button hx-delete="/api/rooms/invitations/{{.RoomID}}/{{.Friend.ID}}"
+            hx-target="#friend-{{.Friend.ID}}"
+            hx-swap="outerHTML"
+            hx-disabled-elt="this"
+            hx-indicator="#cancel-loading-{{.Friend.ID}}"
+            hx-on::after-request="
+                if(!event.detail.successful) {
+                    const errorMsg = document.createElement('span');
+                    errorMsg.textContent = '❌ Failed to cancel';
+                    errorMsg.style.cssText = 'color: #ef4444; font-size: 0.75rem; margin-left: 0.5rem;';
+                    this.parentElement.appendChild(errorMsg);
+                    setTimeout(() => errorMsg.remove(), 3000);
+                }
+            "
+            aria-label="Cancel invitation to {{.Friend.Username}}"
+            class="btn btn-secondary btn-sm">
+        <span>❌ Cancel</span>
+        <span id="cancel-loading-{{.Friend.ID}}" class="htmx-indicator" style="margin-left: 0.25rem; font-size: 0.75rem;">⏳</span>
+    </button>
+</li>
