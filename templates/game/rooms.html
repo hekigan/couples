@@ -59,6 +59,7 @@
                                 hx-target="#room-{{.ID}}"
                                 hx-swap="outerHTML swap:300ms"
                                 hx-disabled-elt="this"
+                                hx-on::after-request="if(event.detail.successful) Toast.success('Room deleted successfully')"
                                 aria-label="Delete room">
                             Delete
                         </button>
@@ -70,6 +71,7 @@
                                 hx-target="#room-{{.ID}}"
                                 hx-swap="outerHTML swap:300ms"
                                 hx-disabled-elt="this"
+                                hx-on::after-request="if(event.detail.successful) Toast.success('Left room successfully')"
                                 aria-label="Leave room">
                             Leave
                         </button>

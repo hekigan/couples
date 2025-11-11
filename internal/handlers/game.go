@@ -45,9 +45,10 @@ func (h *Handler) DeleteRoomAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	// Return empty response for HTMX to replace with nothing (removes the element)
+	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"success","message":"Room deleted successfully"}`))
+	w.Write([]byte(""))
 }
 
 // LeaveRoomHandler handles a guest leaving a room
@@ -95,9 +96,10 @@ func (h *Handler) LeaveRoomHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("DEBUG LeaveRoom: Successfully updated room %s, guest removed", roomID)
 
-	w.Header().Set("Content-Type", "application/json")
+	// Return empty response for HTMX to replace with nothing (removes the element)
+	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"success","message":"Left room successfully"}`))
+	w.Write([]byte(""))
 }
 
 // RoomWithUsername is a room enriched with the other player's username
@@ -202,7 +204,7 @@ func (h *Handler) JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 	// POST - Join room logic
 	ctx := context.Background()
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
-	
+
 	// Parse room ID from form
 	roomIDStr := r.FormValue("room_id")
 	roomID, err := uuid.Parse(roomIDStr)
@@ -210,35 +212,35 @@ func (h *Handler) JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid room ID", http.StatusBadRequest)
 		return
 	}
-	
+
 	// Get the room
 	room, err := h.RoomService.GetRoomByID(ctx, roomID)
 	if err != nil {
 		http.Error(w, "Room not found", http.StatusNotFound)
 		return
 	}
-	
+
 	// Check if room is already full
 	if room.GuestID != nil {
 		http.Error(w, "Room is full", http.StatusBadRequest)
 		return
 	}
-	
+
 	// Check if user is trying to join their own room
 	if room.OwnerID == userID {
 		http.Error(w, "You cannot join your own room", http.StatusBadRequest)
 		return
 	}
-	
+
 	// Join the room by setting the guest_id
 	room.GuestID = &userID
 	room.Status = "ready" // Room is ready when both players are present
-	
+
 	if err := h.RoomService.UpdateRoom(ctx, room); err != nil {
 		http.Error(w, "Failed to join room", http.StatusInternalServerError)
 		return
 	}
-	
+
 	// Redirect to the room
 	http.Redirect(w, r, "/game/room/"+room.ID.String(), http.StatusSeeOther)
 }
@@ -335,10 +337,10 @@ func (h *Handler) PlayHandler(w http.ResponseWriter, r *http.Request) {
 
 // AnswerWithDetails contains an answer with its question and user info
 type AnswerWithDetails struct {
-	Answer       *models.Answer
-	Question     *models.Question
-	Username     string
-	ActionType   string
+	Answer     *models.Answer
+	Question   *models.Question
+	Username   string
+	ActionType string
 }
 
 // GameFinishedHandler shows game results with full history
@@ -1175,4 +1177,3 @@ func (h *Handler) GetGuestReadyButtonHTMLHandler(w http.ResponseWriter, r *http.
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(html))
 }
-
