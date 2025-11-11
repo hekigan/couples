@@ -279,12 +279,27 @@ func (h *Handler) RoomHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("🔍 DEBUG RoomHandler: roomID=%s, currentUserID=%s, ownerID=%s, isOwner=%v, status=%s, guestReady=%v (fetched via view)",
 		roomWithPlayers.ID, currentUserID, roomWithPlayers.OwnerID, isOwner, roomWithPlayers.Status, roomWithPlayers.GuestReady)
 
+	// Get pending join requests count for the badge
+	joinRequestsCount := 0
+	if isOwner {
+		joinRequests, err := h.RoomService.GetJoinRequestsByRoom(ctx, roomID)
+		if err == nil {
+			// Count pending requests only
+			for _, req := range joinRequests {
+				if req.Status == "pending" {
+					joinRequestsCount++
+				}
+			}
+		}
+	}
+
 	data := &TemplateData{
-		Title:          "Room - " + roomWithPlayers.Name,
-		Data:           &roomWithPlayers.Room, // Pass the embedded Room struct
-		OwnerUsername:  ownerUsername,
-		GuestUsername:  guestUsername,
-		IsOwner:        isOwner,
+		Title:             "Room - " + roomWithPlayers.Name,
+		Data:              &roomWithPlayers.Room, // Pass the embedded Room struct
+		OwnerUsername:     ownerUsername,
+		GuestUsername:     guestUsername,
+		IsOwner:           isOwner,
+		JoinRequestsCount: joinRequestsCount,
 	}
 
 	// HTMX refactoring complete - using HTMX version as default

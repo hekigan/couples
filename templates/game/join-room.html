@@ -21,7 +21,7 @@
 
         <!-- Direct Join Form (Default) -->
         <div id="direct-join-form" class="join-form">
-            <form action="/game/join-room" method="POST">
+            <form action="/game/join-room" method="POST" data-testid="direct-join-form">
                 <div class="form-group">
                     <label class="form-label" for="room_id">Room ID:</label>
                     <input
@@ -32,11 +32,12 @@
                         placeholder="Enter room ID"
                         required
                         aria-required="true"
+                        data-testid="direct-join-room-id-input"
                     >
                     <span class="form-help">Join instantly if the room is open</span>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-block">
+                <button type="submit" class="btn btn-primary btn-block" data-testid="direct-join-submit">
                     Join Room Directly
                 </button>
             </form>
@@ -54,7 +55,8 @@
                           this.reset();
                           htmx.trigger('#pending-requests-list', 'load');
                       }
-                  ">
+                  "
+                  data-testid="request-join-form">
                 <div class="form-group">
                     <label class="form-label" for="request_room_id">Room ID:</label>
                     <input
@@ -65,6 +67,7 @@
                         placeholder="Enter room ID"
                         required
                         aria-required="true"
+                        data-testid="request-join-room-id-input"
                     >
                     <span class="form-help">Send a request to the room owner</span>
                 </div>
@@ -79,9 +82,9 @@
                 </div>
 
                 <!-- Result messages -->
-                <div id="request-result" role="alert" aria-live="polite"></div>
+                <div id="request-result" role="alert" aria-live="polite" data-testid="request-result"></div>
 
-                <button type="submit" class="btn btn-primary btn-block">
+                <button type="submit" class="btn btn-primary btn-block" data-testid="request-join-submit">
                     <span>Send Join Request</span>
                     <span id="request-loading" class="htmx-indicator">⏳</span>
                 </button>

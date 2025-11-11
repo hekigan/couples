@@ -206,3 +206,8 @@ type AnswerReviewData struct {
 type GameContentData struct {
 	RoomID string
 }
+
+// BadgeUpdateData represents data for badge update partial
+type BadgeUpdateData struct {
+	Count int
+}

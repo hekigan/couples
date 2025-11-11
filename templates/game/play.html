@@ -188,19 +188,21 @@
 <div class="game-container"
      data-room-id="{{.Data.Room.ID}}"
      hx-ext="sse"
-     sse-connect="/api/rooms/{{.Data.Room.ID}}/events">
+     sse-connect="/api/rooms/{{.Data.Room.ID}}/events"
+     data-testid="game-container">
 
-    <div class="game-header">
-        <h1>{{.Data.Room.Name}}</h1>
-        <div class="game-progress" id="progress">
-            Question <span id="currentQuestion">{{.Data.Room.CurrentQuestion}}</span> of <span id="maxQuestions">{{.Data.Room.MaxQuestions}}</span>
+    <div class="game-header" data-testid="game-header">
+        <h1 data-testid="room-name">{{.Data.Room.Name}}</h1>
+        <div class="game-progress" id="progress" data-testid="game-progress">
+            Question <span id="currentQuestion" data-testid="current-question">{{.Data.Room.CurrentQuestion}}</span> of <span id="maxQuestions" data-testid="max-questions">{{.Data.Room.MaxQuestions}}</span>
         </div>
     </div>
 
     <div id="game-content"
          hx-get="/api/rooms/{{.Data.Room.ID}}/game-content"
          hx-trigger="load, sse:game_started, sse:room_update"
-         hx-swap="innerHTML">
+         hx-swap="innerHTML"
+         data-testid="game-content">
         <div class="loading">Loading game...</div>
     </div>
 </div>

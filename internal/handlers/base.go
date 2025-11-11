@@ -55,14 +55,15 @@ func NewHandler(
 
 // TemplateData represents common data passed to templates
 type TemplateData struct {
-	Title          string
-	User           interface{}
-	Error          string
-	Success        string
-	Data           interface{}
-	OwnerUsername  string
-	GuestUsername  string
-	IsOwner        bool
+	Title             string
+	User              interface{}
+	Error             string
+	Success           string
+	Data              interface{}
+	OwnerUsername     string
+	GuestUsername     string
+	IsOwner           bool
+	JoinRequestsCount int // Number of pending join requests (for badge)
 }
 
 // RenderTemplate renders a template with the given data

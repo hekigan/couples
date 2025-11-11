@@ -5,39 +5,40 @@
      hx-ext="sse"
      sse-connect="/api/rooms/{{.Data.ID}}/events">
 
-    <div class="room-header-section">
+    <div class="room-header-section" data-testid="room-header">
         <div class="room-title-row">
-            <h1>Room:</h1>
+            <h1 data-testid="room-title">Room:</h1>
             <div class="room-id-group">
-                <input type="text" id="room-id-input" value="{{.Data.ID}}" readonly class="room-id-input" />
-                <button onclick="copyRoomId()" class="btn btn-secondary btn-sm copy-btn" title="Copy Room ID">
+                <input type="text" id="room-id-input" value="{{.Data.ID}}" readonly class="room-id-input" data-testid="room-id-input" />
+                <button onclick="copyRoomId()" class="btn btn-secondary btn-sm copy-btn" title="Copy Room ID" data-testid="copy-room-id-button">
                     📋 Copy ID
                 </button>
             </div>
         </div>
         <div class="room-status">
-            <span class="status-badge status-{{.Data.Status}}" id="room-status-badge">
+            <span class="status-badge status-{{.Data.Status}}" id="room-status-badge" data-testid="room-status-badge">
                 {{if eq .Data.Status "ready"}}ready{{else if eq .Data.Status "playing"}}playing{{else}}waiting{{end}}
             </span>
         </div>
     </div>
 
-    <div class="room-players" id="player-list">
-        <h2>Players</h2>
+    <div class="room-players" id="player-list" data-testid="player-list">
+        <h2 data-testid="players-heading">Players</h2>
         <div class="player-grid">
-            <div class="player-card">
+            <div class="player-card" data-testid="owner-card">
                 <span class="player-label">Owner</span>
-                <span class="player-name">{{if .OwnerUsername}}{{.OwnerUsername}}{{else}}Unknown{{end}}</span>
+                <span class="player-name" data-testid="owner-name">{{if .OwnerUsername}}{{.OwnerUsername}}{{else}}Unknown{{end}}</span>
             </div>
             <!-- Guest card - Updated via SSE when request accepted -->
             <div class="player-card {{if not .Data.GuestID}}empty{{end}}"
                  id="guest-info"
-                 sse-swap="request_accepted">
+                 sse-swap="request_accepted"
+                 data-testid="guest-card">
                 {{if .Data.GuestID}}
                 <span class="player-label">Guest</span>
-                <span class="player-name" id="guest-name">{{if .GuestUsername}}{{.GuestUsername}}{{else}}Unknown{{end}}</span>
+                <span class="player-name" id="guest-name" data-testid="guest-name">{{if .GuestUsername}}{{.GuestUsername}}{{else}}Unknown{{end}}</span>
                 {{else}}
-                <span id="guest-waiting">Waiting for guest...</span>
+                <span id="guest-waiting" data-testid="guest-waiting">Waiting for guest...</span>
                 {{end}}
             </div>
         </div>
@@ -72,12 +73,14 @@
     <!-- Category Selection Section (shown when guest joined) -->
     <div class="categories-section"
          id="categories-section"
+         data-testid="categories-section"
          style="{{if not .Data.GuestID}}display: none;{{end}}">
-        <h2>🎯 Select Question Categories</h2>
+        <h2 data-testid="categories-heading">🎯 Select Question Categories</h2>
         <p class="categories-hint">Both players can select categories. Selections sync in real-time!</p>
 
         <div id="categories-grid"
              class="categories-grid"
+             data-testid="categories-grid"
              hx-get="/api/rooms/{{.Data.ID}}/categories"
              hx-trigger="load, sse:categories_updated from:body"
              hx-swap="innerHTML">
@@ -100,8 +103,8 @@
 
     <!-- Pending Join Requests Section (hidden when guest joined) - OWNER ONLY -->
     <div id="join-requests-section" style="margin-top: 2rem; {{if .Data.GuestID}}display: none;{{end}}">
-        <h2>📬 Join Requests <span id="request-count" class="badge">0</span></h2>
-        <!-- Join requests are appended via SSE -->
+        <h2>📬 Join Requests <span id="request-count" class="badge" sse-swap="badge_update">{{.JoinRequestsCount}}</span></h2>
+        <!-- Join requests appended via SSE (beforeend appends to list) -->
         <div id="join-requests"
              sse-swap="join_request"
              hx-swap="beforeend">
@@ -111,9 +114,9 @@
 
     <!-- Owner Actions (Delete Room) - OWNER ONLY -->
     {{if .IsOwner}}
-    <div class="room-actions">
+    <div class="room-actions" data-testid="room-actions">
         <form action="/game/room/{{.Data.ID}}/delete" method="POST" onsubmit="return confirm('Delete this room?');">
-            <button type="submit" class="btn btn-danger">Delete Room</button>
+            <button type="submit" class="btn btn-danger" data-testid="delete-room-button">Delete Room</button>
         </form>
     </div>
     {{end}}

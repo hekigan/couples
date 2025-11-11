@@ -95,6 +95,7 @@ func (h *Handler) CreateJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Render HTML fragment for the join request
+	log.Printf("🎨 Rendering join_request template for user %s (%s)", username, userID)
 	html, err := h.TemplateService.RenderFragment("join_request.html", services.JoinRequestData{
 		ID:        request.ID.String(),
 		RoomID:    roomID.String(),
@@ -102,10 +103,12 @@ func (h *Handler) CreateJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 		CreatedAt: request.CreatedAt.Format("3:04 PM"),
 	})
 	if err != nil {
-		log.Printf("⚠️ Failed to render join request template: %v (falling back to JSON SSE)", err)
+		log.Printf("❌ Failed to render join request template: %v (falling back to JSON SSE)", err)
 		// Fall back to JSON SSE if template rendering fails
 		h.RoomService.BroadcastJoinRequestWithDetails(roomID, request.ID, userID, username, request.CreatedAt)
 	} else {
+		log.Printf("✅ Successfully rendered join_request HTML fragment (%d bytes)", len(html))
+		log.Printf("📤 Broadcasting HTML fragment via SSE to room %s", roomID)
 		// Broadcast HTML fragment via SSE
 		h.RoomService.GetRealtimeService().BroadcastHTMLFragment(roomID, services.HTMLFragmentEvent{
 			Type:       "join_request",
@@ -113,12 +116,32 @@ func (h *Handler) CreateJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 			SwapMethod: "beforeend", // Append to the list of join requests
 			HTML:       html,
 		})
+		log.Printf("✅ Join request HTML fragment broadcasted successfully")
+	}
+
+	// Update the badge count (count pending requests after adding this one)
+	pendingCount := 0
+	if allRequests, err := h.RoomService.GetJoinRequestsByRoom(ctx, roomID); err == nil {
+		for _, req := range allRequests {
+			if req.Status == "pending" {
+				pendingCount++
+			}
+		}
+	}
+	// Broadcast badge update
+	if badgeHTML, err := h.TemplateService.RenderFragment("badge_update.html", services.BadgeUpdateData{Count: pendingCount}); err == nil {
+		h.RoomService.GetRealtimeService().BroadcastHTMLFragment(roomID, services.HTMLFragmentEvent{
+			Type:       "badge_update",
+			Target:     "#request-count",
+			SwapMethod: "innerHTML",
+			HTML:       badgeHTML,
+		})
 	}
 
 	// Return success message for HTMX
-	w.Header().Set("Content-Type", "text/html")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(`<div style="color: #10b981; background: #dcfce7; padding: 0.75rem 1rem; border-radius: 6px;">✅ Join request sent! Waiting for owner approval...</div>`))
+	fmt.Fprint(w, `<div style="color: #10b981; background: #dcfce7; padding: 0.75rem 1rem; border-radius: 6px;">✅ Join request sent! Waiting for owner approval...</div>`)
 }
 
 // AcceptJoinRequestHandler accepts a join request
@@ -174,12 +197,29 @@ func (h *Handler) AcceptJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 	// Notify the guest user that their request was accepted (use JSON for now, will enhance later)
 	h.RoomService.BroadcastRequestAcceptedToGuest(joinRequest.UserID, joinRequest.RoomID)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"status": "success",
-		"message": "Join request accepted",
-		"guest_username": guestUsername,
-	})
+	// Update the badge count (count pending requests after accepting)
+	pendingCount := 0
+	if allRequests, err := h.RoomService.GetJoinRequestsByRoom(ctx, joinRequest.RoomID); err == nil {
+		for _, req := range allRequests {
+			if req.Status == "pending" {
+				pendingCount++
+			}
+		}
+	}
+	// Broadcast badge update
+	if badgeHTML, err := h.TemplateService.RenderFragment("badge_update.html", services.BadgeUpdateData{Count: pendingCount}); err == nil {
+		h.RoomService.GetRealtimeService().BroadcastHTMLFragment(joinRequest.RoomID, services.HTMLFragmentEvent{
+			Type:       "badge_update",
+			Target:     "#request-count",
+			SwapMethod: "innerHTML",
+			HTML:       badgeHTML,
+		})
+	}
+
+	// Return empty HTML - HTMX will remove the element via outerHTML swap
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(""))
 }
 
 // RejectJoinRequestHandler rejects a join request
@@ -209,8 +249,29 @@ func (h *Handler) RejectJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 	// Notify the guest user that their request was rejected
 	h.RoomService.BroadcastRequestRejectedToGuest(joinRequest.UserID, joinRequest.RoomID)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"status":"success","message":"Join request rejected"}`))
+	// Update the badge count (count pending requests after rejecting)
+	pendingCount := 0
+	if allRequests, err := h.RoomService.GetJoinRequestsByRoom(ctx, joinRequest.RoomID); err == nil {
+		for _, req := range allRequests {
+			if req.Status == "pending" {
+				pendingCount++
+			}
+		}
+	}
+	// Broadcast badge update
+	if badgeHTML, err := h.TemplateService.RenderFragment("badge_update.html", services.BadgeUpdateData{Count: pendingCount}); err == nil {
+		h.RoomService.GetRealtimeService().BroadcastHTMLFragment(joinRequest.RoomID, services.HTMLFragmentEvent{
+			Type:       "badge_update",
+			Target:     "#request-count",
+			SwapMethod: "innerHTML",
+			HTML:       badgeHTML,
+		})
+	}
+
+	// Return empty HTML - HTMX will remove the element via outerHTML swap
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(""))
 }
 
 // GetJoinRequestsCountHandler gets count of pending requests

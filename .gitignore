@@ -58,5 +58,11 @@ logs/
 tmp/
 temp/
 
+# Playwright / E2E Testing
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/.auth/
+
 
 

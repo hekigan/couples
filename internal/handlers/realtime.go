@@ -3,8 +3,8 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -26,6 +26,28 @@ func NewRealtimeHandler(h *Handler, realtimeService *services.RealtimeService) *
 		handler:         h,
 		realtimeService: realtimeService,
 	}
+}
+
+// formatSSEData formats data for Server-Sent Events protocol
+// SSE requires multi-line data to have each line prefixed with "data: "
+// Per SSE spec, ALL lines (including empty ones) must be prefixed with "data: "
+func formatSSEData(eventType, data string) string {
+	var b strings.Builder
+	b.WriteString("event: ")
+	b.WriteString(eventType)
+	b.WriteString("\n")
+
+	// Split data on newlines and prefix EVERY line with "data: "
+	// This includes empty lines - they become "data: \n" which is valid SSE
+	lines := strings.Split(data, "\n")
+	for _, line := range lines {
+		b.WriteString("data: ")
+		b.WriteString(line)
+		b.WriteString("\n")
+	}
+	b.WriteString("\n") // Final newline to terminate the event
+
+	return b.String()
 }
 
 // StreamRoomEvents streams room events via SSE
@@ -70,29 +92,8 @@ func (h *RealtimeHandler) StreamRoomEvents(w http.ResponseWriter, r *http.Reques
 	fmt.Fprintf(w, "event: connected\ndata: {\"type\":\"connected\",\"room_id\":\"%s\"}\n\n", roomID)
 	flusher.Flush()
 
-	// Send initial join requests (if user is room owner)
-	ctx := r.Context()
-	room, err := h.handler.RoomService.GetRoomByID(ctx, roomID)
-	if err != nil {
-		// Room doesn't exist (deleted or invalid) - close connection gracefully
-		log.Printf("⚠️ SSE connection attempted for non-existent room %s, closing connection", roomID)
-		fmt.Fprintf(w, "event: error\ndata: {\"type\":\"room_not_found\",\"message\":\"Room no longer exists\"}\n\n")
-		flusher.Flush()
-		return
-	}
-
-	if room.OwnerID == userID {
-		// Get pending join requests with user info
-		requests, err := h.handler.RoomService.GetJoinRequestsWithUserInfo(ctx, roomID)
-		if err == nil && len(requests) > 0 {
-			// Send each request as a join_request event
-			for _, req := range requests {
-				data, _ := json.Marshal(req)
-				fmt.Fprintf(w, "event: join_request\ndata: %s\n\n", string(data))
-			}
-			flusher.Flush()
-		}
-	}
+	// NOTE: Initial join requests are now rendered server-side in the template
+	// We only broadcast NEW join requests via SSE to avoid duplicates on reconnect
 
 	// Stream events until client disconnects
 	ticker := time.NewTicker(15 * time.Second)
@@ -105,10 +106,17 @@ func (h *RealtimeHandler) StreamRoomEvents(w http.ResponseWriter, r *http.Reques
 				// Channel closed
 				return
 			}
-			// Send event from realtime service
-			sseData := services.EventToSSE(event)
-			if _, err := fmt.Fprint(w, sseData); err != nil {
-				return
+			// Check if this is an HTML fragment (string data) or JSON data
+			if htmlStr, isString := event.Data.(string); isString {
+				// HTML fragment - use proper SSE format for multi-line data
+				// HTMX expects raw HTML in the data field
+				fmt.Fprint(w, formatSSEData(event.Type, htmlStr))
+			} else {
+				// JSON data - use the normal EventToSSE function
+				sseData := services.EventToSSE(event)
+				if _, err := fmt.Fprint(w, sseData); err != nil {
+					return
+				}
 			}
 			flusher.Flush()
 		case <-r.Context().Done():
@@ -170,10 +178,17 @@ func (h *RealtimeHandler) StreamUserNotifications(w http.ResponseWriter, r *http
 				// Channel closed
 				return
 			}
-			// Send event from realtime service
-			sseData := services.EventToSSE(event)
-			if _, err := fmt.Fprint(w, sseData); err != nil {
-				return
+			// Check if this is an HTML fragment (string data) or JSON data
+			if htmlStr, isString := event.Data.(string); isString {
+				// HTML fragment - use proper SSE format for multi-line data
+				// HTMX expects raw HTML in the data field
+				fmt.Fprint(w, formatSSEData(event.Type, htmlStr))
+			} else {
+				// JSON data - use the normal EventToSSE function
+				sseData := services.EventToSSE(event)
+				if _, err := fmt.Fprint(w, sseData); err != nil {
+					return
+				}
 			}
 			flusher.Flush()
 		case <-r.Context().Done():
@@ -195,14 +210,14 @@ func (h *RealtimeHandler) GetRoomPlayers(w http.ResponseWriter, r *http.Request)
 
 // RoomStateResponse represents the room state for the frontend
 type RoomStateResponse struct {
-	ID              uuid.UUID        `json:"id"`
-	Status          string           `json:"status"`
-	CurrentQuestion int              `json:"current_question"`
-	CurrentTurn     *uuid.UUID       `json:"current_turn"` // Note: different field name for frontend compatibility
-	MaxQuestions    int              `json:"max_questions"`
-	OwnerID         uuid.UUID        `json:"owner_id"`
-	GuestID         *uuid.UUID       `json:"guest_id"`
-	Language        string           `json:"language"`
+	ID                  uuid.UUID        `json:"id"`
+	Status              string           `json:"status"`
+	CurrentQuestion     int              `json:"current_question"`
+	CurrentTurn         *uuid.UUID       `json:"current_turn"` // Note: different field name for frontend compatibility
+	MaxQuestions        int              `json:"max_questions"`
+	OwnerID             uuid.UUID        `json:"owner_id"`
+	GuestID             *uuid.UUID       `json:"guest_id"`
+	Language            string           `json:"language"`
 	CurrentQuestionData *models.Question `json:"current_question_data,omitempty"` // Include full question data if exists
 }
 
@@ -273,4 +288,3 @@ func (h *RealtimeHandler) GetRoomState(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
-

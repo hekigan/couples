@@ -280,7 +280,8 @@ type HTMLFragmentEvent struct {
 }
 
 // BroadcastHTMLFragment broadcasts an HTML fragment to all clients in a room
-// This is the HTMX-compatible version that sends HTML instead of JSON
+// This is the HTMX-compatible version that sends HTML directly
+// HTMX SSE extension expects the HTML as the data field, not wrapped in JSON
 func (s *RealtimeService) BroadcastHTMLFragment(roomID uuid.UUID, fragment HTMLFragmentEvent) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -288,17 +289,11 @@ func (s *RealtimeService) BroadcastHTMLFragment(roomID uuid.UUID, fragment HTMLF
 	broadcastCount := 0
 	for _, client := range s.clients {
 		if client.RoomID == roomID {
-			// Create a JSON wrapper that HTMX SSE extension can understand
-			data := map[string]interface{}{
-				"target": fragment.Target,
-				"swap":   fragment.SwapMethod,
-				"html":   fragment.HTML,
-			}
-
-			// Send as a RealtimeEvent that will be converted to SSE
+			// HTMX SSE extension expects the HTML directly as a string
+			// The sse-swap attribute in the template handles where it goes
 			event := RealtimeEvent{
 				Type: fragment.Type,
-				Data: data,
+				Data: fragment.HTML, // Send HTML directly, not wrapped in JSON
 			}
 
 			select {

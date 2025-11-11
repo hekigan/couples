@@ -24,12 +24,12 @@
 
         <div class="home-actions">
             {{if .User}}
-                <a href="/game/create-room" class="btn btn-primary btn-lg">Create Room</a>
-                <a href="/game/join-room" class="btn btn-secondary btn-lg">Join Room</a>
+                <a href="/game/create-room" class="btn btn-primary btn-lg" data-testid="create-room-link">Create Room</a>
+                <a href="/game/join-room" class="btn btn-secondary btn-lg" data-testid="join-room-link">Join Room</a>
             {{else}}
-                <a href="/auth/login" class="btn btn-primary btn-lg">Login/Signup to Play</a>
+                <a href="/auth/login" class="btn btn-primary btn-lg" data-testid="login-link">Login/Signup to Play</a>
                 <form action="/auth/anonymous" method="POST" style="display:inline;">
-                    <button type="submit" class="btn btn-secondary btn-lg">Play as Guest</button>
+                    <button type="submit" class="btn btn-secondary btn-lg" data-testid="play-as-guest-button">Play as Guest</button>
                 </form>
             {{end}}
         </div>

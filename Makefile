@@ -1,5 +1,6 @@
 .PHONY: help build run test test-short test-full test-coverage test-coverage-html clean docker-build docker-run sass dev
 .PHONY: test-db-setup test-db-start test-db-stop test-db-reset test-db-status test-db-studio
+.PHONY: test-e2e test-e2e-ui test-e2e-headed test-e2e-debug test-e2e-report test-e2e-setup
 
 # Default target
 help:
@@ -17,6 +18,14 @@ help:
 	@echo "  make test-full     - Run full test suite (requires test DB)"
 	@echo "  make test-coverage - Run tests with coverage report"
 	@echo "  make test-coverage-html - Open coverage report in browser"
+	@echo ""
+	@echo "E2E Testing:"
+	@echo "  make test-e2e        - Run E2E tests with Playwright"
+	@echo "  make test-e2e-ui     - Run E2E tests in Playwright UI mode"
+	@echo "  make test-e2e-headed - Run E2E tests in headed browser mode"
+	@echo "  make test-e2e-debug  - Run E2E tests in debug mode"
+	@echo "  make test-e2e-report - Open Playwright test report"
+	@echo "  make test-e2e-setup  - Setup E2E testing (one-time)"
 	@echo ""
 	@echo "Test Database:"
 	@echo "  make test-db-setup  - Setup test database (one-time)"
@@ -204,6 +213,44 @@ test-db-status:
 test-db-studio:
 	@echo "Opening Supabase Studio..."
 	@open http://localhost:54323 2>/dev/null || xdg-open http://localhost:54323 2>/dev/null || echo "Please open http://localhost:54323 in your browser"
+
+# ============================================
+# E2E Testing Commands (Playwright)
+# ============================================
+
+# Setup E2E testing (one-time setup)
+test-e2e-setup:
+	@echo "Setting up E2E testing with Playwright..."
+	@npm install
+	@npx playwright install chromium
+	@echo "✅ E2E testing setup complete"
+	@echo ""
+	@echo "Run tests with: make test-e2e"
+
+# Run E2E tests
+test-e2e:
+	@echo "Running E2E tests with Playwright..."
+	@npx playwright test
+
+# Run E2E tests in UI mode (interactive)
+test-e2e-ui:
+	@echo "Opening Playwright UI..."
+	@npx playwright test --ui
+
+# Run E2E tests in headed mode (visible browser)
+test-e2e-headed:
+	@echo "Running E2E tests in headed mode..."
+	@npx playwright test --headed
+
+# Run E2E tests in debug mode
+test-e2e-debug:
+	@echo "Running E2E tests in debug mode..."
+	@npx playwright test --debug
+
+# Open Playwright test report
+test-e2e-report:
+	@echo "Opening Playwright test report..."
+	@npx playwright show-report
 
 
 
