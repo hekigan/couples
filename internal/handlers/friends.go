@@ -32,6 +32,14 @@ func (h *Handler) FriendListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get current user for template
+	currentUser, err := h.UserService.GetUserByID(r.Context(), parsedUserID)
+	if err != nil {
+		log.Printf("⚠️ Failed to fetch current user: %v", err)
+		http.Error(w, "Failed to load user information", http.StatusInternalServerError)
+		return
+	}
+
 	// Get friends
 	friends, err := h.FriendService.GetFriends(r.Context(), parsedUserID)
 	if err != nil {
@@ -48,6 +56,7 @@ func (h *Handler) FriendListHandler(w http.ResponseWriter, r *http.Request) {
 
 	data := &TemplateData{
 		Title: "Friends",
+		User:  currentUser,
 		Data: map[string]interface{}{
 			"Friends":            friends,
 			"PendingInvitations": pendingRequests,
@@ -68,9 +77,24 @@ func (h *Handler) AddFriendHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	parsedUserID, err := uuid.Parse(userID)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get current user for template
+	currentUser, err := h.UserService.GetUserByID(r.Context(), parsedUserID)
+	if err != nil {
+		log.Printf("⚠️ Failed to fetch current user: %v", err)
+		http.Error(w, "Failed to load user information", http.StatusInternalServerError)
+		return
+	}
+
 	if r.Method == "GET" {
 		data := &TemplateData{
 			Title: "Add Friend",
+			User:  currentUser,
 			Data: map[string]interface{}{
 				"CurrentUserID": userID,
 			},
@@ -83,6 +107,7 @@ func (h *Handler) AddFriendHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		h.RenderTemplate(w, "friends/add.html", &TemplateData{
 			Title: "Add Friend",
+			User:  currentUser,
 			Error: "Invalid form data",
 			Data:  map[string]interface{}{"CurrentUserID": userID},
 		})
@@ -93,6 +118,7 @@ func (h *Handler) AddFriendHandler(w http.ResponseWriter, r *http.Request) {
 	if friendIdentifier == "" {
 		h.RenderTemplate(w, "friends/add.html", &TemplateData{
 			Title: "Add Friend",
+			User:  currentUser,
 			Error: "Friend identifier is required",
 			Data:  map[string]interface{}{"CurrentUserID": userID},
 		})
@@ -110,6 +136,7 @@ func (h *Handler) AddFriendHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.RenderTemplate(w, "friends/add.html", &TemplateData{
 			Title: "Add Friend",
+			User:  currentUser,
 			Error: "Invalid friend ID format. Please use UUID format.",
 			Data:  map[string]interface{}{"CurrentUserID": userID},
 		})
@@ -121,6 +148,7 @@ func (h *Handler) AddFriendHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.RenderTemplate(w, "friends/add.html", &TemplateData{
 			Title: "Add Friend",
+			User:  currentUser,
 			Error: "Failed to send friend request",
 			Data:  map[string]interface{}{"CurrentUserID": userID},
 		})
@@ -129,6 +157,7 @@ func (h *Handler) AddFriendHandler(w http.ResponseWriter, r *http.Request) {
 
 	h.RenderTemplate(w, "friends/add.html", &TemplateData{
 		Title:   "Add Friend",
+		User:    currentUser,
 		Success: "Friend invitation sent!",
 		Data:    map[string]interface{}{"CurrentUserID": userID},
 	})

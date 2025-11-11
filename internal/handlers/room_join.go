@@ -24,6 +24,16 @@ func (h *Handler) ListJoinRequestsHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	ctx := context.Background()
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	// Get current user for template
+	currentUser, err := h.UserService.GetUserByID(ctx, userID)
+	if err != nil {
+		log.Printf("⚠️ Failed to fetch current user: %v", err)
+		http.Error(w, "Failed to load user information", http.StatusInternalServerError)
+		return
+	}
+
 	requests, err := h.RoomService.GetJoinRequestsByRoom(ctx, roomID)
 	if err != nil {
 		http.Error(w, "Failed to load join requests", http.StatusInternalServerError)
@@ -32,6 +42,7 @@ func (h *Handler) ListJoinRequestsHandler(w http.ResponseWriter, r *http.Request
 
 	data := &TemplateData{
 		Title: "Join Requests",
+		User:  currentUser,
 		Data:  requests,
 	}
 	h.RenderTemplate(w, "game/join-requests.html", data)
@@ -154,21 +165,21 @@ func (h *Handler) AcceptJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	ctx := context.Background()
-	
+
 	// Get the join request to find the user ID
 	joinRequest, err := h.RoomService.GetJoinRequestByID(ctx, requestID)
 	if err != nil {
 		http.Error(w, "Join request not found", http.StatusNotFound)
 		return
 	}
-	
+
 	// Accept the request
 	if err := h.RoomService.AcceptJoinRequest(ctx, requestID); err != nil {
 		fmt.Printf("ERROR: AcceptJoinRequest failed: %v\n", err)
 		http.Error(w, fmt.Sprintf("Failed to accept join request: %v", err), http.StatusInternalServerError)
 		return
 	}
-	
+
 	// Get the guest username
 	guestUser, err := h.UserService.GetUserByID(ctx, joinRequest.UserID)
 	var guestUsername string
@@ -472,4 +483,3 @@ func (h *Handler) CancelMyJoinRequestHTMLHandler(w http.ResponseWriter, r *http.
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(``))
 }
-

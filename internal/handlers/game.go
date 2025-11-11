@@ -149,6 +149,14 @@ func (h *Handler) ListRoomsHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("DEBUG ListRooms: Found %d rooms (via view)", len(roomsWithPlayers))
 
+	// Get current user for template
+	currentUser, err := h.UserService.GetUserByID(ctx, userID)
+	if err != nil {
+		log.Printf("⚠️ Failed to fetch current user: %v", err)
+		http.Error(w, "Failed to load user information", http.StatusInternalServerError)
+		return
+	}
+
 	// Convert to RoomWithUsername format for template
 	enrichedRooms := make([]RoomWithUsername, 0, len(roomsWithPlayers))
 	for _, roomWithPlayers := range roomsWithPlayers {
@@ -179,6 +187,7 @@ func (h *Handler) ListRoomsHandler(w http.ResponseWriter, r *http.Request) {
 
 	data := &TemplateData{
 		Title: "My Rooms",
+		User:  currentUser,
 		Data:  enrichedRooms,
 	}
 	h.RenderTemplate(w, "game/rooms.html", data)
@@ -186,17 +195,27 @@ func (h *Handler) ListRoomsHandler(w http.ResponseWriter, r *http.Request) {
 
 // CreateRoomHandler handles room creation
 func (h *Handler) CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	// Get current user for template
+	currentUser, err := h.UserService.GetUserByID(ctx, userID)
+	if err != nil {
+		log.Printf("⚠️ Failed to fetch current user: %v", err)
+		http.Error(w, "Failed to load user information", http.StatusInternalServerError)
+		return
+	}
+
 	if r.Method == "GET" {
 		data := &TemplateData{
 			Title: "Create Room",
+			User:  currentUser,
 		}
 		h.RenderTemplate(w, "game/create-room.html", data)
 		return
 	}
 
 	// POST - Create room
-	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 
 	room := &models.Room{
 		ID:       uuid.New(),
@@ -216,17 +235,27 @@ func (h *Handler) CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 
 // JoinRoomHandler handles joining a room
 func (h *Handler) JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	// Get current user for template
+	currentUser, err := h.UserService.GetUserByID(ctx, userID)
+	if err != nil {
+		log.Printf("⚠️ Failed to fetch current user: %v", err)
+		http.Error(w, "Failed to load user information", http.StatusInternalServerError)
+		return
+	}
+
 	if r.Method == "GET" {
 		data := &TemplateData{
 			Title: "Join Room",
+			User:  currentUser,
 		}
 		h.RenderTemplate(w, "game/join-room.html", data)
 		return
 	}
 
 	// POST - Join room logic
-	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 
 	// Parse room ID from form
 	roomIDStr := r.FormValue("room_id")
@@ -304,6 +333,14 @@ func (h *Handler) RoomHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("🔍 DEBUG RoomHandler: roomID=%s, currentUserID=%s, ownerID=%s, isOwner=%v, status=%s, guestReady=%v (fetched via view)",
 		roomWithPlayers.ID, currentUserID, roomWithPlayers.OwnerID, isOwner, roomWithPlayers.Status, roomWithPlayers.GuestReady)
 
+	// Get current user for template
+	currentUser, err := h.UserService.GetUserByID(ctx, currentUserID)
+	if err != nil {
+		log.Printf("⚠️ Failed to fetch current user: %v", err)
+		http.Error(w, "Failed to load user information", http.StatusInternalServerError)
+		return
+	}
+
 	// Get pending join requests count for the badge
 	joinRequestsCount := 0
 	if isOwner {
@@ -320,6 +357,7 @@ func (h *Handler) RoomHandler(w http.ResponseWriter, r *http.Request) {
 
 	data := &TemplateData{
 		Title:             "Room - " + roomWithPlayers.Name,
+		User:              currentUser,
 		Data:              &roomWithPlayers.Room, // Pass the embedded Room struct
 		OwnerUsername:     ownerUsername,
 		GuestUsername:     guestUsername,
@@ -339,6 +377,14 @@ func (h *Handler) PlayHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 
+	// Get current user for template
+	currentUser, err := h.UserService.GetUserByID(ctx, userID)
+	if err != nil {
+		log.Printf("⚠️ Failed to fetch current user: %v", err)
+		http.Error(w, "Failed to load user information", http.StatusInternalServerError)
+		return
+	}
+
 	room, err := h.RoomService.GetRoomByID(ctx, roomID)
 	if err != nil {
 		http.Error(w, "Room not found", http.StatusNotFound)
@@ -353,6 +399,7 @@ func (h *Handler) PlayHandler(w http.ResponseWriter, r *http.Request) {
 
 	data := &TemplateData{
 		Title: "Play - " + room.Name,
+		User:  currentUser,
 		Data:  playData,
 	}
 	h.RenderTemplate(w, "game/play.html", data)
@@ -372,6 +419,16 @@ func (h *Handler) GameFinishedHandler(w http.ResponseWriter, r *http.Request) {
 	roomID, _ := uuid.Parse(vars["id"])
 
 	ctx := context.Background()
+	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+
+	// Get current user for template
+	currentUser, err := h.UserService.GetUserByID(ctx, userID)
+	if err != nil {
+		log.Printf("⚠️ Failed to fetch current user: %v", err)
+		http.Error(w, "Failed to load user information", http.StatusInternalServerError)
+		return
+	}
+
 	room, err := h.RoomService.GetRoomByID(ctx, roomID)
 	if err != nil {
 		http.Error(w, "Room not found", http.StatusNotFound)
@@ -431,6 +488,7 @@ func (h *Handler) GameFinishedHandler(w http.ResponseWriter, r *http.Request) {
 
 	data := &TemplateData{
 		Title: "Game Finished",
+		User:  currentUser,
 		Data: map[string]interface{}{
 			"Room":           room,
 			"Answers":        answerDetails,
