@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 
@@ -100,6 +101,28 @@ func (h *Handler) LeaveRoomHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(""))
+}
+
+// EmptyRoomsStateHandler serves the empty rooms state partial
+func (h *Handler) EmptyRoomsStateHandler(w http.ResponseWriter, r *http.Request) {
+	// Parse the partial template
+	partialPath := "templates/partials/game/empty-rooms-state.html"
+	tmpl, err := template.ParseFiles(partialPath)
+	if err != nil {
+		log.Printf("Error parsing empty rooms state partial: %v", err)
+		http.Error(w, "Failed to load empty state", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+
+	// Execute the defined template by name
+	err = tmpl.ExecuteTemplate(w, "partials/game/empty-rooms-state.html", nil)
+	if err != nil {
+		log.Printf("Error executing empty rooms state template: %v", err)
+		http.Error(w, "Failed to render template", http.StatusInternalServerError)
+	}
 }
 
 // RoomWithUsername is a room enriched with the other player's username

@@ -5,89 +5,86 @@
         <a href="/game/create-room" role="button">+ Create New Room</a>
     </div>
 
-    {{if .Data}}
-        <div class="rooms-grid">
-            {{range .Data}}
-            <div class="room-card" id="room-{{.ID}}">
-                <div class="room-card-header">
-                    <span class="room-id">🆔 {{.ID}}</span>
-                    <span class="room-status room-status-{{.Status}}">{{.Status}}</span>
+    <div id="rooms-container">
+        {{if .Data}}
+            <div class="rooms-grid">
+                {{range .Data}}
+                <div class="room-card" id="room-{{.ID}}">
+                    <div class="room-card-header">
+                        <span class="room-id">🆔 {{.ID}}</span>
+                        <span class="room-status room-status-{{.Status}}">{{.Status}}</span>
+                    </div>
+                    <div class="room-card-body">
+                        <p class="room-info">
+                            <span class="room-info-label">Playing with:</span>
+                            <span class="room-info-value">
+                                {{if .OtherPlayerUsername}}
+                                    👤 {{.OtherPlayerUsername}}
+                                {{else}}
+                                    ⏳ Waiting for player...
+                                {{end}}
+                            </span>
+                        </p>
+                        <p class="room-info">
+                            <span class="room-info-label">Language:</span>
+                            <span class="room-info-value">{{if .Language}}{{.Language}}{{else}}en{{end}}</span>
+                        </p>
+                        <p class="room-info">
+                            <span class="room-info-label">Status:</span>
+                            <span class="room-info-value">
+                                {{if eq .Status "ready"}}✅ Ready to play
+                                {{else if eq .Status "playing"}}🎮 Playing
+                                {{else}}⏳ Waiting for guest{{end}}
+                            </span>
+                        </p>
+                        <p class="room-info">
+                            <span class="room-info-label">Created:</span>
+                            <span class="room-info-value">{{.CreatedAt.Format "Jan 2, 2006"}}</span>
+                        </p>
+                    </div>
+                    <div class="room-card-actions">
+                        {{if eq .Status "waiting"}}
+                            <a href="/game/room/{{.ID}}" role="button">Enter Room</a>
+                        {{else if eq .Status "ready"}}
+                            <a href="/game/room/{{.ID}}" role="button" class="btn-success">Enter Room</a>
+                        {{else if eq .Status "playing"}}
+                            <a href="/game/play/{{.ID}}" role="button" class="btn-success">Continue Game</a>
+                        {{else if eq .Status "finished"}}
+                            <a href="/game/finished/{{.ID}}" role="button" class="secondary">View Results</a>
+                        {{end}}
+                        {{if .IsOwner}}
+                            <button type="button"
+                                    class="btn-danger"
+                                    hx-delete="/api/rooms/{{.ID}}"
+                                    hx-confirm="⚠️ Are you sure you want to delete this room?\n\nThis action cannot be undone and will remove all game data."
+                                    hx-target="#room-{{.ID}}"
+                                    hx-swap="outerHTML swap:300ms"
+                                    hx-disabled-elt="this"
+                                    hx-on::after-request="if(event.detail.successful) Toast.success('Room deleted successfully')"
+                                    aria-label="Delete room">
+                                Delete
+                            </button>
+                        {{else}}
+                            <button type="button"
+                                    class="secondary"
+                                    hx-post="/api/rooms/{{.ID}}/leave"
+                                    hx-confirm="⚠️ Are you sure you want to leave this room?\n\nThe room will remain for the owner, but you will be removed."
+                                    hx-target="#room-{{.ID}}"
+                                    hx-swap="outerHTML swap:300ms"
+                                    hx-disabled-elt="this"
+                                    hx-on::after-request="if(event.detail.successful) Toast.success('Left room successfully')"
+                                    aria-label="Leave room">
+                                Leave
+                            </button>
+                        {{end}}
+                    </div>
                 </div>
-                <div class="room-card-body">
-                    <p class="room-info">
-                        <span class="room-info-label">Playing with:</span>
-                        <span class="room-info-value">
-                            {{if .OtherPlayerUsername}}
-                                👤 {{.OtherPlayerUsername}}
-                            {{else}}
-                                ⏳ Waiting for player...
-                            {{end}}
-                        </span>
-                    </p>
-                    <p class="room-info">
-                        <span class="room-info-label">Language:</span>
-                        <span class="room-info-value">{{if .Language}}{{.Language}}{{else}}en{{end}}</span>
-                    </p>
-                    <p class="room-info">
-                        <span class="room-info-label">Status:</span>
-                        <span class="room-info-value">
-                            {{if eq .Status "ready"}}✅ Ready to play
-                            {{else if eq .Status "playing"}}🎮 Playing
-                            {{else}}⏳ Waiting for guest{{end}}
-                        </span>
-                    </p>
-                    <p class="room-info">
-                        <span class="room-info-label">Created:</span>
-                        <span class="room-info-value">{{.CreatedAt.Format "Jan 2, 2006"}}</span>
-                    </p>
-                </div>
-                <div class="room-card-actions">
-                    {{if eq .Status "waiting"}}
-                        <a href="/game/room/{{.ID}}" role="button">Enter Room</a>
-                    {{else if eq .Status "ready"}}
-                        <a href="/game/room/{{.ID}}" role="button" class="btn-success">Enter Room</a>
-                    {{else if eq .Status "playing"}}
-                        <a href="/game/play/{{.ID}}" role="button" class="btn-success">Continue Game</a>
-                    {{else if eq .Status "finished"}}
-                        <a href="/game/finished/{{.ID}}" role="button" class="secondary">View Results</a>
-                    {{end}}
-                    {{if .IsOwner}}
-                        <button type="button"
-                                class="btn-danger"
-                                hx-delete="/api/rooms/{{.ID}}"
-                                hx-confirm="⚠️ Are you sure you want to delete this room?\n\nThis action cannot be undone and will remove all game data."
-                                hx-target="#room-{{.ID}}"
-                                hx-swap="outerHTML swap:300ms"
-                                hx-disabled-elt="this"
-                                hx-on::after-request="if(event.detail.successful) Toast.success('Room deleted successfully')"
-                                aria-label="Delete room">
-                            Delete
-                        </button>
-                    {{else}}
-                        <button type="button"
-                                class="secondary"
-                                hx-post="/api/rooms/{{.ID}}/leave"
-                                hx-confirm="⚠️ Are you sure you want to leave this room?\n\nThe room will remain for the owner, but you will be removed."
-                                hx-target="#room-{{.ID}}"
-                                hx-swap="outerHTML swap:300ms"
-                                hx-disabled-elt="this"
-                                hx-on::after-request="if(event.detail.successful) Toast.success('Left room successfully')"
-                                aria-label="Leave room">
-                            Leave
-                        </button>
-                    {{end}}
-                </div>
+                {{end}}
             </div>
-            {{end}}
-        </div>
-    {{else}}
-        <div class="empty-state">
-            <p class="empty-state-icon">🎮</p>
-            <h2>No Rooms Yet</h2>
-            <p>Create your first room to start playing!</p>
-            <a href="/game/create-room" role="button">Create Room</a>
-        </div>
-    {{end}}
+        {{else}}
+            {{template "partials/game/empty-rooms-state.html"}}
+        {{end}}
+    </div>
 </div>
 
 <script>
@@ -100,12 +97,35 @@
 // - Button disable during requests via hx-disabled-elt
 // ============================================================================
 
-// Check if grid is empty after deletions and reload to show empty state
-document.body.addEventListener('htmx:afterSwap', function(event) {
-    const roomsGrid = document.querySelector('.rooms-grid');
-    if (roomsGrid && roomsGrid.children.length === 0) {
-        // Show empty state by reloading
-        setTimeout(() => window.location.reload(), 300);
+// Track room deletions to detect when grid becomes empty
+let roomDeletionInProgress = false;
+
+// Before swap, check if we're deleting a room card
+document.body.addEventListener('htmx:beforeSwap', function(event) {
+    const target = event.detail.target;
+    if (target && target.id && target.id.startsWith('room-')) {
+        roomDeletionInProgress = true;
+    }
+});
+
+// After request completes, check if we need to load empty state
+// Note: We use afterRequest instead of afterSwap because when the element is removed
+// with outerHTML, afterSwap may not bubble up correctly
+document.body.addEventListener('htmx:afterRequest', function(event) {
+    if (event.detail.successful && roomDeletionInProgress) {
+        roomDeletionInProgress = false;
+        
+        // Wait for swap animation to complete (300ms) plus buffer
+        setTimeout(() => {
+            const roomsGrid = document.querySelector('.rooms-grid');
+            if (roomsGrid && roomsGrid.children.length === 0) {
+                // Load empty state partial via HTMX
+                htmx.ajax('GET', '/game/partials/empty-rooms-state', {
+                    target: '#rooms-container',
+                    swap: 'innerHTML'
+                });
+            }
+        }, 400);
     }
 });
 </script>

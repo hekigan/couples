@@ -84,6 +84,11 @@ func (h *Handler) RenderTemplate(w http.ResponseWriter, tmpl string, data *Templ
 
 	// Also parse component templates if they exist
 	t.ParseGlob("templates/components/*.html")
+	
+	// Also parse partial templates (for reusable fragments)
+	// Note: ParseGlob doesn't support ** so we parse each subdirectory
+	t.ParseGlob("templates/partials/*/*.html")
+	t.ParseGlob("templates/partials/*/*/*.html")
 
 	// Execute layout.html which will include the content template
 	err = t.ExecuteTemplate(w, "layout.html", data)
