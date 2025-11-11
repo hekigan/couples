@@ -8,8 +8,8 @@
 
         <!-- Join Method Toggle (CSS-only, no JavaScript needed) -->
         <div class="join-method-toggle">
-            <input type="radio" name="join-method" id="direct-radio" checked style="display: none;">
-            <input type="radio" name="join-method" id="request-radio" style="display: none;">
+            <input type="radio" name="join-method" id="direct-radio" checked hidden>
+            <input type="radio" name="join-method" id="request-radio" hidden>
 
             <label for="direct-radio" class="method-btn" aria-label="Direct join method">
                 🎮 Direct Join
@@ -22,22 +22,21 @@
         <!-- Direct Join Form (Default) -->
         <div id="direct-join-form" class="join-form">
             <form action="/game/join-room" method="POST" data-testid="direct-join-form">
-                <div class="form-group">
-                    <label class="form-label" for="room_id">Room ID:</label>
+                <label for="room_id">
+                    Room ID
                     <input
                         type="text"
                         id="room_id"
                         name="room_id"
-                        class="form-input"
                         placeholder="Enter room ID"
                         required
                         aria-required="true"
                         data-testid="direct-join-room-id-input"
                     >
                     <span class="form-help">Join instantly if the room is open</span>
-                </div>
+                </label>
 
-                <button type="submit" class="btn btn-primary btn-block" data-testid="direct-join-submit">
+                <button type="submit" data-testid="direct-join-submit">
                     Join Room Directly
                 </button>
             </form>
@@ -57,20 +56,19 @@
                       }
                   "
                   data-testid="request-join-form">
-                <div class="form-group">
-                    <label class="form-label" for="request_room_id">Room ID:</label>
+                <label for="request_room_id">
+                    Room ID
                     <input
                         type="text"
                         id="request_room_id"
                         name="room_id"
-                        class="form-input"
                         placeholder="Enter room ID"
                         required
                         aria-required="true"
                         data-testid="request-join-room-id-input"
                     >
                     <span class="form-help">Send a request to the room owner</span>
-                </div>
+                </label>
 
                 <div class="info-box" role="note">
                     <p><strong>Request to Join:</strong></p>
@@ -84,17 +82,17 @@
                 <!-- Result messages -->
                 <div id="request-result" role="alert" aria-live="polite" data-testid="request-result"></div>
 
-                <button type="submit" class="btn btn-primary btn-block" data-testid="request-join-submit">
+                <button type="submit" data-testid="request-join-submit">
                     <span>Send Join Request</span>
                     <span id="request-loading" class="htmx-indicator">⏳</span>
                 </button>
             </form>
         </div>
 
-        <a href="/" class="btn btn-secondary btn-block" style="margin-top: 16px;">Cancel</a>
+        <a href="/" role="button" class="secondary" class="mt-md">Cancel</a>
 
         <!-- Pending Requests Section -->
-        <div id="pending-requests" style="margin-top: 2rem;">
+        <div id="pending-requests" class="mt-xl">
             <h3>📬 Pending Join Requests</h3>
             <div id="pending-requests-list"
                  hx-get="/api/rooms/my-join-requests"
@@ -106,7 +104,7 @@
                  "
                  role="region"
                  aria-label="Join request status">
-                <p style="color: #6b7280;">Loading requests...</p>
+                <p class="loading-text">Loading requests...</p>
             </div>
         </div>
     </div>

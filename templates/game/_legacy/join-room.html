@@ -37,7 +37,7 @@
         </div>
 
         <!-- Request to Join Form (Hidden by default) -->
-        <div id="request-join-form" style="display: none;">
+        <div id="request-join-form" hidden>
             <form id="join-request-form" onsubmit="handleJoinRequest(event)">
                 <div class="form-group">
                     <label class="form-label" for="request_room_id">Room ID:</label>
@@ -67,7 +67,7 @@
             </form>
         </div>
 
-        <a href="/" class="btn btn-secondary btn-block" style="margin-top: 16px;">Cancel</a>
+        <a href="/" class="btn btn-secondary btn-block" class="mt-md">Cancel</a>
 
         <!-- Pending Requests Section -->
         <div id="pending-requests" style="display: none; margin-top: 2rem;">

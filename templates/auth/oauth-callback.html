@@ -1,14 +1,16 @@
 {{template "layout.html" .}}
 
 {{define "content"}}
-<div class="container" style="text-align: center; padding: 4rem 1rem;">
-    <div class="card" style="max-width: 500px; margin: 0 auto;">
-        <h2>Completing Login...</h2>
-        <div class="loading-spinner" style="margin: 2rem auto;">
+<div class="auth-callback-container">
+    <article class="auth-callback-card">
+        <header>
+            <h2>Completing Login...</h2>
+        </header>
+        <div class="loading-spinner">
             <div class="spinner"></div>
         </div>
         <p>Please wait while we complete your authentication.</p>
-    </div>
+    </article>
 </div>
 
 <script>
@@ -59,27 +61,5 @@
     }
 })();
 </script>
-
-<style>
-.loading-spinner {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.spinner {
-    border: 4px solid rgba(0, 0, 0, 0.1);
-    border-radius: 50%;
-    border-top: 4px solid #6366f1;
-    width: 40px;
-    height: 40px;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-</style>
 {{end}}
 

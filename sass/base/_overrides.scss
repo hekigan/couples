@@ -1,0 +1,157 @@
+// ==================================================
+// Pico CSS Variable Overrides for Pastel Theme
+// ==================================================
+// Custom pastel color scheme for the Couple Card Game
+// Colors: Pink (#FFB6C1), Powder Blue (#B0E0E6), Mint (#98D8C8)
+
+:root {
+  // ============================================
+  // Primary Color - Light Pink
+  // ============================================
+  --pico-primary: #FFB6C1;
+  --pico-primary-background: #FFE4E9;
+  --pico-primary-border: #FFB6C1;
+  --pico-primary-hover: #FF9FB3;
+  --pico-primary-focus: rgba(255, 182, 193, 0.2);
+  --pico-primary-inverse: #FFFFFF;
+
+  // ============================================
+  // Secondary Color - Powder Blue
+  // ============================================
+  --pico-secondary: #B0E0E6;
+  --pico-secondary-background: #E0F4F8;
+  --pico-secondary-border: #B0E0E6;
+  --pico-secondary-hover: #9DD6E0;
+  --pico-secondary-focus: rgba(176, 224, 230, 0.2);
+  --pico-secondary-inverse: #333333;
+
+  // ============================================
+  // Contrast Color - Dark
+  // ============================================
+  --pico-contrast: #333333;
+  --pico-contrast-background: #F8F9FA;
+  --pico-contrast-border: #E0E0E0;
+  --pico-contrast-hover: #4A5568;
+  --pico-contrast-focus: rgba(51, 51, 51, 0.1);
+  --pico-contrast-inverse: #FFFFFF;
+
+  // ============================================
+  // Accent Colors
+  // ============================================
+  --pico-success: #98D8C8;              // Mint
+  --pico-success-background: #E6F7F2;
+  --pico-success-border: #98D8C8;
+  --pico-success-hover: #7DC4B3;
+
+  --pico-warning: #FFD700;              // Gold
+  --pico-warning-background: #FFF9E0;
+  --pico-warning-border: #FFD700;
+
+  --pico-danger: #FFB6B9;               // Pastel Red
+  --pico-danger-background: #FFE8E9;
+  --pico-danger-border: #FFB6B9;
+
+  --pico-info: #B0C4DE;                 // Light Steel Blue
+  --pico-info-background: #E8EEF7;
+  --pico-info-border: #B0C4DE;
+
+  // ============================================
+  // Background Colors
+  // ============================================
+  --pico-background-color: #FFFFFF;
+  --pico-color: #333333;
+  --pico-muted-color: #999999;
+  --pico-muted-border-color: #E0E0E0;
+
+  // Card styling with subtle pink tint
+  --pico-card-background-color: #FFFFFF;
+  --pico-card-border-color: #E0E0E0;
+  --pico-card-sectioning-background-color: #FFF5F7;
+
+  // ============================================
+  // Spacing & Sizing
+  // ============================================
+  --pico-spacing: 1rem;
+  --pico-typography-spacing-vertical: 1.5rem;
+  --pico-block-spacing-vertical: 1.5rem;
+  --pico-form-element-spacing-vertical: 0.75rem;
+  --pico-form-element-spacing-horizontal: 1rem;
+  --pico-grid-column-gap: 1.5rem;
+  --pico-grid-row-gap: 1.5rem;
+
+  // ============================================
+  // Border Radius (Softer Look)
+  // ============================================
+  --pico-border-radius: 0.75rem;        // 12px - softer than default
+  --pico-border-width: 1px;
+  --pico-outline-width: 2px;
+
+  // ============================================
+  // Typography
+  // ============================================
+  --pico-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --pico-font-size: 16px;
+  --pico-line-height: 1.6;
+  --pico-font-weight: 400;
+
+  // Heading sizes
+  --pico-h1-font-size: 2rem;            // 32px
+  --pico-h2-font-size: 1.75rem;         // 28px
+  --pico-h3-font-size: 1.5rem;          // 24px
+  --pico-h4-font-size: 1.25rem;         // 20px
+  --pico-h5-font-size: 1.125rem;        // 18px
+  --pico-h6-font-size: 1rem;            // 16px
+
+  // ============================================
+  // Transitions & Animations
+  // ============================================
+  --pico-transition: 0.2s ease-in-out;
+
+  // ============================================
+  // Form Elements
+  // ============================================
+  --pico-form-element-background-color: #FFFFFF;
+  --pico-form-element-border-color: #E0E0E0;
+  --pico-form-element-color: #333333;
+  --pico-form-element-placeholder-color: #999999;
+
+  // Focus states - pink theme
+  --pico-form-element-focus-color: #FFB6C1;
+  --pico-form-element-active-border-color: #FFB6C1;
+  --pico-form-element-invalid-border-color: #FFB6B9;
+
+  // ============================================
+  // Buttons
+  // ============================================
+  --pico-button-hover-box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+// ============================================
+// Dark Mode Overrides (Optional)
+// ============================================
+@media only screen and (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --pico-background-color: #1a1d26;
+    --pico-color: #c2c7d0;
+
+    // Brighter pastels for dark mode
+    --pico-primary: #FF9FB3;
+    --pico-secondary: #9DD6E0;
+    --pico-success: #7DC4B3;
+
+    // Card backgrounds
+    --pico-card-background-color: #242933;
+    --pico-card-sectioning-background-color: #2d313d;
+  }
+}
+
+// Force dark mode (if using data-theme attribute)
+[data-theme="dark"] {
+  --pico-background-color: #1a1d26;
+  --pico-color: #c2c7d0;
+  --pico-primary: #FF9FB3;
+  --pico-secondary: #9DD6E0;
+  --pico-success: #7DC4B3;
+  --pico-card-background-color: #242933;
+  --pico-card-sectioning-background-color: #2d313d;
+}

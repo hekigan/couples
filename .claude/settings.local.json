@@ -21,7 +21,10 @@
       "Bash(npm --version)",
       "Bash(npm install)",
       "Bash(npx playwright install:*)",
-      "Bash(npx playwright test:*)"
+      "Bash(npx playwright test:*)",
+      "WebFetch(domain:picocss.com)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)"
     ],
     "deny": [],
     "ask": []

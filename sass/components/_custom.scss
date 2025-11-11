@@ -1,0 +1,108 @@
+// ==================================================
+// Custom Component Styles
+// ==================================================
+// Styles extracted from inline styles in templates
+// Using Pico CSS variables for consistency
+
+// Loading states
+.loading-text {
+  color: var(--pico-muted-color);
+}
+
+// Notification badge (hidden by default, shown by JavaScript)
+.notification-badge {
+  display: none;
+
+  &.visible {
+    display: inline-block;
+  }
+}
+
+// Notification dropdown (hidden by default, shown by JavaScript)
+.notification-dropdown {
+  display: none;
+
+  &.visible {
+    display: block;
+  }
+}
+
+// Auth callback page
+.auth-callback-container {
+  text-align: center;
+  padding: 4rem 1rem;
+
+  .auth-callback-card {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  .loading-spinner {
+    margin: 2rem auto;
+  }
+}
+
+// Invite section (conditional display via template logic)
+.invite-section {
+  margin-top: var(--pico-spacing);
+}
+
+// Join requests section
+.join-requests-section {
+  margin-top: var(--pico-spacing);
+}
+
+// Categories section (conditional display)
+.categories-section {
+  margin-top: var(--pico-spacing);
+}
+
+// Flexbox button group
+.button-group {
+  display: flex;
+  gap: var(--pico-spacing);
+  justify-content: center;
+
+  button {
+    flex: 1;
+    max-width: 200px;
+  }
+}
+
+// Helper classes for conditional visibility
+.hidden-conditional {
+  display: none;
+}
+
+// Auth callback specific styles
+.auth-callback-container {
+  text-align: center;
+  padding: 4rem 1rem;
+
+  .auth-callback-card {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+}
+
+// Loading spinner
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 2rem auto;
+}
+
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top: 4px solid var(--pico-primary);
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

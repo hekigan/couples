@@ -305,7 +305,7 @@ couple-game/
 ├── sass/                      # SASS source files
 ├── sql/                       # Database schema, views, indexes, seeds
 ├── scripts/                   # Shell scripts (test DB setup, etc.)
-└── docs/                      # Comprehensive documentation
+└── docs/                      # Comprehensive documentation (put all *.md files here, not at the project root)
 
 # Generated/ignored:
 ├── server                     # Compiled binary (gitignored)

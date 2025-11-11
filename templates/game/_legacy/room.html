@@ -79,7 +79,7 @@
             <p class="categories-hint">Both players can select categories. Selections sync in real-time!</p>
 
             <div id="categories-grid" class="categories-grid">
-                <p style="color: #6b7280;">Loading categories...</p>
+                <p class="loading-text">Loading categories...</p>
             </div>
         </div>
 
@@ -88,7 +88,7 @@
         <div class="invite-section" id="invite-section" style="margin-top: 2rem; {{if .Data.GuestID}}display: none;{{end}}">
             <h2>👥 Invite Friends</h2>
             <div id="friends-list" class="friends-list">
-                <p style="color: #6b7280;">Loading friends...</p>
+                <p class="loading-text">Loading friends...</p>
             </div>
         </div>
 
@@ -104,7 +104,7 @@
     <div class="room-actions">
         
         <form action="/game/room/{{.Data.ID}}/delete" method="POST" onsubmit="return confirm('Delete this room?');">
-            <button type="submit" class="btn btn-danger">Delete Room</button>
+            <button type="submit" class="contrast">Delete Room</button>
         </form>
     </div>
     {{end}}
@@ -462,7 +462,7 @@ async function loadJoinRequests(roomId) {
     try {
         const response = await fetch(`/api/rooms/${roomId}/join-requests-json`);
         if (!response.ok) {
-            document.getElementById('join-requests-list').innerHTML = '<p style="color: #6b7280;">No pending requests</p>';
+            document.getElementById('join-requests-list').innerHTML = '<p class="loading-text">No pending requests</p>';
             return;
         }
         
@@ -473,11 +473,11 @@ async function loadJoinRequests(roomId) {
         if (requests.length > 0) {
             displayJoinRequests(roomId, requests);
         } else {
-            document.getElementById('join-requests-list').innerHTML = '<p style="color: #6b7280;">No pending requests</p>';
+            document.getElementById('join-requests-list').innerHTML = '<p class="loading-text">No pending requests</p>';
         }
     } catch (error) {
         console.error('Failed to load join requests:', error);
-        document.getElementById('join-requests-list').innerHTML = '<p style="color: #6b7280;">No pending requests</p>';
+        document.getElementById('join-requests-list').innerHTML = '<p class="loading-text">No pending requests</p>';
     }
 }
 
@@ -681,7 +681,7 @@ async function rejectRequest(requestId) {
 
             // If no more requests, show "no pending requests" message
             if (currentCount === 0) {
-                listElement.innerHTML = '<p style="color: #6b7280;">No pending requests</p>';
+                listElement.innerHTML = '<p class="loading-text">No pending requests</p>';
             }
         } else {
             showNotification('Failed to reject request', 'error');
@@ -696,7 +696,7 @@ async function loadFriends(roomId) {
     try {
         const response = await fetch('/api/friends/list');
         if (!response.ok) {
-            document.getElementById('friends-list').innerHTML = '<p style="color: #6b7280;">No friends to invite</p>';
+            document.getElementById('friends-list').innerHTML = '<p class="loading-text">No friends to invite</p>';
             return;
         }
         
@@ -705,11 +705,11 @@ async function loadFriends(roomId) {
         if (friends && friends.length > 0) {
             displayFriendsList(roomId, friends);
         } else {
-            document.getElementById('friends-list').innerHTML = '<p style="color: #6b7280;">No friends yet. <a href="/friends">Add friends</a></p>';
+            document.getElementById('friends-list').innerHTML = '<p class="loading-text">No friends yet. <a href="/friends">Add friends</a></p>';
         }
     } catch (error) {
         console.error('Failed to load friends:', error);
-        document.getElementById('friends-list').innerHTML = '<p style="color: #6b7280;">Failed to load friends</p>';
+        document.getElementById('friends-list').innerHTML = '<p class="loading-text">Failed to load friends</p>';
     }
 }
 
@@ -852,7 +852,7 @@ async function loadCategories(roomId) {
     try {
         const response = await fetch('/api/categories');
         if (!response.ok) {
-            document.getElementById('categories-grid').innerHTML = '<p style="color: #6b7280;">Failed to load categories</p>';
+            document.getElementById('categories-grid').innerHTML = '<p class="loading-text">Failed to load categories</p>';
             return;
         }
 
@@ -862,11 +862,11 @@ async function loadCategories(roomId) {
         if (categories.length > 0) {
             displayCategories(roomId, categories);
         } else {
-            document.getElementById('categories-grid').innerHTML = '<p style="color: #6b7280;">No categories available</p>';
+            document.getElementById('categories-grid').innerHTML = '<p class="loading-text">No categories available</p>';
         }
     } catch (error) {
         console.error('Failed to load categories:', error);
-        document.getElementById('categories-grid').innerHTML = '<p style="color: #6b7280;">Failed to load categories</p>';
+        document.getElementById('categories-grid').innerHTML = '<p class="loading-text">Failed to load categories</p>';
     }
 }
 
@@ -1427,7 +1427,7 @@ async function startGame() {
 </style>
 
 <!-- Game Starting Notification (shown when redirecting to game) -->
-<div id="game-starting-notification" style="display: none;">
+<div id="game-starting-notification" hidden>
     <div style="font-size: 3rem; margin-bottom: 1rem;">🎮</div>
     <h2>Game Starting...</h2>
     <p>Redirecting to game page...</p>

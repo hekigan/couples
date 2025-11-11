@@ -51,7 +51,7 @@
              hx-get="/api/rooms/{{.Data.ID}}/start-button"
              hx-trigger="load, sse:room_update from:body"
              hx-swap="innerHTML">
-            <p style="color: #6b7280;">Loading...</p>
+            <p class="loading-text">Loading...</p>
         </div>
         {{end}}
         {{end}}
@@ -64,7 +64,7 @@
              hx-get="/api/rooms/{{.Data.ID}}/ready-button"
              hx-trigger="load"
              hx-swap="innerHTML">
-            <p style="color: #6b7280;">Loading...</p>
+            <p class="loading-text">Loading...</p>
         </div>
         {{end}}
         {{end}}
@@ -84,7 +84,7 @@
              hx-get="/api/rooms/{{.Data.ID}}/categories"
              hx-trigger="load, sse:categories_updated from:body"
              hx-swap="innerHTML">
-            <p style="color: #6b7280;">Loading categories...</p>
+            <p class="loading-text">Loading categories...</p>
         </div>
     </div>
 
@@ -97,7 +97,7 @@
              hx-get="/api/friends/list-html?room_id={{.Data.ID}}"
              hx-trigger="load"
              hx-swap="innerHTML">
-            <p style="color: #6b7280;">Loading friends...</p>
+            <p class="loading-text">Loading friends...</p>
         </div>
     </div>
 
@@ -116,7 +116,7 @@
     {{if .IsOwner}}
     <div class="room-actions" data-testid="room-actions">
         <form action="/game/room/{{.Data.ID}}/delete" method="POST" onsubmit="return confirm('Delete this room?');">
-            <button type="submit" class="btn btn-danger" data-testid="delete-room-button">Delete Room</button>
+            <button type="submit" class="contrast" data-testid="delete-room-button">Delete Room</button>
         </form>
     </div>
     {{end}}

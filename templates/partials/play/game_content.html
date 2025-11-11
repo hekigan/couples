@@ -28,7 +28,7 @@
 
 <!-- Finish Game Button -->
 <div class="button-group" style="margin-top: 30px;">
-    <button class="btn btn-danger"
+    <button class="contrast"
             hx-post="/api/rooms/{{.RoomID}}/finish"
             hx-confirm="⚠️ Are you sure you want to finish the game?"
             hx-disabled-elt="this"
@@ -45,4 +45,4 @@
     </button>
 </div>
 
-<div id="error-message" class="error" style="display: none;" role="alert" aria-live="assertive"></div>
+<div id="error-message" class="error" hidden role="alert" aria-live="assertive"></div>

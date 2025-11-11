@@ -169,21 +169,21 @@
         </div>
 
         <!-- Active player form -->
-        <div id="answerForm" class="answer-form" style="display: none;">
+        <div id="answerForm" class="answer-form" hidden>
             <textarea id="answerText" placeholder="Write your answer here (optional)..." rows="4"></textarea>
 
             <div class="button-group" style="display: flex; gap: 10px; justify-content: center;">
-                <button id="answeredBtn" class="btn btn-primary" onclick="submitAnswer('answered')" style="flex: 1; max-width: 200px;">
+                <button id="answeredBtn" class="" onclick="submitAnswer('answered')" style="flex: 1; max-width: 200px;">
                     ✅ Answered
                 </button>
-                <button id="passBtn" class="btn btn-secondary" onclick="submitAnswer('passed')" style="flex: 1; max-width: 200px;">
+                <button id="passBtn" class="secondary" onclick="submitAnswer('passed')" style="flex: 1; max-width: 200px;">
                     ⏭️ Pass
                 </button>
             </div>
         </div>
 
         <!-- Passive player UI -->
-        <div id="waitingUI" class="answer-form" style="display: none;">
+        <div id="waitingUI" class="answer-form" hidden>
             <textarea id="passiveAnswerText" placeholder="" rows="4" disabled style="background-color: #f5f5f5;"></textarea>
 
             <div id="typingIndicator" class="typing-indicator" style="display: none; text-align: center; padding: 10px; font-style: italic; color: #666;">
@@ -197,7 +197,7 @@
         </div>
 
         <!-- Answer review section (shown to both players after answer submission) -->
-        <div id="answerReviewUI" class="answer-review" style="display: none;">
+        <div id="answerReviewUI" class="answer-review" hidden>
             <div style="padding: 20px; background-color: #f0f9ff; border-radius: 8px; border: 2px solid #3b82f6;">
                 <h3 style="margin-top: 0; color: #1e40af;">📝 Answer:</h3>
                 <p id="reviewAnswerText" style="font-size: 18px; white-space: pre-wrap; margin: 15px 0;"></p>
@@ -219,7 +219,7 @@
         </div>
 
         <div class="button-group" style="margin-top: 30px;">
-            <button class="btn btn-danger" onclick="finishGame()">
+            <button class="contrast" onclick="finishGame()">
                 Finish Game
             </button>
         </div>
@@ -229,7 +229,7 @@
         Loading game...
     </div>
 
-    <div id="errorMessage" class="error" style="display: none;"></div>
+    <div id="errorMessage" class="error" hidden></div>
 </div>
 
 <script>

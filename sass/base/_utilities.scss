@@ -59,5 +59,17 @@
 .gap-md { gap: $spacing-md; }
 .gap-lg { gap: $spacing-lg; }
 
+// Text utilities
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+// Typography utilities
+.text-muted { color: var(--pico-muted-color); }
+.text-primary { color: var(--pico-primary); }
+.text-secondary { color: var(--pico-secondary); }
+.text-success { color: var(--pico-success); }
+.text-danger { color: var(--pico-danger); }
+
 
 

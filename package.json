@@ -10,11 +10,19 @@
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:report": "playwright show-report"
   },
-  "keywords": ["e2e", "playwright", "htmx", "testing"],
+  "keywords": [
+    "e2e",
+    "playwright",
+    "htmx",
+    "testing"
+  ],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@playwright/test": "^1.40.0",
     "@types/node": "^20.10.0"
+  },
+  "dependencies": {
+    "@picocss/pico": "^2.1.1"
   }
 }

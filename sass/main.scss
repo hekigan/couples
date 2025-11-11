@@ -1,22 +1,33 @@
-// Couple Card Game - Main SASS File
+// Couple Card Game - Main SASS File (with Pico CSS)
 // Compile with: npx sass sass/main.scss static/css/main.css
 
-// Base styles
-@use 'base/variables' as *;
-@use 'base/reset';
-@use 'base/typography';
-@use 'base/utilities';
+// ==================================================
+// 1. Pico CSS Foundation
+// ==================================================
+@use 'vendor/pico-custom';
 
-// Component styles
-@use 'components/buttons';
-@use 'components/cards';
-@use 'components/forms';
-@use 'components/modals';
-@use 'components/navigation';
-@use 'components/alerts';
-@use 'components/badges';
+// ==================================================
+// 2. Custom Theme Overrides
+// ==================================================
+@use 'base/overrides';
 
-// Page-specific styles
+// ==================================================
+// 3. Utility Classes (Complementary to Pico)
+// ==================================================
+@use 'base/variables' as *;        // Keep for custom spacing/color variables
+@use 'base/utilities';              // Custom utility classes
+
+// ==================================================
+// 4. Custom Component Styles
+// ==================================================
+@use 'components/custom';         // Custom styles extracted from inline styles
+@use 'components/navigation';     // Keep custom navigation
+@use 'components/alerts';         // Keep - Pico doesn't have alerts
+@use 'components/badges';         // Keep - Pico doesn't have badges
+
+// ==================================================
+// 5. Page-Specific Styles
+// ==================================================
 @use 'pages/home';
 @use 'pages/auth';
 @use 'pages/game';

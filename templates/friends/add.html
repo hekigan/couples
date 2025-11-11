@@ -4,7 +4,7 @@
 <div class="container" style="padding: 2rem 1rem;">
     <div class="page-header">
         <h1>Add Friend</h1>
-        <a href="/friends" class="btn btn-secondary">← Back to Friends</a>
+        <a href="/friends" class="secondary">← Back to Friends</a>
     </div>
 
     {{if .Success}}
@@ -22,25 +22,20 @@
     <div class="card" style="max-width: 600px; margin: 0 auto;">
         <h2>Send Friend Invitation</h2>
         
-        <form method="POST" action="/friends/add" class="form">
-            <div class="form-group">
-                <label for="friend_identifier">Friend's Email or User ID</label>
-                <input 
-                    type="text" 
-                    id="friend_identifier" 
-                    name="friend_identifier" 
+        <form method="POST" action="/friends/add">
+            <label for="friend_identifier">
+                Friend's Email or User ID
+                <input
+                    type="text"
+                    id="friend_identifier"
+                    name="friend_identifier"
                     placeholder="Enter email or user ID"
-                    class="form-input"
                     required
                 />
-                <p class="form-help">
-                    Enter your friend's email address or their User ID to send a friend request.
-                </p>
-            </div>
+                <small>Enter your friend's email address or their User ID to send a friend request.</small>
+            </label>
 
-            <button type="submit" class="btn btn-primary" style="width: 100%;">
-                Send Friend Request
-            </button>
+            <button type="submit">Send Friend Request</button>
         </form>
     </div>
 
@@ -61,7 +56,7 @@
             />
             <button 
                 onclick="copyUserID()"
-                class="btn btn-secondary"
+                class="secondary"
                 style="white-space: nowrap;"
             >
                 📋 Copy
