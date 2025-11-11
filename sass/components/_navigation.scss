@@ -2,7 +2,7 @@
 
 // Navigation
 .main-header {
-  background-color: $bg-primary;
+  background-color: #{$primary-color};
   box-shadow: $shadow-sm;
   padding: $spacing-md 0;
   position: sticky;

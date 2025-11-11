@@ -1,3 +1,5 @@
+@use 'variables' as *;
+
 // ==================================================
 // Pico CSS Variable Overrides for Pastel Theme
 // ==================================================
@@ -9,7 +11,7 @@
   // Primary Color - Light Pink
   // ============================================
   --pico-primary: #FFB6C1;
-  --pico-primary-background: #FFE4E9;
+  --pico-primary-background: #{$bg-primary};
   --pico-primary-border: #FFB6C1;
   --pico-primary-hover: #FF9FB3;
   --pico-primary-focus: rgba(255, 182, 193, 0.2);
@@ -124,6 +126,10 @@
   // Buttons
   // ============================================
   --pico-button-hover-box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+:root:not([data-theme]) {
+  --pico-background-color: #{$bg-primary};
 }
 
 // ============================================

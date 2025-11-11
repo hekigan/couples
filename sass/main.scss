@@ -9,12 +9,12 @@
 // ==================================================
 // 2. Custom Theme Overrides
 // ==================================================
+@use 'base/variables' as *;        // Keep for custom spacing/color variables
 @use 'base/overrides';
 
 // ==================================================
 // 3. Utility Classes (Complementary to Pico)
 // ==================================================
-@use 'base/variables' as *;        // Keep for custom spacing/color variables
 @use 'base/utilities';              // Custom utility classes
 
 // ==================================================
@@ -31,6 +31,7 @@
 @use 'pages/home';
 @use 'pages/auth';
 @use 'pages/game';
+@use 'pages/rooms';
 @use 'pages/admin';
 @use 'pages/friends';
 
