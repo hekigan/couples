@@ -1,7 +1,9 @@
 {{if .Categories}}
 <fieldset style="border: none; padding: 0; margin: 0;">
-    <legend class="sr-only">Select question categories</legend>
     <div class="categories-grid">
+        <span class="category-saving htmx-indicator">
+            <span>updating...</span>
+        </span>
         {{range .Categories}}
         <label class="category-checkbox" for="category-{{.ID}}">
             <input type="checkbox"
@@ -19,7 +21,7 @@
                 hx-trigger="change"
                 hx-swap="none"
                 hx-disabled-elt="this"
-                hx-indicator=".category-saving-{{.ID}}"
+                hx-indicator=".category-saving"
                 hx-on::after-request="
                     if(!event.detail.successful) {
                         this.checked = !this.checked;
@@ -36,9 +38,6 @@
                 "
                 aria-label="{{.Label}} category"/>
             <span class="category-label">{{.Label}}</span>
-            <span class="category-saving-{{.ID}} htmx-indicator" style="margin-left: 0.25rem; font-size: 0.75rem;">
-                💾
-            </span>
         </label>
         {{end}}
     </div>

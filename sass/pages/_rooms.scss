@@ -1,3 +1,5 @@
+@use '../base/variables' as *;
+
 // ============================================================================
 // Rooms Page Styles
 // ============================================================================
@@ -141,6 +143,27 @@
 .empty-state-icon {
     font-size: 4rem;
     margin-bottom: 1rem;
+}
+
+.categories-grid {
+    position: relative;
+}
+
+.category-saving.htmx-indicator {
+    text-align: center;
+    margin-bottom: $spacing-lg;
+    background: rgba(125, 125, 125, .2);
+    border-radius: 5px;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+
+    span {
+        position: relative;
+        display: inline-block;
+        transform: translateY(-50%);
+        top: 50%;
+    }
 }
 
 // ============================================================================
