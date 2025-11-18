@@ -198,12 +198,86 @@
         </div>
     </div>
 
-    <div id="game-content"
-         hx-get="/api/rooms/{{.Data.Room.ID}}/game-content"
-         hx-trigger="load, sse:game_started, sse:room_update"
-         hx-swap="innerHTML"
-         data-testid="game-content">
-        <div class="loading">Loading game...</div>
+    <div id="game-content" data-testid="game-content">
+        <!-- Turn Indicator - server-side rendered -->
+        <div id="turn-indicator"
+             hx-get="/api/rooms/{{.Data.Room.ID}}/turn-indicator"
+             hx-trigger="sse:turn_changed from:body, sse:answer_submitted from:body"
+             hx-swap="innerHTML">
+            <div class="turn-indicator {{if .Data.IsMyTurn}}your-turn{{else}}waiting{{end}}" role="status" aria-live="polite">
+                {{if .Data.IsMyTurn}}
+                <span>✨ It's YOUR turn!</span>
+                {{else}}
+                <span>⏳ Waiting for {{.Data.OtherPlayerName}}...</span>
+                {{end}}
+            </div>
+        </div>
+
+        <!-- Question Card - server-side rendered -->
+        <div id="question-card"
+             hx-get="/api/rooms/{{.Data.Room.ID}}/question-card"
+             hx-trigger="sse:question_drawn from:body"
+             hx-swap="innerHTML">
+            <div class="question-card" role="region" aria-label="Current question">
+                <p class="question-text">{{.Data.QuestionText}}</p>
+            </div>
+        </div>
+
+        <!-- Game Forms - server-side rendered -->
+        <div id="game-forms"
+             hx-get="/api/rooms/{{.Data.Room.ID}}/game-forms"
+             hx-trigger="sse:turn_changed from:body, sse:question_drawn from:body, sse:answer_submitted from:body, sse:player_typing from:body"
+             hx-swap="innerHTML">
+            {{if .Data.IsMyTurn}}
+            <!-- Active player - show answer form -->
+            <div class="answer-form">
+                <form hx-post="/api/rooms/{{.Data.Room.ID}}/answer"
+                      hx-target="#game-forms"
+                      hx-swap="innerHTML"
+                      hx-disabled-elt="button">
+                    <input type="hidden" name="question_id" value="{{.Data.QuestionID}}">
+
+                    <label for="answer-text" class="sr-only">Your answer (optional)</label>
+                    <textarea id="answer-text"
+                              name="answer_text"
+                              placeholder="Write your answer here (optional)..."
+                              rows="4"
+                              aria-label="Your answer"></textarea>
+
+                    <div class="button-group">
+                        <button type="submit"
+                                name="action_type"
+                                value="answered"
+                                class="btn btn-success">
+                            ✅ Answered
+                        </button>
+                        <button type="submit"
+                                name="action_type"
+                                value="passed"
+                                class="btn btn-secondary">
+                            ⏭️ Pass
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {{else}}
+            <!-- Passive player - show waiting UI -->
+            <div class="answer-display">
+                <p>Waiting for {{.Data.OtherPlayerName}} to answer...</p>
+            </div>
+            {{end}}
+        </div>
+
+        <!-- Finish Game Button -->
+        <div class="button-group" style="margin-top: 30px;">
+            <button class="btn btn-danger"
+                    hx-post="/api/rooms/{{.Data.Room.ID}}/finish"
+                    hx-confirm="⚠️ Are you sure you want to finish the game?"
+                    hx-disabled-elt="this"
+                    aria-label="Finish game">
+                Finish Game
+            </button>
+        </div>
     </div>
 </div>
 

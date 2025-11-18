@@ -28,6 +28,7 @@
 // ==================================================
 // 5. Page-Specific Styles
 // ==================================================
+@use 'pages/common';
 @use 'pages/home';
 @use 'pages/auth';
 @use 'pages/game';

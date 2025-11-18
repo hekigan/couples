@@ -35,6 +35,11 @@
     background-color: $warning-color;
     color: white;
   }
+  
+  &.badge-muted {
+    background-color: $text-muted;
+    color: white;
+  }
 }
 
 .badge-pill {

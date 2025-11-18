@@ -4,8 +4,9 @@
 // Navigation
 .main-header {
   background-color: #{$primary-color};
-  box-shadow: $shadow-sm;
+  box-shadow: $shadow-heavy-md;
   padding: $spacing-md 0;
+  width: inherit;
   position: sticky;
   top: 0;
   z-index: $z-sticky;
@@ -13,6 +14,7 @@
 
 .header-content {
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
   align-items: center;
 }
@@ -55,10 +57,16 @@
 
 .main-footer {
   background-color: $text-primary;
-  color: white;
+  color: $text-contrast;
+  font-size: $font-size-sm;
+  width: inherit;
   text-align: center;
-  padding: $spacing-xxl 0;
-  margin-top: $spacing-xxl;
+  padding: $spacing-sm 0;
+
+  p {
+    color: inherit;
+    margin-bottom: 0;
+  }
 }
 
 

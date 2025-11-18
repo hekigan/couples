@@ -1,6 +1,30 @@
 @use '../base/variables' as *;
 
 // Friends pages
+[data-testid="friends-list"] {
+  details {
+    width: 100%;
+
+    summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-direction: row;
+      width: inherit;
+      position: relative;
+
+      &::after {
+        margin: $spacing-sm 0;
+      }
+
+      .badge {
+        position: absolute;
+        right: 20px;
+      }
+    }
+  }
+}
+
 .friends-container {
   max-width: 800px;
   margin: 0 auto;
