@@ -152,11 +152,12 @@
 .category-saving.htmx-indicator {
     text-align: center;
     margin-bottom: $spacing-lg;
-    background: rgba(125, 125, 125, .2);
+    background: rgba(255, 255, 255, 0.7);
     border-radius: 5px;
     position: absolute;
     width: 100%;
     height: 100%;
+    z-index: 1000;
 
     span {
         position: relative;
