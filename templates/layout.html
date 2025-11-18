@@ -33,6 +33,10 @@
                     <span class="logo-text">Couple Card Game</span>
                 </a>
                 
+                <button class="hamburger-btn" onclick="MobileMenu.open()" aria-label="Open menu">
+                    <span class="hamburger-icon">☰</span>
+                </button>
+                
                 <nav class="main-nav">
                     {{if .User}}
                     <!-- Notification Bell -->
@@ -86,6 +90,29 @@
             <p>&copy; 2025 Couple Card Game. Made with ❤️ for couples everywhere.</p>
         </div>
     </footer>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu-overlay" id="mobile-menu-overlay" data-menu="close"></div>
+    <div class="mobile-menu-panel" id="mobile-menu-panel" data-menu="close">
+        <div class="mobile-menu-header">
+            <h2 class="menu-title">Menu</h2>
+            <button class="close-btn" id="mobile-menu-close" aria-label="Close menu">×</button>
+        </div>
+        <nav class="mobile-menu-nav">
+            {{if .User}}
+                <a href="#" class="notification-bell" onclick="toggleNotifications()" id="notification-btn-mobile">
+                    📧
+                    <span class="notification-badge" id="notification-badge-mobile" hidden>0</span>
+                </a>
+                <a href="/friends" class="nav-link">Friends</a>
+                <a href="/game/rooms" class="nav-link">Rooms</a>
+                <a href="/profile" class="nav-link">Profile</a>
+                <a href="#" hx-post="/auth/logout" hx-confirm="Are you sure you want to logout?" class="nav-link">Logout</a>
+            {{else}}
+                <a href="/auth/login" role="button">Login</a>
+            {{end}}
+        </nav>
+    </div>
 </body>
 </html>
 {{end}}

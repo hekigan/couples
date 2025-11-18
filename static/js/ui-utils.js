@@ -274,9 +274,65 @@ function validateField(input, validationFn, errorMessage) {
     return isValid;
 }
 
+// Mobile Menu System
+const MobileMenu = {
+    overlay: null,
+    panel: null,
+    closeBtn: null,
+    isOpen: false,
+
+    init() {
+        // Get elements from DOM
+        this.overlay = document.getElementById('mobile-menu-overlay');
+        this.panel = document.getElementById('mobile-menu-panel');
+        this.closeBtn = document.getElementById('mobile-menu-close');
+
+        if (!this.overlay || !this.panel || !this.closeBtn) {
+            console.warn('Mobile menu elements not found');
+            return;
+        }
+
+        // Add event listeners
+        this.overlay.addEventListener('click', () => this.close());
+        this.closeBtn.addEventListener('click', () => this.close());
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768 && this.isOpen) {
+                this.close();
+            }
+        });
+    },
+
+    open() {
+        if (!this.overlay || !this.panel) return;
+
+        // Update state attributes
+        this.overlay.setAttribute('data-menu', 'open');
+        this.panel.setAttribute('data-menu', 'open');
+
+        // Prevent body scroll
+        document.body.style.overflow = 'hidden';
+        this.isOpen = true;
+    },
+
+    close() {
+        if (!this.overlay || !this.panel || !this.isOpen) return;
+
+        // Update state attributes
+        this.overlay.setAttribute('data-menu', 'close');
+        this.panel.setAttribute('data-menu', 'close');
+
+        // Restore body scroll
+        document.body.style.overflow = '';
+        this.isOpen = false;
+    }
+};
+
 // Initialize UI utilities on page load
 document.addEventListener('DOMContentLoaded', () => {
     Toast.init();
+    MobileMenu.init();
 
     // Add fade-in animation to main content
     const mainContent = document.querySelector('main') || document.querySelector('.container');
@@ -288,6 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Export utilities
 window.Toast = Toast;
 window.Loading = Loading;
+window.MobileMenu = MobileMenu;
 window.setButtonLoading = setButtonLoading;
 window.animateElement = animateElement;
 window.shakeElement = shakeElement;
