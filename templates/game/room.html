@@ -11,7 +11,11 @@
                 Room ID
 
                 <span class="room-status">
-                    <span class="status-badge status-{{.Data.Status}}" id="room-status-badge" data-testid="room-status-badge">
+                    <span class="status-badge status-{{.Data.Status}}"
+                          id="room-status-badge"
+                          data-testid="room-status-badge"
+                          sse-swap="room_status_update"
+                          hx-swap="outerHTML">
                         {{if eq .Data.Status "ready"}}ready{{else if eq .Data.Status "playing"}}playing{{else}}waiting{{end}}
                     </span>
                 </span>
@@ -69,15 +73,14 @@
     <div>
         <!-- Start Game Button (shown when ready) - OWNER ONLY -->
         {{if .IsOwner}}
-        {{if eq .Data.Status "ready"}}
         <div class="start-game-section"
              id="start-game-section"
+             style="{{if ne .Data.Status "ready"}}display: none;{{end}}"
              hx-get="/api/rooms/{{.Data.ID}}/start-button"
              hx-trigger="load, sse:room_update from:body"
              hx-swap="innerHTML">
             <p class="loading-text">Loading...</p>
         </div>
-        {{end}}
         {{end}}
 
         <!-- Ready Button - GUEST ONLY -->

@@ -227,6 +227,26 @@ func (h *Handler) AcceptJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 		})
 	}
 
+	// Broadcast room status badge update (room is now "ready")
+	// Refetch the room to get the updated status
+	room, err := h.RoomService.GetRoomByID(ctx, joinRequest.RoomID)
+	if err != nil {
+		log.Printf("⚠️ Failed to refetch room for status badge update: %v", err)
+	} else {
+		log.Printf("🔍 Room status after accepting join request: %s", room.Status)
+		if statusBadgeHTML, err := h.TemplateService.RenderFragment("status_badge.html", services.RoomStatusBadgeData{
+			Status: room.Status,
+		}); err == nil {
+			h.RoomService.GetRealtimeService().BroadcastHTMLFragment(joinRequest.RoomID, services.HTMLFragmentEvent{
+				Type:       "room_status_update",
+				Target:     "#room-status-badge",
+				SwapMethod: "outerHTML",
+				HTML:       statusBadgeHTML,
+			})
+			log.Printf("📡 Broadcasted room status badge update (status: %s) after accepting join request", room.Status)
+		}
+	}
+
 	// Return empty HTML - HTMX will remove the element via outerHTML swap
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)

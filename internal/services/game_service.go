@@ -62,8 +62,23 @@ func (s *GameService) StartGame(ctx context.Context, roomID uuid.UUID) error {
 		return err
 	}
 
-	// Broadcast game started event
-	s.realtimeService.BroadcastGameStarted(roomID)
+	// Broadcast game started event with HTML fragment for redirect
+	// Render the game_started template which contains the redirect script
+	html, err := s.templateService.RenderFragment("game_started.html", GameStartedData{
+		RoomID: roomID.String(),
+	})
+	if err != nil {
+		// Fallback to JSON event if template fails
+		s.realtimeService.BroadcastGameStarted(roomID)
+	} else {
+		// Broadcast HTML fragment that triggers redirect on all clients
+		s.realtimeService.BroadcastHTMLFragment(roomID, HTMLFragmentEvent{
+			Type:       "game_started",
+			Target:     "#game-start-redirect",
+			SwapMethod: "innerHTML",
+			HTML:       html,
+		})
+	}
 
 	// Draw the first question immediately
 	_, err = s.DrawQuestion(ctx, roomID)

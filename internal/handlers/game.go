@@ -604,6 +604,16 @@ func (h *Handler) SetGuestReadyAPIHandler(w http.ResponseWriter, r *http.Request
 
 	log.Printf("✅ Guest %s marked as ready in room %s", userID, roomID)
 
+	// Refetch room to get updated status from database
+	room, err = h.RoomService.GetRoomByID(ctx, roomID)
+	if err != nil {
+		log.Printf("❌ Failed to refetch room: %v", err)
+		http.Error(w, "Failed to refetch room", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("🔍 Room status after refetch: %s (GuestReady: %v)", room.Status, room.GuestReady)
+
 	// Render HTML fragment for updated button state
 	html, err := h.TemplateService.RenderFragment("guest_ready_button.html", services.GuestReadyButtonData{
 		RoomID:     roomID.String(),
@@ -615,12 +625,59 @@ func (h *Handler) SetGuestReadyAPIHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Broadcast guest ready event via SSE to update owner's start button
+	// Broadcast room status badge update via SSE (so owner sees status change)
+	if statusBadgeHTML, err := h.TemplateService.RenderFragment("status_badge.html", services.RoomStatusBadgeData{
+		Status: room.Status,
+	}); err == nil {
+		h.RoomService.GetRealtimeService().BroadcastHTMLFragment(roomID, services.HTMLFragmentEvent{
+			Type:       "room_status_update",
+			Target:     "#room-status-badge",
+			SwapMethod: "outerHTML",
+			HTML:       statusBadgeHTML,
+		})
+		log.Printf("📡 Broadcasted room status badge update to room %s (status: %s)", roomID, room.Status)
+	}
+
+	// Broadcast room_update event to trigger start button refresh
 	h.RoomService.BroadcastRoomUpdate(roomID, map[string]interface{}{
 		"guest_ready": true,
 	})
 
 	log.Printf("📡 Broadcasting guest_ready=true to room %s", roomID)
+
+	// Return HTML fragment for HTMX
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(html))
+}
+
+// RoomStatusBadgeAPIHandler returns the room status badge HTML fragment
+func (h *Handler) RoomStatusBadgeAPIHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	roomID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid room ID", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+
+	// Get the room
+	room, err := h.RoomService.GetRoomByID(ctx, roomID)
+	if err != nil {
+		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+
+	// Render HTML fragment for status badge
+	html, err := h.TemplateService.RenderFragment("status_badge.html", services.RoomStatusBadgeData{
+		Status: room.Status,
+	})
+	if err != nil {
+		log.Printf("Error rendering status badge template: %v", err)
+		http.Error(w, "Failed to render status badge", http.StatusInternalServerError)
+		return
+	}
 
 	// Return HTML fragment for HTMX
 	w.Header().Set("Content-Type", "text/html")

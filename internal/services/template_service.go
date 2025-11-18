@@ -211,3 +211,8 @@ type GameContentData struct {
 type BadgeUpdateData struct {
 	Count int
 }
+
+// RoomStatusBadgeData represents data for room status badge partial
+type RoomStatusBadgeData struct {
+	Status string // "waiting", "ready", "playing"
+}
