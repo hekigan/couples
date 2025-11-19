@@ -209,6 +209,41 @@ func (s *QuestionService) GetCategories(ctx context.Context) ([]models.Category,
 	return categories, nil
 }
 
+// CategoryCount represents a category with its question count
+type CategoryCount struct {
+	CategoryID string `json:"category_id"`
+	Count      int    `json:"count"`
+}
+
+// GetQuestionCountsByCategory returns the number of questions per category for a given language
+func (s *QuestionService) GetQuestionCountsByCategory(ctx context.Context, language string) (map[string]int, error) {
+	// Query questions grouped by category for the given language
+	data, _, err := s.client.From("questions").
+		Select("category_id", "", false).
+		Eq("lang_code", language).
+		Execute()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch question counts: %w", err)
+	}
+
+	// Parse the response - we get all questions with their category_id
+	var questions []struct {
+		CategoryID string `json:"category_id"`
+	}
+	if err := json.Unmarshal(data, &questions); err != nil {
+		return nil, fmt.Errorf("failed to parse questions: %w", err)
+	}
+
+	// Count questions per category
+	counts := make(map[string]int)
+	for _, q := range questions {
+		counts[q.CategoryID]++
+	}
+
+	return counts, nil
+}
+
 // Helper function to join strings
 func joinStrings(strs []string, sep string) string {
 	result := ""

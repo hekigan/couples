@@ -143,10 +143,11 @@ type CategoriesGridData struct {
 
 // CategoryInfo represents a single category with selection state
 type CategoryInfo struct {
-	ID         string
-	Key        string
-	Label      string
-	IsSelected bool
+	ID            string
+	Key           string
+	Label         string
+	IsSelected    bool
+	QuestionCount int
 }
 
 // GuestReadyButtonData represents data for guest ready button partial
