@@ -2,9 +2,11 @@
 
 // Game pages
 .game-container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: $spacing-xl;
+  width: 100%;
+  
+  @media screen and (min-width: $breakpoint-md) {
+    // desktop layout
+  }
 }
 
 .game-header {

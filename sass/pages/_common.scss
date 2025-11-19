@@ -28,6 +28,10 @@ main {
     width: inherit;
 
     @media screen and (min-width: $breakpoint-md) {
+        max-width: $breakpoint-md;
+        margin: 0 auto;
+        overflow-y: initial;
+
         > :first-child {
             width: $breakpoint-md;
         }
