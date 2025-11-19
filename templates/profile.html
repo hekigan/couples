@@ -10,12 +10,14 @@
                 {{end}}
             </div>
             <div class="profile-info">
-                <h1>{{if .Data.DisplayName}}{{.Data.DisplayName}}{{else if .Data.Name}}{{.Data.Name}}{{else}}Guest User{{end}}</h1>
+                <h1>{{if .Data.Username}}{{.Data.Username}}{{else if .Data.Name}}{{.Data.Name}}{{else}}Guest User{{end}}</h1>
                 {{if .Data.Email}}
                     <p class="profile-email">{{.Data.Email}}</p>
                 {{end}}
                 {{if .Data.IsAnonymous}}
                     <span class="badge badge-warning">Guest User</span>
+                {{else}}
+                    <span class="badge badge-success">Registered User</span>
                 {{end}}
             </div>
         </div>
@@ -34,16 +36,6 @@
                         <span class="info-value">{{.Data.Email}}</span>
                     </div>
                     {{end}}
-                    {{if .Data.Username}}
-                    <div class="info-item">
-                        <span class="info-label">Username:</span>
-                        <span class="info-value">{{.Data.Username}}</span>
-                    </div>
-                    {{end}}
-                    <div class="info-item">
-                        <span class="info-label">Account Type:</span>
-                        <span class="info-value">{{if .Data.IsAnonymous}}Guest{{else}}Registered{{end}}</span>
-                    </div>
                     <div class="info-item">
                         <span class="info-label">Member Since:</span>
                         <span class="info-value">{{.Data.CreatedAt.Format "January 2, 2006"}}</span>
@@ -75,7 +67,7 @@
                 <div class="actions-grid">
                     <a href="/game/rooms" class="action-card">
                         <span class="action-icon">🎮</span>
-                        <span class="action-label">My Rooms</span>
+                        <span class="action-label">Rooms</span>
                     </a>
                     <a href="/friends" class="action-card">
                         <span class="action-icon">👥</span>
@@ -83,7 +75,7 @@
                     </a>
                     <a href="/game/create-room" class="action-card">
                         <span class="action-icon">➕</span>
-                        <span class="action-label">Create Room</span>
+                        <span class="action-label">New Room</span>
                     </a>
                     <a href="/game/join-room" class="action-card">
                         <span class="action-icon">🚪</span>

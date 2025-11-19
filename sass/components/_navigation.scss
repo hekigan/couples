@@ -14,12 +14,11 @@
 
 .header-content {
   display: flex;
-  flex-direction: column;
   justify-content: space-between;
   align-items: center;
+  flex-direction: row;
   
-  @media (max-width: $breakpoint-md - 1px) {
-    flex-direction: row;
+  @media (min-width: $breakpoint-md) {
   }
 }
 

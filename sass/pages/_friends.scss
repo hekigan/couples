@@ -21,6 +21,15 @@
         position: absolute;
         right: 20px;
       }
+
+      @media (min-width: $breakpoint-md) {
+        justify-content: left;
+
+        .badge {
+          position: static;
+          margin: 0 $spacing-lg;
+        }
+      }
     }
   }
 }
