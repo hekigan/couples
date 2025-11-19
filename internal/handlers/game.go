@@ -391,10 +391,48 @@ func (h *Handler) PlayHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create a map to pass both room and current user ID
+	// Debug logging
+	fmt.Printf("🎮 PlayHandler: Room %s, Status: %s, CurrentQuestion: %d, CurrentQuestionID: %v\n",
+		roomID, room.Status, room.CurrentQuestion, room.CurrentQuestionID)
+
+	// Determine if it's the current user's turn
+	isMyTurn := room.CurrentTurn != nil && *room.CurrentTurn == userID
+
+	// Get other player name
+	var otherPlayerID uuid.UUID
+	if room.OwnerID == userID && room.GuestID != nil {
+		otherPlayerID = *room.GuestID
+	} else if room.GuestID != nil && *room.GuestID == userID {
+		otherPlayerID = room.OwnerID
+	}
+
+	otherPlayerName := "other player"
+	if otherPlayerID != uuid.Nil {
+		otherUser, err := h.UserService.GetUserByID(ctx, otherPlayerID)
+		if err == nil && otherUser != nil {
+			otherPlayerName = otherUser.Username
+		}
+	}
+
+	// Get current question text if exists
+	questionText := "Waiting for question..."
+	questionID := ""
+	if room.CurrentQuestionID != nil {
+		questionID = room.CurrentQuestionID.String()
+		question, err := h.QuestionService.GetQuestionByID(ctx, *room.CurrentQuestionID)
+		if err == nil && question != nil {
+			questionText = question.Text
+		}
+	}
+
+	// Create a map to pass all play data for server-side rendering
 	playData := map[string]interface{}{
-		"Room":          room,
-		"CurrentUserID": userID.String(),
+		"Room":            room,
+		"CurrentUserID":   userID.String(),
+		"IsMyTurn":        isMyTurn,
+		"OtherPlayerName": otherPlayerName,
+		"QuestionText":    questionText,
+		"QuestionID":      questionID,
 	}
 
 	data := &TemplateData{
@@ -1139,7 +1177,15 @@ func (h *Handler) GetRoomCategoriesHTMLHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Build CategoryInfo array with selection state
+	// Get question counts per category for the room's language
+	questionCounts, err := h.QuestionService.GetQuestionCountsByCategory(ctx, room.Language)
+	if err != nil {
+		log.Printf("Error fetching question counts: %v", err)
+		// Continue without counts - they'll just be 0
+		questionCounts = make(map[string]int)
+	}
+
+	// Build CategoryInfo array with selection state and question counts
 	categoryInfos := make([]services.CategoryInfo, 0, len(allCategories))
 	for _, cat := range allCategories {
 		isSelected := false
@@ -1152,10 +1198,11 @@ func (h *Handler) GetRoomCategoriesHTMLHandler(w http.ResponseWriter, r *http.Re
 		}
 
 		categoryInfos = append(categoryInfos, services.CategoryInfo{
-			ID:         cat.ID.String(),
-			Key:        cat.Key,
-			Label:      cat.Label,
-			IsSelected: isSelected,
+			ID:            cat.ID.String(),
+			Key:           cat.Key,
+			Label:         cat.Label,
+			IsSelected:    isSelected,
+			QuestionCount: questionCounts[cat.ID.String()],
 		})
 	}
 
