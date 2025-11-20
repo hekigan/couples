@@ -298,16 +298,13 @@ func (h *Handler) NextQuestionHTMLHandler(w http.ResponseWriter, r *http.Request
 	}
 	log.Printf("✅ Cleared current_question_id for room %s before drawing next question", roomID)
 
-	// Draw next question
-	question, err := h.GameService.DrawQuestion(ctx, roomID)
+	// Draw next question (this also broadcasts question_drawn via SSE)
+	_, err = h.GameService.DrawQuestion(ctx, roomID)
 	if err != nil {
 		log.Printf("Error drawing question: %v", err)
 		http.Error(w, fmt.Sprintf("Failed to draw question: %v", err), http.StatusInternalServerError)
 		return
 	}
-
-	// Broadcast question_drawn event via SSE
-	h.RoomService.GetRealtimeService().BroadcastQuestionDrawn(roomID, question)
 
 	// Return updated game forms (will show answer form to active player)
 	h.GetGameFormsHandler(w, r)
