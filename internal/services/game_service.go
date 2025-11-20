@@ -62,6 +62,16 @@ func (s *GameService) StartGame(ctx context.Context, roomID uuid.UUID) error {
 		return err
 	}
 
+	// Draw the first question BEFORE broadcasting game_started
+	// This ensures the question is ready when players load the play page
+	fmt.Printf("🎮 StartGame: About to draw first question for room %s\n", roomID)
+	question, err := s.DrawQuestion(ctx, roomID)
+	if err != nil {
+		fmt.Printf("❌ StartGame: Failed to draw first question: %v\n", err)
+		return fmt.Errorf("failed to draw first question: %w", err)
+	}
+	fmt.Printf("✅ StartGame: Drew first question '%s' (ID: %s)\n", question.Text, question.ID)
+
 	// Broadcast game started event with HTML fragment for redirect
 	// Render the game_started template which contains the redirect script
 	html, err := s.templateService.RenderFragment("game_started.html", GameStartedData{
@@ -78,12 +88,6 @@ func (s *GameService) StartGame(ctx context.Context, roomID uuid.UUID) error {
 			SwapMethod: "innerHTML",
 			HTML:       html,
 		})
-	}
-
-	// Draw the first question immediately
-	_, err = s.DrawQuestion(ctx, roomID)
-	if err != nil {
-		return fmt.Errorf("failed to draw first question: %w", err)
 	}
 
 	return nil

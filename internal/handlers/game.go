@@ -947,23 +947,12 @@ func (h *Handler) SubmitAnswerAPIHandler(w http.ResponseWriter, r *http.Request)
 
 	log.Printf("✅ Answer submitted by user %s in room %s (action: %s)", userID, roomID, actionType)
 
-	// Clear the current question ID after answer submission
-	// This allows the next player to draw a fresh question
-	room, err = h.RoomService.GetRoomByID(ctx, roomID)
-	if err != nil {
-		log.Printf("⚠️ Failed to fetch room for clearing question: %v", err)
-	} else {
-		room.CurrentQuestionID = nil
-		if err := h.RoomService.UpdateRoom(ctx, room); err != nil {
-			log.Printf("⚠️ Failed to clear current_question_id: %v", err)
-			// Don't fail the request - answer is already saved
-		} else {
-			log.Printf("✅ Cleared current_question_id for room %s", roomID)
-		}
-	}
+	// NOTE: We do NOT clear current_question_id here anymore.
+	// The question remains visible so both players can see the question + answer together.
+	// current_question_id will be cleared when the new active player clicks "Next Question"
 
 	// Change turn immediately after answer submission
-	// The new active player will draw the next question when they click "Next Question"
+	// The new active player will see the answer and click "Next Question" to draw
 	if actionType == "answered" {
 		log.Printf("🔄 Switching turn after answer in room %s", roomID)
 		if err := h.GameService.ChangeTurn(ctx, roomID); err != nil {
@@ -975,9 +964,9 @@ func (h *Handler) SubmitAnswerAPIHandler(w http.ResponseWriter, r *http.Request)
 	}
 	// Note: For "passed" action, turn doesn't change but question drawing is deferred to next question click
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"success","message":"Answer submitted"}`))
+	// Return updated game forms HTML (for HTMX)
+	// This shows the answer review to the user who just submitted
+	h.GetGameFormsHandler(w, r)
 }
 
 // NextQuestionAPIHandler draws the next question (called by new active player after seeing answer)
