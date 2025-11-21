@@ -196,11 +196,12 @@ type WaitingUIData struct {
 
 // AnswerReviewData represents data for answer review partial
 type AnswerReviewData struct {
-	RoomID          string
-	AnswerText      string
-	ActionType      string
-	ShowNextButton  bool
-	OtherPlayerName string
+	RoomID               string
+	AnswerText           string
+	ActionType           string
+	ShowNextButton       bool
+	AnsweredByPlayerName string
+	OtherPlayerName      string
 }
 
 // GameContentData represents data for main game content area
@@ -216,4 +217,10 @@ type BadgeUpdateData struct {
 // RoomStatusBadgeData represents data for room status badge partial
 type RoomStatusBadgeData struct {
 	Status string // "waiting", "ready", "playing"
+}
+
+// ProgressCounterData represents data for progress counter partial
+type ProgressCounterData struct {
+	CurrentQuestion int
+	MaxQuestions    int
 }

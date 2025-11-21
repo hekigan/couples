@@ -24,7 +24,8 @@
       "Bash(npx playwright test:*)",
       "WebFetch(domain:picocss.com)",
       "Bash(lsof:*)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

@@ -55,8 +55,18 @@ func (s *GameService) StartGame(ctx context.Context, roomID uuid.UUID) error {
 		room.CurrentTurn = &room.OwnerID
 	}
 
+	// Calculate total questions available for selected categories
+	totalQuestions, err := s.questionService.CountQuestionsForCategories(ctx, room.Language, room.SelectedCategories)
+	if err != nil {
+		return fmt.Errorf("failed to count questions: %w", err)
+	}
+	if totalQuestions == 0 {
+		return fmt.Errorf("no questions available for the selected categories and language '%s'", room.Language)
+	}
+
 	room.Status = "playing"
 	room.CurrentQuestion = 0
+	room.MaxQuestions = totalQuestions
 
 	if err := s.roomService.UpdateRoom(ctx, room); err != nil {
 		return err
@@ -157,7 +167,8 @@ func (s *GameService) DrawQuestion(ctx context.Context, roomID uuid.UUID) (*mode
 		}
 	}
 
-	// Increment current question counter and save current question ID
+	// Set current question ID and increment counter
+	// Increment BEFORE saving so first question shows as "Question 1"
 	room.CurrentQuestion++
 	room.CurrentQuestionID = &question.ID
 	if err := s.roomService.UpdateRoom(ctx, room); err != nil {

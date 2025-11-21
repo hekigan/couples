@@ -77,7 +77,12 @@
      data-testid="game-container">
 
     <div class="game-header" data-testid="game-header">
-        <div class="game-progress" id="progress" data-testid="game-progress">
+        <div class="game-progress"
+             id="progress-counter"
+             data-testid="game-progress"
+             hx-get="/api/rooms/{{.Data.Room.ID}}/progress-counter"
+             hx-trigger="sse:question_drawn from:body"
+             hx-swap="innerHTML">
             Question <span id="currentQuestion" data-testid="current-question">{{.Data.Room.CurrentQuestion}}</span> of <span id="maxQuestions" data-testid="max-questions">{{.Data.Room.MaxQuestions}}</span>
         </div>
         <!-- Turn Indicator - server-side rendered -->
@@ -191,20 +196,7 @@
         }
     });
 
-    // Update progress counter when question is drawn
-    document.body.addEventListener('sse:question_drawn', function(e) {
-        try {
-            const data = JSON.parse(e.detail.data);
-            if (data.current_question !== undefined) {
-                const currentQ = document.getElementById('currentQuestion');
-                if (currentQ) {
-                    currentQ.textContent = data.current_question;
-                }
-            }
-        } catch (error) {
-            console.error('Error updating progress:', error);
-        }
-    });
+    // Progress counter is now updated via HTMX (see hx-trigger on #progress-counter)
 
     // Handle typing status updates
     document.body.addEventListener('sse:player_typing', function(e) {

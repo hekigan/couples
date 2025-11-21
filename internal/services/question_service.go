@@ -244,6 +244,35 @@ func (s *QuestionService) GetQuestionCountsByCategory(ctx context.Context, langu
 	return counts, nil
 }
 
+// CountQuestionsForCategories counts total questions available for selected categories and language
+func (s *QuestionService) CountQuestionsForCategories(ctx context.Context, language string, categoryIDs []uuid.UUID) (int, error) {
+	query := s.client.From("questions").
+		Select("id", "exact", false).
+		Eq("lang_code", language)
+
+	// Filter by categories if provided
+	if len(categoryIDs) > 0 {
+		categoryIDStrings := make([]string, len(categoryIDs))
+		for i, id := range categoryIDs {
+			categoryIDStrings[i] = id.String()
+		}
+		query = query.In("category_id", categoryIDStrings)
+	}
+
+	data, _, err := query.Execute()
+	if err != nil {
+		return 0, fmt.Errorf("failed to count questions: %w", err)
+	}
+
+	// Parse the data array length
+	var questions []map[string]interface{}
+	if err := json.Unmarshal(data, &questions); err != nil {
+		return 0, fmt.Errorf("failed to parse questions: %w", err)
+	}
+
+	return len(questions), nil
+}
+
 // Helper function to join strings
 func joinStrings(strs []string, sep string) string {
 	result := ""

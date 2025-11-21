@@ -166,6 +166,8 @@ func (s *RoomService) UpdateRoom(ctx context.Context, room *models.Room) error {
 		"updated_at":          room.UpdatedAt,
 		"selected_categories": room.SelectedCategories,
 		"guest_ready":         room.GuestReady,
+		"current_question":    room.CurrentQuestion,
+		"max_questions":       room.MaxQuestions,
 	}
 
 	// Always update guest_id (including NULL values)

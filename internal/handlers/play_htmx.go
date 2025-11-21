@@ -212,12 +212,20 @@ func (h *Handler) GetGameFormsHandler(w http.ResponseWriter, r *http.Request) {
 		// The previous active player sees waiting message
 		log.Printf("📝 Answer found for question %s: %s (action: %s)", room.CurrentQuestionID, lastAnswer.AnswerText, lastAnswer.ActionType)
 
+		// Get the username of the player who answered
+		answeredPlayerName := "Unknown Player"
+		answeredUser, err := h.UserService.GetUserByID(ctx, lastAnswer.UserID)
+		if err == nil && answeredUser != nil {
+			answeredPlayerName = answeredUser.Username
+		}
+
 		html, err = h.TemplateService.RenderFragment("answer_review.html", services.AnswerReviewData{
-			RoomID:          roomID.String(),
-			AnswerText:      lastAnswer.AnswerText,
-			ActionType:      lastAnswer.ActionType,
-			ShowNextButton:  isMyTurn, // New active player can draw next question
-			OtherPlayerName: otherPlayerName,
+			RoomID:               roomID.String(),
+			AnswerText:           lastAnswer.AnswerText,
+			ActionType:           lastAnswer.ActionType,
+			ShowNextButton:       isMyTurn, // New active player can draw next question
+			AnsweredByPlayerName: answeredPlayerName,
+			OtherPlayerName:      otherPlayerName,
 		})
 		if err != nil {
 			log.Printf("Error rendering answer_review template: %v", err)
@@ -256,6 +264,45 @@ func (h *Handler) GetGameFormsHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`<div class="loading">Loading...</div>`))
 			return
 		}
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(html))
+}
+
+// GetProgressCounterHandler returns HTML fragment for progress counter
+func (h *Handler) GetProgressCounterHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	roomID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid room ID", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+
+	// Get room to check current question count
+	room, err := h.RoomService.GetRoomByID(ctx, roomID)
+	if err != nil {
+		log.Printf("Error fetching room: %v", err)
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`Question 0 of 0`))
+		return
+	}
+
+	// Render HTML fragment
+	html, err := h.TemplateService.RenderFragment("progress_counter.html", services.ProgressCounterData{
+		CurrentQuestion: room.CurrentQuestion,
+		MaxQuestions:    room.MaxQuestions,
+	})
+	if err != nil {
+		log.Printf("Error rendering progress_counter template: %v", err)
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(fmt.Sprintf(`Question %d of %d`, room.CurrentQuestion, room.MaxQuestions)))
+		return
 	}
 
 	w.Header().Set("Content-Type", "text/html")
