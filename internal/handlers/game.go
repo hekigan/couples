@@ -425,14 +425,42 @@ func (h *Handler) PlayHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Check if there's an answer for the current question (for SSR)
+	var lastAnswer *models.Answer
+	var answeredPlayerName string
+	hasAnswer := false
+	if room.CurrentQuestionID != nil {
+		lastAnswer, _ = h.AnswerService.GetLastAnswerForQuestion(ctx, roomID, *room.CurrentQuestionID)
+		if lastAnswer != nil {
+			hasAnswer = true
+			// Get the username of the player who answered
+			answeredUser, err := h.UserService.GetUserByID(ctx, lastAnswer.UserID)
+			if err == nil && answeredUser != nil {
+				answeredPlayerName = answeredUser.Username
+			} else {
+				answeredPlayerName = "Unknown Player"
+			}
+		}
+	}
+
 	// Create a map to pass all play data for server-side rendering
 	playData := map[string]interface{}{
-		"Room":            room,
-		"CurrentUserID":   userID.String(),
-		"IsMyTurn":        isMyTurn,
-		"OtherPlayerName": otherPlayerName,
-		"QuestionText":    questionText,
-		"QuestionID":      questionID,
+		"Room":                 room,
+		"CurrentUserID":        userID.String(),
+		"IsMyTurn":             isMyTurn,
+		"OtherPlayerName":      otherPlayerName,
+		"QuestionText":         questionText,
+		"QuestionID":           questionID,
+		"HasAnswer":            hasAnswer,
+		"AnswerText":           "",
+		"ActionType":           "",
+		"AnsweredByPlayerName": answeredPlayerName,
+	}
+
+	// If there's an answer, include its details
+	if lastAnswer != nil {
+		playData["AnswerText"] = lastAnswer.AnswerText
+		playData["ActionType"] = lastAnswer.ActionType
 	}
 
 	data := &TemplateData{

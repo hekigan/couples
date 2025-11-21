@@ -114,11 +114,40 @@
 
         <!-- Game Forms - server-side rendered -->
         <div id="game-forms"
+             class="answer-review"
              hx-get="/api/rooms/{{.Data.Room.ID}}/game-forms"
              hx-trigger="sse:turn_changed from:body, sse:question_drawn from:body, sse:answer_submitted from:body, sse:player_typing from:body"
              hx-swap="innerHTML">
-            {{if .Data.IsMyTurn}}
-            <!-- Active player - show answer form -->
+            {{if .Data.HasAnswer}}
+            <!-- Answer exists - show answer review -->
+            <div class="answer-display">
+                <h3>{{.Data.AnsweredByPlayerName}}'s answer:</h3>
+                {{if eq .Data.ActionType "passed"}}
+                <p class="answer-text">Passed</p>
+                {{else}}
+                <p class="answer-text">{{.Data.AnswerText}}</p>
+                {{end}}
+
+                {{if .Data.IsMyTurn}}
+                <!-- Active player can draw next question -->
+                <div style="margin-top: 20px;">
+                    <button hx-post="/api/rooms/{{.Data.Room.ID}}/next-question"
+                            hx-target="#game-forms"
+                            hx-swap="innerHTML"
+                            hx-disabled-elt="this"
+                            class="btn btn-primary">
+                        ➡️ Next Question
+                    </button>
+                </div>
+                {{else}}
+                <!-- Passive player waits for next question -->
+                <p>
+                    ⏳ Waiting for {{.Data.OtherPlayerName}} to draw next question...
+                </p>
+                {{end}}
+            </div>
+            {{else if .Data.IsMyTurn}}
+            <!-- No answer yet - Active player shows answer form -->
             <div class="answer-form">
                 <form hx-post="/api/rooms/{{.Data.Room.ID}}/answer"
                       hx-target="#game-forms"
@@ -150,7 +179,7 @@
                 </form>
             </div>
             {{else}}
-            <!-- Passive player - show waiting UI -->
+            <!-- No answer yet - Passive player shows waiting UI -->
             <div class="answer-display">
                 <p>Waiting for {{.Data.OtherPlayerName}} to answer...</p>
             </div>

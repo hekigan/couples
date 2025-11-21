@@ -1,12 +1,12 @@
 <div class="answer-review">
-    <div style="padding: 20px; background-color: #f0f9ff; border-radius: 8px; border: 2px solid #3b82f6;">
-        <h3 style="margin-top: 0; color: #1e40af;">{{.AnsweredByPlayerName}}'s answer:</h3>
+    <div class="answer-display">
+        <h3>{{.AnsweredByPlayerName}}'s answer:</h3>
         {{if eq .ActionType "passed"}}
-        <p style="font-size: 18px; white-space: pre-wrap; margin: 15px 0; font-style: italic; color: #6b7280;">
+        <p>
             (Question was passed)
         </p>
         {{else}}
-        <p style="font-size: 18px; white-space: pre-wrap; margin: 15px 0;">
+        <p>
             {{if .AnswerText}}{{.AnswerText}}{{else}}(No answer provided){{end}}
         </p>
         {{end}}
@@ -20,16 +20,15 @@
                     hx-disabled-elt="this"
                     hx-indicator="#next-loading"
                     class=""
-                    aria-label="Draw next question"
-                    style="width: 100%;">
+                    aria-label="Draw next question">
                 <span>➡️ Next Question</span>
                 <span id="next-loading" class="htmx-indicator">⏳</span>
             </button>
         </div>
         {{else}}
         <!-- Show waiting message to previous active player -->
-        <div style="margin-top: 20px; text-align: center;">
-            <p style="color: #6b7280; font-style: italic;" role="status" aria-live="polite">
+        <div>
+            <p role="status" aria-live="polite">
                 ⏳ Waiting for {{.OtherPlayerName}} to draw next question...
             </p>
         </div>
