@@ -1,7 +1,13 @@
 @use '../base/variables' as *;
+@use 'sass:color';
 
 // Game pages
 .game-container {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
   width: 100%;
   
   @media screen and (min-width: $breakpoint-md) {
@@ -10,24 +16,69 @@
 }
 
 .game-header {
-  text-align: center;
-  margin-bottom: $spacing-xxl;
+  display: flex;
+  flex-direction: row;
+  align-items: start;
+  position: absolute;
+  top: calc(#{-$spacing-md} - var(--pico-block-spacing-vertical) + 14px);
+  left: 0;
+  right: 0;
+
+  .game-progress,
+  #turn-indicator {
+    flex: 50%;
+    text-align: center;
+  }
+
+  .game-progress {
+    display: flex;
+    align-items: center;
+    align-self: stretch;
+    justify-content: center;
+    gap: 3px;
+    background: $bg-primary;
+    font-size: $font-size-sm;
+    color: $text-muted;
+    padding: $spacing-xs;
+  }
+
+  #turn-indicator {
+    font-weight: bold;
+
+    .turn-indicator {
+      padding: $spacing-xs;
+    }
+
+    .your-turn {
+      background-color: #d4edda;
+      color: #155724;
+      border: 2px solid #c3e6cb;
+    }
+
+    .waiting {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 2px solid #f5c6cb;
+    }
+  }
 }
 
-.game-progress {
-  font-size: $font-size-sm;
-  color: $text-muted;
-  margin-top: $spacing-sm;
+#game-content {
 }
 
 .question-card {
-  background: linear-gradient(135deg, $primary-color, $secondary-color);
-  color: white;
-  padding: $spacing-xxl;
+  background: linear-gradient(156deg, #fff, color.adjust($primary-color, $lightness: 10%));
+  padding: $spacing-lg $spacing-md;
   border-radius: $border-radius-lg;
   box-shadow: $shadow-lg;
   margin-bottom: $spacing-xl;
   text-align: center;
+
+  p {
+    color: white;
+    margin-bottom: 0;
+    text-shadow: $shadow-text-md;
+  }
 }
 
 .question-text {
