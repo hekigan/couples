@@ -89,5 +89,24 @@
   margin-top: $spacing-sm;
 }
 
+// Dev admin login button
+.btn-dev-admin {
+  background: #f59e0b;
+  color: white;
+  text-align: center;
+  display: block;
+  padding: $spacing-md;
+  text-decoration: none;
+  border-radius: $border-radius-md;
 
+  &:hover {
+    background: #d97706;
+    color: white;
+  }
+}
 
+// Dev warning text
+.dev-warning {
+  color: #f59e0b;
+  font-weight: $font-weight-bold;
+}

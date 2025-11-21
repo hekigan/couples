@@ -1,31 +1,59 @@
 {{define "content"}}
 <div class="admin-container">
     <h1>Admin Dashboard</h1>
-    
+
+    {{if .Data}}
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Total Users</h3>
+            <p>{{.Data.TotalUsers}}</p>
+            <p>{{.Data.AnonymousUsers}} anonymous, {{.Data.RegisteredUsers}} registered</p>
+        </div>
+        <div class="stat-card">
+            <h3>Admin Users</h3>
+            <p>{{.Data.AdminUsers}}</p>
+        </div>
+        <div class="stat-card">
+            <h3>Total Rooms</h3>
+            <p>{{.Data.TotalRooms}}</p>
+            <p>{{.Data.ActiveRooms}} active, {{.Data.CompletedRooms}} completed</p>
+        </div>
+        <div class="stat-card">
+            <h3>Questions</h3>
+            <p>{{.Data.TotalQuestions}}</p>
+        </div>
+        <div class="stat-card">
+            <h3>Categories</h3>
+            <p>{{.Data.TotalCategories}}</p>
+        </div>
+    </div>
+    {{end}}
+
+    <h2 class="section-header">Management</h2>
     <div class="admin-grid">
         <a href="/admin/users" class="admin-card">
             <h3>Users</h3>
-            <p>Manage users</p>
+            <p>Manage users and permissions</p>
         </a>
-        
+
         <a href="/admin/questions" class="admin-card">
             <h3>Questions</h3>
-            <p>Manage questions</p>
+            <p>Manage questions and content</p>
         </a>
-        
+
         <a href="/admin/categories" class="admin-card">
             <h3>Categories</h3>
-            <p>Manage categories</p>
+            <p>Manage question categories</p>
         </a>
-        
+
         <a href="/admin/rooms" class="admin-card">
             <h3>Rooms</h3>
-            <p>Monitor rooms</p>
+            <p>Monitor active game rooms</p>
         </a>
-        
+
         <a href="/admin/translations" class="admin-card">
             <h3>Translations</h3>
-            <p>Manage translations</p>
+            <p>Manage multi-language support</p>
         </a>
     </div>
 </div>

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/supabase-community/postgrest-go"
 	"github.com/supabase-community/supabase-go"
 	"github.com/yourusername/couple-card-game/internal/models"
 )
@@ -271,6 +272,107 @@ func (s *QuestionService) CountQuestionsForCategories(ctx context.Context, langu
 	}
 
 	return len(questions), nil
+}
+
+// CreateCategory creates a new category
+func (s *QuestionService) CreateCategory(ctx context.Context, category *models.Category) error {
+	categoryMap := map[string]interface{}{
+		"key":   category.Key,
+		"label": category.Label,
+		"icon":  category.Icon,
+	}
+
+	_, _, err := s.client.From("categories").Insert(categoryMap, false, "", "", "").Execute()
+	if err != nil {
+		return fmt.Errorf("failed to create category: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateCategory updates a category
+func (s *QuestionService) UpdateCategory(ctx context.Context, category *models.Category) error {
+	categoryMap := map[string]interface{}{
+		"key":   category.Key,
+		"label": category.Label,
+		"icon":  category.Icon,
+	}
+
+	_, _, err := s.client.From("categories").
+		Update(categoryMap, "", "").
+		Eq("id", category.ID.String()).
+		Execute()
+
+	if err != nil {
+		return fmt.Errorf("failed to update category: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteCategory deletes a category
+func (s *QuestionService) DeleteCategory(ctx context.Context, id uuid.UUID) error {
+	_, _, err := s.client.From("categories").
+		Delete("", "").
+		Eq("id", id.String()).
+		Execute()
+
+	if err != nil {
+		return fmt.Errorf("failed to delete category: %w", err)
+	}
+
+	return nil
+}
+
+// GetCategoryByID retrieves a category by ID
+func (s *QuestionService) GetCategoryByID(ctx context.Context, id uuid.UUID) (*models.Category, error) {
+	data, _, err := s.client.From("categories").
+		Select("*", "", false).
+		Eq("id", id.String()).
+		Single().
+		Execute()
+
+	if err != nil {
+		return nil, fmt.Errorf("category not found: %w", err)
+	}
+
+	var category models.Category
+	if err := json.Unmarshal(data, &category); err != nil {
+		return nil, fmt.Errorf("failed to parse category: %w", err)
+	}
+
+	return &category, nil
+}
+
+// ListQuestions retrieves questions with pagination and optional filtering
+func (s *QuestionService) ListQuestions(ctx context.Context, limit, offset int, categoryID *uuid.UUID, langCode *string) ([]models.Question, error) {
+	query := s.client.From("questions").
+		Select("*", "", false).
+		Order("created_at", &postgrest.OrderOpts{Ascending: false})
+
+	if categoryID != nil {
+		query = query.Eq("category_id", categoryID.String())
+	}
+
+	if langCode != nil {
+		query = query.Eq("lang_code", *langCode)
+	}
+
+	if limit > 0 {
+		query = query.Range(offset, offset+limit-1, "")
+	}
+
+	data, _, err := query.Execute()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list questions: %w", err)
+	}
+
+	var questions []models.Question
+	if err := json.Unmarshal(data, &questions); err != nil {
+		return nil, fmt.Errorf("failed to parse questions: %w", err)
+	}
+
+	return questions, nil
 }
 
 // Helper function to join strings

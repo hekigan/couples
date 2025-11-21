@@ -18,13 +18,29 @@ func (h *Handler) AdminDashboardHandler(w http.ResponseWriter, r *http.Request) 
 	currentUser, err := h.UserService.GetUserByID(ctx, userID)
 	if err != nil {
 		log.Printf("⚠️ Failed to fetch current user: %v", err)
-		// Admin pages still work without user info
 		currentUser = nil
 	}
 
+	// Get admin service from handler
+	adminService := h.GetAdminService()
+	if adminService == nil {
+		log.Printf("⚠️ AdminService not available")
+		http.Error(w, "Admin service not configured", http.StatusInternalServerError)
+		return
+	}
+
+	// Get dashboard statistics
+	stats, err := adminService.GetDashboardStats(ctx)
+	if err != nil {
+		log.Printf("⚠️ Failed to fetch dashboard stats: %v", err)
+		stats = nil
+	}
+
 	data := &TemplateData{
-		Title: "Admin Dashboard",
-		User:  currentUser,
+		Title:   "Admin Dashboard",
+		User:    currentUser,
+		Data:    stats,
+		IsAdmin: true, // Admin pages are protected by middleware
 	}
 	h.RenderTemplate(w, "admin/dashboard.html", data)
 }
@@ -42,8 +58,9 @@ func (h *Handler) AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := &TemplateData{
-		Title: "User Management",
-		User:  currentUser,
+		Title:   "User Management",
+		User:    currentUser,
+		IsAdmin: true,
 	}
 	h.RenderTemplate(w, "admin/users.html", data)
 }
@@ -61,8 +78,9 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	data := &TemplateData{
-		Title: "Question Management",
-		User:  currentUser,
+		Title:   "Question Management",
+		User:    currentUser,
+		IsAdmin: true,
 	}
 	h.RenderTemplate(w, "admin/questions.html", data)
 }
@@ -80,8 +98,9 @@ func (h *Handler) AdminCategoriesHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	data := &TemplateData{
-		Title: "Category Management",
-		User:  currentUser,
+		Title:   "Category Management",
+		User:    currentUser,
+		IsAdmin: true,
 	}
 	h.RenderTemplate(w, "admin/categories.html", data)
 }
@@ -99,8 +118,9 @@ func (h *Handler) AdminRoomsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := &TemplateData{
-		Title: "Room Monitoring",
-		User:  currentUser,
+		Title:   "Room Monitoring",
+		User:    currentUser,
+		IsAdmin: true,
 	}
 	h.RenderTemplate(w, "admin/rooms.html", data)
 }
@@ -118,8 +138,9 @@ func (h *Handler) AdminTranslationsHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	data := &TemplateData{
-		Title: "Translation Management",
-		User:  currentUser,
+		Title:   "Translation Management",
+		User:    currentUser,
+		IsAdmin: true,
 	}
 	h.RenderTemplate(w, "admin/translations.html", data)
 }

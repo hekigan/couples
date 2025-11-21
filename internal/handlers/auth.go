@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/yourusername/couple-card-game/internal/middleware"
 	"github.com/yourusername/couple-card-game/internal/services"
 )
@@ -25,6 +26,51 @@ func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	session.Options.MaxAge = -1
 	session.Save(r, w)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// DevLoginAsAdminHandler is a development-only endpoint to login as the seeded admin user
+func (h *Handler) DevLoginAsAdminHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+
+	// This is the seeded admin user ID from sql/seed.sql
+	adminUserID := "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+
+	adminUUID, err := uuid.Parse(adminUserID)
+	if err != nil {
+		http.Error(w, "Invalid admin user ID", http.StatusInternalServerError)
+		return
+	}
+
+	// Get the admin user from database
+	adminUser, err := h.UserService.GetUserByID(ctx, adminUUID)
+	if err != nil {
+		http.Error(w, "Admin user not found. Please run sql/seed.sql first.", http.StatusNotFound)
+		return
+	}
+
+	// Verify the user is actually an admin
+	if !adminUser.IsAdmin {
+		http.Error(w, "User is not an admin", http.StatusForbidden)
+		return
+	}
+
+	// Create session with both user auth and admin auth flags
+	session, _ := middleware.Store.Get(r, "couple-card-game-session")
+	session.Values["user_id"] = adminUser.ID.String()
+	session.Values["is_anonymous"] = false
+	session.Values["is_admin"] = true
+	session.Values["admin_authenticated"] = true // Required by AdminPasswordGate
+
+	if err := session.Save(r, w); err != nil {
+		log.Printf("Failed to save session: %v", err)
+		http.Error(w, "Failed to save session", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("✅ Dev login successful for admin user: %s", adminUser.Username)
+
+	// Redirect to admin dashboard
+	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }
 
 // CreateAnonymousHandler creates an anonymous user
@@ -172,6 +218,7 @@ func (h *Handler) processOAuthTokens(w http.ResponseWriter, r *http.Request, acc
 	session, _ := middleware.Store.Get(r, "couple-card-game-session")
 	session.Values["user_id"] = user.ID.String()
 	session.Values["is_anonymous"] = false
+	session.Values["is_admin"] = user.IsAdmin
 	session.Values["access_token"] = accessToken
 	if refreshToken != "" {
 		session.Values["refresh_token"] = refreshToken

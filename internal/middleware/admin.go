@@ -6,61 +6,92 @@ import (
 	"os"
 
 	"github.com/google/uuid"
+	"github.com/yourusername/couple-card-game/internal/services"
 )
 
 // AdminPasswordGate checks for admin password authentication
-func AdminPasswordGate(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Check if admin password is set in environment
-		adminPassword := os.Getenv("ADMIN_PASSWORD")
-		if adminPassword == "" {
-			// If no admin password is set, deny access for security
-			http.Error(w, "Admin access not configured", http.StatusForbidden)
-			return
-		}
+// It requires a UserService to verify the user's admin status in the database
+func AdminPasswordGate(userService *services.UserService) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Check if admin password is set in environment
+			adminPassword := os.Getenv("ADMIN_PASSWORD")
+			if adminPassword == "" {
+				// If no admin password is set, deny access for security
+				http.Error(w, "Admin access not configured", http.StatusForbidden)
+				return
+			}
 
-		// Get session
-		session, err := Store.Get(r, "couple-card-game-session")
-		if err != nil {
-			http.Error(w, "Session error", http.StatusInternalServerError)
-			return
-		}
+			// Get session
+			session, err := Store.Get(r, "couple-card-game-session")
+			if err != nil {
+				http.Error(w, "Session error", http.StatusInternalServerError)
+				return
+			}
 
-		// Check if admin is already authenticated in session
-		adminAuth, ok := session.Values["admin_authenticated"].(bool)
-		if ok && adminAuth {
-			// Already authenticated, proceed
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		// Check for password in request (form or query)
-		password := r.FormValue("admin_password")
-		if password == "" {
-			password = r.URL.Query().Get("admin_password")
-		}
-
-		// If password provided, verify it
-		if password != "" {
-			if password == adminPassword {
-				// Correct password, save to session
-				session.Values["admin_authenticated"] = true
-				if err := session.Save(r, w); err != nil {
-					http.Error(w, "Failed to save session", http.StatusInternalServerError)
-					return
-				}
+			// Check if admin is already authenticated in session
+			adminAuth, ok := session.Values["admin_authenticated"].(bool)
+			isAdmin, isAdminOk := session.Values["is_admin"].(bool)
+			if ok && adminAuth && isAdminOk && isAdmin {
+				// Already authenticated and verified as admin, proceed
 				next.ServeHTTP(w, r)
 				return
 			}
-			// Wrong password
-			http.Error(w, "Invalid admin password", http.StatusUnauthorized)
-			return
-		}
 
-		// No authentication, show password prompt
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`
+			// Check for password in request (form or query)
+			password := r.FormValue("admin_password")
+			if password == "" {
+				password = r.URL.Query().Get("admin_password")
+			}
+
+			// If password provided, verify it
+			if password != "" {
+				if password == adminPassword {
+					// Correct password, now verify user is actually an admin
+					// Get user ID from context (set by AuthMiddleware)
+					userIDVal := r.Context().Value(UserIDKey)
+					if userIDVal == nil {
+						http.Error(w, "Unauthorized: Please log in first", http.StatusUnauthorized)
+						return
+					}
+
+					userID, ok := userIDVal.(uuid.UUID)
+					if !ok {
+						http.Error(w, "Invalid user ID", http.StatusBadRequest)
+						return
+					}
+
+					// Fetch user from database to check is_admin flag
+					user, err := userService.GetUserByID(r.Context(), userID)
+					if err != nil {
+						http.Error(w, "Failed to verify admin status", http.StatusInternalServerError)
+						return
+					}
+
+					if !user.IsAdmin {
+						http.Error(w, "Forbidden: User does not have admin privileges", http.StatusForbidden)
+						return
+					}
+
+					// User is verified as admin, save to session
+					session.Values["admin_authenticated"] = true
+					session.Values["is_admin"] = true
+					if err := session.Save(r, w); err != nil {
+						http.Error(w, "Failed to save session", http.StatusInternalServerError)
+						return
+					}
+					next.ServeHTTP(w, r)
+					return
+				}
+				// Wrong password
+				http.Error(w, "Invalid admin password", http.StatusUnauthorized)
+				return
+			}
+
+			// No authentication, show password prompt
+			w.Header().Set("Content-Type", "text/html")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`
 <!DOCTYPE html>
 <html>
 <head>
@@ -134,7 +165,8 @@ func AdminPasswordGate(next http.Handler) http.Handler {
 </body>
 </html>
 		`))
-	})
+		})
+	}
 }
 
 // RequireAdmin ensures user has admin privileges (checks user's is_admin flag)

@@ -2,22 +2,12 @@
 <div class="admin-container">
     <h1>User Management</h1>
     <div class="admin-table">
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Email</th>
-                    <th>Type</th>
-                    <th>Created</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr><td colspan="4">No users found</td></tr>
-            </tbody>
-        </table>
+        <div id="users-list"
+             hx-get="/admin/api/users/list"
+             hx-trigger="load"
+             hx-swap="outerHTML">
+            <p>Loading users...</p>
+        </div>
     </div>
 </div>
 {{end}}
-
-
-

@@ -25,7 +25,9 @@
       "WebFetch(domain:picocss.com)",
       "Bash(lsof:*)",
       "Bash(xargs kill:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(go doc:*)",
+      "Bash(./server)"
     ],
     "deny": [],
     "ask": []

@@ -78,5 +78,169 @@
   margin-bottom: $spacing-lg;
 }
 
+// Dashboard statistics
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: $spacing-lg;
+  margin-bottom: $spacing-xl;
+}
 
+.stat-card {
+  background: $bg-secondary;
+  padding: $spacing-xl;
+  border-radius: $border-radius-lg;
 
+  h3 {
+    margin: 0 0 $spacing-sm 0;
+    font-size: $font-size-base;
+    color: $text-secondary;
+    font-weight: $font-weight-medium;
+  }
+
+  p {
+    margin: 0;
+
+    &:first-of-type {
+      font-size: 2rem;
+      font-weight: $font-weight-bold;
+      color: $primary-color;
+    }
+  }
+}
+
+// Bulk actions
+.bulk-actions-bar {
+  display: flex;
+  gap: $spacing-sm;
+  align-items: center;
+  background: $bg-secondary;
+  padding: $spacing-md;
+  border-radius: $border-radius-md;
+  margin-bottom: $spacing-md;
+
+  &.bulk-actions-bottom {
+    margin-top: $spacing-md;
+    margin-bottom: 0;
+  }
+
+  input[type="checkbox"] {
+    cursor: pointer;
+  }
+
+  label {
+    margin: 0;
+    cursor: pointer;
+  }
+
+  select {
+    padding: $spacing-sm;
+    border: $border-width solid $border-color;
+    border-radius: $border-radius-sm;
+    background: white;
+  }
+
+  .item-count {
+    margin-left: auto;
+    color: $text-secondary;
+    font-size: $font-size-sm;
+  }
+}
+
+// Filters
+.admin-filters {
+  display: flex;
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+  flex-wrap: wrap;
+
+  select, input {
+    padding: $spacing-sm;
+    border: $border-width solid $border-color;
+    border-radius: $border-radius-sm;
+  }
+}
+
+// Action buttons in tables
+.action-btns {
+  display: flex;
+  gap: $spacing-sm;
+
+  button {
+    padding: $spacing-xs $spacing-sm;
+    font-size: $font-size-sm;
+  }
+}
+
+// User badges
+.badge {
+  display: inline-block;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $border-radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+
+  &.badge-admin {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  &.badge-user {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  &.badge-guest {
+    background: #e5e7eb;
+    color: #374151;
+  }
+}
+
+// Admin check mark
+.admin-check {
+  color: #f59e0b;
+  font-weight: $font-weight-bold;
+}
+
+// Section headers
+.section-header {
+  margin-top: $spacing-xl;
+  margin-bottom: $spacing-lg;
+}
+
+// Checkbox column
+.checkbox-col {
+  width: 40px;
+}
+
+// Admin actions header
+.admin-actions-header {
+  margin-bottom: $spacing-lg;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.admin-filters-bar {
+  display: flex;
+  gap: $spacing-md;
+  align-items: center;
+}
+
+// Add buttons
+.btn-add {
+  background: #10b981;
+  color: white;
+
+  &:hover {
+    background: #059669;
+  }
+}
+
+// PicoCSS handles modals via <dialog> element natively
+// We only need to ensure the max-width for wider modals
+dialog {
+  &.modal-wide article {
+    max-width: 600px;
+  }
+}
