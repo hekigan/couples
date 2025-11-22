@@ -57,6 +57,10 @@ func (h *Handler) DevLoginAsAdminHandler(w http.ResponseWriter, r *http.Request)
 	// Create session with both user auth and admin auth flags
 	session, _ := middleware.Store.Get(r, "couple-card-game-session")
 	session.Values["user_id"] = adminUser.ID.String()
+	session.Values["username"] = adminUser.Username
+	if adminUser.Email != nil {
+		session.Values["email"] = *adminUser.Email
+	}
 	session.Values["is_anonymous"] = false
 	session.Values["is_admin"] = true
 	session.Values["admin_authenticated"] = true // Required by AdminPasswordGate
@@ -91,6 +95,8 @@ func (h *Handler) CreateAnonymousHandler(w http.ResponseWriter, r *http.Request)
 	// Save to session
 	session, _ := middleware.Store.Get(r, "couple-card-game-session")
 	session.Values["user_id"] = user.ID.String()
+	session.Values["username"] = user.Username
+	session.Values["email"] = "" // Anonymous users don't have email
 	session.Values["is_anonymous"] = true
 	if err := session.Save(r, w); err != nil {
 		log.Printf("ERROR saving session: %v", err)
@@ -217,6 +223,10 @@ func (h *Handler) processOAuthTokens(w http.ResponseWriter, r *http.Request, acc
 	// Save to session
 	session, _ := middleware.Store.Get(r, "couple-card-game-session")
 	session.Values["user_id"] = user.ID.String()
+	session.Values["username"] = user.Username
+	if user.Email != nil {
+		session.Values["email"] = *user.Email
+	}
 	session.Values["is_anonymous"] = false
 	session.Values["is_admin"] = user.IsAdmin
 	session.Values["access_token"] = accessToken

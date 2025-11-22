@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/supabase-community/postgrest-go"
@@ -41,88 +41,120 @@ type DashboardStats struct {
 func (s *AdminService) GetDashboardStats(ctx context.Context) (*DashboardStats, error) {
 	stats := &DashboardStats{}
 
+	// Use sync.WaitGroup to run all queries in parallel
+	var wg sync.WaitGroup
+	var mu sync.Mutex // Protect stats writes
+
 	// Count total users
-	data, _, err := s.client.From("users").Select("id", "", false).Execute()
-	if err != nil {
-		log.Printf("Error counting total users: %v", err)
-		return nil, err
-	}
-	var totalUsers []map[string]interface{}
-	if err := json.Unmarshal(data, &totalUsers); err == nil {
-		stats.TotalUsers = len(totalUsers)
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, count, err := s.client.From("users").Select("*", "exact", true).Execute()
+		if err == nil {
+			mu.Lock()
+			stats.TotalUsers = int(count)
+			mu.Unlock()
+		}
+	}()
 
 	// Count anonymous users
-	data, _, err = s.client.From("users").Select("id", "", false).Eq("is_anonymous", "true").Execute()
-	if err == nil {
-		var anonymousUsers []map[string]interface{}
-		if err := json.Unmarshal(data, &anonymousUsers); err == nil {
-			stats.AnonymousUsers = len(anonymousUsers)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, count, err := s.client.From("users").Select("*", "exact", true).Eq("is_anonymous", "true").Execute()
+		if err == nil {
+			mu.Lock()
+			stats.AnonymousUsers = int(count)
+			mu.Unlock()
 		}
-	}
+	}()
 
 	// Count registered users
-	data, _, err = s.client.From("users").Select("id", "", false).Eq("is_anonymous", "false").Execute()
-	if err == nil {
-		var registeredUsers []map[string]interface{}
-		if err := json.Unmarshal(data, &registeredUsers); err == nil {
-			stats.RegisteredUsers = len(registeredUsers)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, count, err := s.client.From("users").Select("*", "exact", true).Eq("is_anonymous", "false").Execute()
+		if err == nil {
+			mu.Lock()
+			stats.RegisteredUsers = int(count)
+			mu.Unlock()
 		}
-	}
+	}()
 
 	// Count admin users
-	data, _, err = s.client.From("users").Select("id", "", false).Eq("is_admin", "true").Execute()
-	if err == nil {
-		var adminUsers []map[string]interface{}
-		if err := json.Unmarshal(data, &adminUsers); err == nil {
-			stats.AdminUsers = len(adminUsers)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, count, err := s.client.From("users").Select("*", "exact", true).Eq("is_admin", "true").Execute()
+		if err == nil {
+			mu.Lock()
+			stats.AdminUsers = int(count)
+			mu.Unlock()
 		}
-	}
+	}()
 
 	// Count total rooms
-	data, _, err = s.client.From("rooms").Select("id", "", false).Execute()
-	if err == nil {
-		var totalRooms []map[string]interface{}
-		if err := json.Unmarshal(data, &totalRooms); err == nil {
-			stats.TotalRooms = len(totalRooms)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, count, err := s.client.From("rooms").Select("*", "exact", true).Execute()
+		if err == nil {
+			mu.Lock()
+			stats.TotalRooms = int(count)
+			mu.Unlock()
 		}
-	}
+	}()
 
 	// Count active rooms
-	data, _, err = s.client.From("rooms").Select("id", "", false).Eq("status", "active").Execute()
-	if err == nil {
-		var activeRooms []map[string]interface{}
-		if err := json.Unmarshal(data, &activeRooms); err == nil {
-			stats.ActiveRooms = len(activeRooms)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, count, err := s.client.From("rooms").Select("*", "exact", true).Eq("status", "active").Execute()
+		if err == nil {
+			mu.Lock()
+			stats.ActiveRooms = int(count)
+			mu.Unlock()
 		}
-	}
+	}()
 
 	// Count completed rooms
-	data, _, err = s.client.From("rooms").Select("id", "", false).Eq("status", "completed").Execute()
-	if err == nil {
-		var completedRooms []map[string]interface{}
-		if err := json.Unmarshal(data, &completedRooms); err == nil {
-			stats.CompletedRooms = len(completedRooms)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, count, err := s.client.From("rooms").Select("*", "exact", true).Eq("status", "completed").Execute()
+		if err == nil {
+			mu.Lock()
+			stats.CompletedRooms = int(count)
+			mu.Unlock()
 		}
-	}
+	}()
 
 	// Count total questions
-	data, _, err = s.client.From("questions").Select("id", "", false).Execute()
-	if err == nil {
-		var totalQuestions []map[string]interface{}
-		if err := json.Unmarshal(data, &totalQuestions); err == nil {
-			stats.TotalQuestions = len(totalQuestions)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, count, err := s.client.From("questions").Select("*", "exact", true).Execute()
+		if err == nil {
+			mu.Lock()
+			stats.TotalQuestions = int(count)
+			mu.Unlock()
 		}
-	}
+	}()
 
 	// Count total categories
-	data, _, err = s.client.From("categories").Select("id", "", false).Execute()
-	if err == nil {
-		var totalCategories []map[string]interface{}
-		if err := json.Unmarshal(data, &totalCategories); err == nil {
-			stats.TotalCategories = len(totalCategories)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, count, err := s.client.From("categories").Select("*", "exact", true).Execute()
+		if err == nil {
+			mu.Lock()
+			stats.TotalCategories = int(count)
+			mu.Unlock()
 		}
-	}
+	}()
+
+	// Wait for all queries to complete
+	wg.Wait()
 
 	return stats, nil
 }

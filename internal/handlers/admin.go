@@ -7,20 +7,11 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/yourusername/couple-card-game/internal/middleware"
 )
 
 // AdminDashboardHandler displays admin dashboard
 func (h *Handler) AdminDashboardHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
-
-	// Get current user for template
-	currentUser, err := h.UserService.GetUserByID(ctx, userID)
-	if err != nil {
-		log.Printf("⚠️ Failed to fetch current user: %v", err)
-		currentUser = nil
-	}
 
 	// Get admin service from handler
 	adminService := h.GetAdminService()
@@ -39,24 +30,17 @@ func (h *Handler) AdminDashboardHandler(w http.ResponseWriter, r *http.Request) 
 
 	data := &TemplateData{
 		Title:   "Admin Dashboard",
-		User:    currentUser,
+		User:    GetSessionUser(r), // Get user from session (no DB call)
 		Data:    stats,
 		IsAdmin: true, // Admin pages are protected by middleware
 	}
+
 	h.RenderTemplate(w, "admin/dashboard.html", data)
 }
 
 // AdminUsersHandler displays user management
 func (h *Handler) AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
-
-	// Get current user for template
-	currentUser, err := h.UserService.GetUserByID(ctx, userID)
-	if err != nil {
-		log.Printf("⚠️ Failed to fetch current user: %v", err)
-		currentUser = nil
-	}
 
 	// Fetch users list for SSR
 	limit := 50
@@ -105,7 +89,7 @@ func (h *Handler) AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 
 	data := &TemplateData{
 		Title:   "User Management",
-		User:    currentUser,
+		User:    GetSessionUser(r), // Get user from session (no DB call)
 		IsAdmin: true,
 		Data:    template.HTML(usersListHTML),
 	}
@@ -115,14 +99,6 @@ func (h *Handler) AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 // AdminQuestionsHandler displays question management
 func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
-
-	// Get current user for template
-	currentUser, err := h.UserService.GetUserByID(ctx, userID)
-	if err != nil {
-		log.Printf("⚠️ Failed to fetch current user: %v", err)
-		currentUser = nil
-	}
 
 	// Fetch questions list for SSR
 	limit := 50
@@ -185,7 +161,7 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 
 	data := &TemplateData{
 		Title:   "Question Management",
-		User:    currentUser,
+		User:    GetSessionUser(r), // Get user from session (no DB call)
 		IsAdmin: true,
 		Data:    template.HTML(questionsListHTML),
 	}
@@ -195,14 +171,6 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 // AdminCategoriesHandler displays category management
 func (h *Handler) AdminCategoriesHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
-
-	// Get current user for template
-	currentUser, err := h.UserService.GetUserByID(ctx, userID)
-	if err != nil {
-		log.Printf("⚠️ Failed to fetch current user: %v", err)
-		currentUser = nil
-	}
 
 	// Fetch categories list for SSR
 	categories, err := h.QuestionService.GetCategories(ctx)
@@ -241,7 +209,7 @@ func (h *Handler) AdminCategoriesHandler(w http.ResponseWriter, r *http.Request)
 
 	data := &TemplateData{
 		Title:   "Category Management",
-		User:    currentUser,
+		User:    GetSessionUser(r), // Get user from session (no DB call)
 		IsAdmin: true,
 		Data:    template.HTML(categoriesListHTML),
 	}
@@ -251,14 +219,6 @@ func (h *Handler) AdminCategoriesHandler(w http.ResponseWriter, r *http.Request)
 // AdminRoomsHandler displays room monitoring
 func (h *Handler) AdminRoomsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
-
-	// Get current user for template
-	currentUser, err := h.UserService.GetUserByID(ctx, userID)
-	if err != nil {
-		log.Printf("⚠️ Failed to fetch current user: %v", err)
-		currentUser = nil
-	}
 
 	// Fetch rooms list for SSR
 	limit := 50
@@ -314,7 +274,7 @@ func (h *Handler) AdminRoomsHandler(w http.ResponseWriter, r *http.Request) {
 
 	data := &TemplateData{
 		Title:   "Room Monitoring",
-		User:    currentUser,
+		User:    GetSessionUser(r), // Get user from session (no DB call)
 		IsAdmin: true,
 		Data:    template.HTML(roomsListHTML),
 	}
@@ -323,19 +283,9 @@ func (h *Handler) AdminRoomsHandler(w http.ResponseWriter, r *http.Request) {
 
 // AdminTranslationsHandler displays translation management
 func (h *Handler) AdminTranslationsHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
-
-	// Get current user for template
-	currentUser, err := h.UserService.GetUserByID(ctx, userID)
-	if err != nil {
-		log.Printf("⚠️ Failed to fetch current user: %v", err)
-		currentUser = nil
-	}
-
 	data := &TemplateData{
 		Title:   "Translation Management",
-		User:    currentUser,
+		User:    GetSessionUser(r), // Get user from session (no DB call)
 		IsAdmin: true,
 	}
 	h.RenderTemplate(w, "admin/translations.html", data)
