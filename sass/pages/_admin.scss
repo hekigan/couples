@@ -12,34 +12,6 @@
   margin-bottom: $spacing-xl;
 }
 
-.admin-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: $spacing-lg;
-}
-
-.admin-card {
-  background-color: $bg-primary;
-  padding: $spacing-xl;
-  border-radius: $border-radius-lg;
-  box-shadow: $shadow-md;
-  text-align: center;
-  text-decoration: none;
-  color: $text-primary;
-  transition: all $transition-base;
-  
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: $shadow-lg;
-    color: $primary-color;
-  }
-  
-  h3 {
-    color: $primary-color;
-    margin-bottom: $spacing-sm;
-  }
-}
-
 .admin-table {
   background-color: $bg-primary;
   border-radius: $border-radius-lg;
@@ -100,11 +72,38 @@
 
   p {
     margin: 0;
+  }
 
-    &:first-of-type {
-      font-size: 2rem;
-      font-weight: $font-weight-bold;
-      color: $primary-color;
+  .stat-value {
+    font-size: 2rem;
+    font-weight: $font-weight-bold;
+    color: $secondary-color;
+    text-shadow: $shadow-text-sm;
+  }
+
+  &:nth-child(2) .stat-value{
+    color: $danger-color;
+  }
+
+  &:nth-child(3) .stat-value{
+    color: $success-color;
+  }
+
+  &:nth-child(4) .stat-value{
+    color: $warning-color;
+  }
+
+  &:nth-child(5) .stat-value{
+    color: $info-color;
+  }
+
+  .stat-list {
+    margin: 0;
+    padding: 0;
+
+    li {
+      list-style-type: none;
+      margin: 0;
     }
   }
 }
