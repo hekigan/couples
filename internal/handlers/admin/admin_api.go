@@ -2,9 +2,7 @@ package admin
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"html"
 	"log"
 	"net/http"
 	"strconv"
@@ -56,39 +54,12 @@ func (ah *AdminAPIHandler) ListUsersHandler(w http.ResponseWriter, r *http.Reque
 
 	totalCount, _ := ah.adminService.GetUserCount(ctx)
 
-	// Render HTML fragment
-	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprintf(w, `<div id="users-list">
-	<form id="bulk-users-form">
-		<!-- Bulk Actions Bar (Top) -->
-		<div class="bulk-actions-bar">
-			<input type="checkbox" id="select-all-users-top" onclick="toggleAllCheckboxes(this, 'user-checkbox')" />
-			<label for="select-all-users-top">Select All</label>
-			<select name="bulk_action" id="bulk-action-users">
-				<option value="">Bulk Actions...</option>
-				<option value="delete">Delete Selected</option>
-			</select>
-			<button type="button" onclick="submitBulkAction('users')" class="btn btn-sm">Apply</button>
-		</div>
-
-	<table>
-		<thead>
-			<tr>
-				<th class="checkbox-col"></th>
-				<th>Username</th>
-				<th>Email</th>
-				<th>Type</th>
-				<th>Admin</th>
-				<th>Created</th>
-				<th>Actions</th>
-			</tr>
-		</thead>
-		<tbody>`)
-
-	for _, user := range users {
+	// Build data for template
+	userInfos := make([]services.AdminUserInfo, len(users))
+	for i, user := range users {
 		email := ""
 		if user.Email != nil {
-			email = html.EscapeString(*user.Email)
+			email = *user.Email
 		}
 
 		userType := "Registered"
@@ -96,63 +67,31 @@ func (ah *AdminAPIHandler) ListUsersHandler(w http.ResponseWriter, r *http.Reque
 			userType = "Anonymous"
 		}
 
-		adminBadge := ""
-		if user.IsAdmin {
-			adminBadge = `<span class="admin-check">✓</span>`
+		userInfos[i] = services.AdminUserInfo{
+			ID:        user.ID.String(),
+			Username:  user.Username,
+			Email:     email,
+			UserType:  userType,
+			IsAdmin:   user.IsAdmin,
+			CreatedAt: user.CreatedAt.Format("2006-01-02"),
 		}
-
-		fmt.Fprintf(w, `
-			<tr>
-				<td><input type="checkbox" class="user-checkbox" name="user_ids[]" value="%s" /></td>
-				<td>%s</td>
-				<td>%s</td>
-				<td>%s</td>
-				<td>%s</td>
-				<td>%s</td>
-				<td>
-					<button hx-post="/admin/api/users/%s/toggle-admin"
-					        hx-target="#users-list"
-					        hx-swap="outerHTML"
-					        class="btn btn-sm">
-						Toggle Admin
-					</button>
-					<button hx-delete="/admin/api/users/%s"
-					        hx-target="#users-list"
-					        hx-swap="outerHTML"
-					        hx-confirm="Are you sure you want to delete this user?"
-					        class="btn btn-sm btn-danger">
-						Delete
-					</button>
-				</td>
-			</tr>`,
-			user.ID.String(),
-			html.EscapeString(user.Username),
-			email,
-			userType,
-			adminBadge,
-			user.CreatedAt.Format("2006-01-02"),
-			user.ID.String(),
-			user.ID.String(),
-		)
 	}
 
-	fmt.Fprintf(w, `
-		</tbody>
-	</table>
+	data := services.UsersListData{
+		Users:      userInfos,
+		TotalCount: totalCount,
+		Page:       page,
+	}
 
-		<!-- Bulk Actions Bar (Bottom) -->
-		<div class="bulk-actions-bar bulk-actions-bottom">
-			<input type="checkbox" id="select-all-users-bottom" onclick="toggleAllCheckboxes(this, 'user-checkbox')" />
-			<label for="select-all-users-bottom">Select All</label>
-			<select name="bulk_action_bottom">
-				<option value="">Bulk Actions...</option>
-				<option value="delete">Delete Selected</option>
-			</select>
-			<button type="button" onclick="submitBulkAction('users')" class="btn btn-sm">Apply</button>
-			<span class="item-count">Total: %d users (Page %d)</span>
-		</div>
-	</form>
-</div>`, totalCount, page)
+	html, err := ah.handler.TemplateService.RenderFragment("users_list.html", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error rendering users list: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(html))
 }
 
 // ToggleUserAdminHandler toggles a user's admin status
@@ -232,58 +171,17 @@ func (ah *AdminAPIHandler) ListQuestionsHandler(w http.ResponseWriter, r *http.R
 	// Get categories for dropdown
 	categories, _ := ah.questionService.GetCategories(ctx)
 
-	// Render HTML fragment
-	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprintf(w, `<div id="questions-list">
-	<div class="filters">
-		<select hx-get="/admin/api/questions/list"
-		        hx-target="#questions-list"
-		        hx-swap="outerHTML"
-		        hx-include="[name='lang_code']"
-		        name="category_id">
-			<option value="">All Categories</option>`)
-
-	for _, cat := range categories {
-		selected := ""
-		if categoryID != nil && *categoryID == cat.ID {
-			selected = "selected"
+	// Build category options
+	categoryOptions := make([]services.AdminCategoryOption, len(categories))
+	for i, cat := range categories {
+		selected := categoryID != nil && *categoryID == cat.ID
+		categoryOptions[i] = services.AdminCategoryOption{
+			ID:       cat.ID.String(),
+			Icon:     cat.Icon,
+			Label:    cat.Label,
+			Selected: selected,
 		}
-		fmt.Fprintf(w, `<option value="%s" %s>%s %s</option>`,
-			cat.ID.String(), selected, cat.Icon, html.EscapeString(cat.Label))
 	}
-
-	selectedLang := ""
-	if langCode != nil {
-		selectedLang = *langCode
-	}
-
-	fmt.Fprintf(w, `
-		</select>
-		<select hx-get="/admin/api/questions/list"
-		        hx-target="#questions-list"
-		        hx-swap="outerHTML"
-		        hx-include="[name='category_id']"
-		        name="lang_code">
-			<option value="">All Languages</option>
-			<option value="en" %s>English</option>
-			<option value="fr" %s>French</option>
-			<option value="ja" %s>Japanese</option>
-		</select>
-	</div>
-	<table>
-		<thead>
-			<tr>
-				<th>Question Text</th>
-				<th>Category</th>
-				<th>Language</th>
-				<th>Actions</th>
-			</tr>
-		</thead>
-		<tbody>`,
-		tern(selectedLang == "en", "selected", ""),
-		tern(selectedLang == "fr", "selected", ""),
-		tern(selectedLang == "ja", "selected", ""),
-	)
 
 	// Create category map for lookups
 	categoryMap := make(map[uuid.UUID]models.Category)
@@ -291,46 +189,45 @@ func (ah *AdminAPIHandler) ListQuestionsHandler(w http.ResponseWriter, r *http.R
 		categoryMap[cat.ID] = cat
 	}
 
-	for _, q := range questions {
+	// Build question infos
+	questionInfos := make([]services.AdminQuestionInfo, len(questions))
+	for i, q := range questions {
 		categoryLabel := "Unknown"
 		if cat, ok := categoryMap[q.CategoryID]; ok {
 			categoryLabel = fmt.Sprintf("%s %s", cat.Icon, cat.Label)
 		}
 
-		fmt.Fprintf(w, `
-			<tr>
-				<td>%s</td>
-				<td>%s</td>
-				<td>%s</td>
-				<td>
-					<button hx-get="/admin/api/questions/%s/edit-form"
-					        hx-target="#edit-modal-content"
-					        hx-swap="innerHTML"
-					        onclick="document.getElementById('edit-modal').style.display='block'"
-					        class="btn btn-sm">
-						Edit
-					</button>
-					<button hx-delete="/admin/api/questions/%s"
-					        hx-target="#questions-list"
-					        hx-swap="outerHTML"
-					        hx-confirm="Are you sure you want to delete this question?"
-					        class="btn btn-sm btn-danger">
-						Delete
-					</button>
-				</td>
-			</tr>`,
-			html.EscapeString(q.Text),
-			html.EscapeString(categoryLabel),
-			html.EscapeString(q.LanguageCode),
-			q.ID.String(),
-			q.ID.String(),
-		)
+		questionInfos[i] = services.AdminQuestionInfo{
+			ID:            q.ID.String(),
+			Text:          q.Text,
+			CategoryLabel: categoryLabel,
+			LanguageCode:  q.LanguageCode,
+		}
 	}
 
-	fmt.Fprintf(w, `
-		</tbody>
-	</table>
-</div>`)
+	selectedLang := ""
+	if langCode != nil {
+		selectedLang = *langCode
+	}
+
+	data := services.QuestionsListData{
+		Questions:          questionInfos,
+		Categories:         categoryOptions,
+		SelectedLanguage:   selectedLang,
+		LanguageEnSelected: selectedLang == "en",
+		LanguageFrSelected: selectedLang == "fr",
+		LanguageJaSelected: selectedLang == "ja",
+	}
+
+	html, err := ah.handler.TemplateService.RenderFragment("questions_list.html", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error rendering questions list: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(html))
 }
 
 // GetQuestionEditFormHandler returns an HTML form for editing a question
@@ -351,46 +248,36 @@ func (ah *AdminAPIHandler) GetQuestionEditFormHandler(w http.ResponseWriter, r *
 
 	categories, _ := ah.questionService.GetCategories(ctx)
 
-	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprintf(w, `
-<form hx-put="/admin/api/questions/%s"
-      hx-target="#questions-list"
-      hx-swap="outerHTML"
-      onclick="document.getElementById('edit-modal').style.display='none'">
-	<label>Question Text:</label>
-	<textarea name="question_text" required rows="4">%s</textarea>
-
-	<label>Category:</label>
-	<select name="category_id" required>`,
-		question.ID.String(),
-		html.EscapeString(question.Text))
-
-	for _, cat := range categories {
-		selected := ""
-		if cat.ID == question.CategoryID {
-			selected = "selected"
+	// Build category options
+	categoryOptions := make([]services.AdminCategoryOption, len(categories))
+	for i, cat := range categories {
+		selected := cat.ID == question.CategoryID
+		categoryOptions[i] = services.AdminCategoryOption{
+			ID:       cat.ID.String(),
+			Icon:     cat.Icon,
+			Label:    cat.Label,
+			Selected: selected,
 		}
-		fmt.Fprintf(w, `<option value="%s" %s>%s %s</option>`,
-			cat.ID.String(), selected, cat.Icon, html.EscapeString(cat.Label))
 	}
 
-	fmt.Fprintf(w, `
-	</select>
+	data := services.QuestionEditFormData{
+		QuestionID:   question.ID.String(),
+		QuestionText: question.Text,
+		Categories:   categoryOptions,
+		LangEN:       question.LanguageCode == "en",
+		LangFR:       question.LanguageCode == "fr",
+		LangJA:       question.LanguageCode == "ja",
+	}
 
-	<label>Language:</label>
-	<select name="lang_code" required>
-		<option value="en" %s>English</option>
-		<option value="fr" %s>French</option>
-		<option value="ja" %s>Japanese</option>
-	</select>
+	html, err := ah.handler.TemplateService.RenderFragment("question_edit_form.html", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error rendering question edit form: %v", err)
+		return
+	}
 
-	<button type="submit" class="btn">Save Changes</button>
-	<button type="button" class="btn" onclick="document.getElementById('edit-modal').style.display='none'">Cancel</button>
-</form>`,
-		tern(question.LanguageCode == "en", "selected", ""),
-		tern(question.LanguageCode == "fr", "selected", ""),
-		tern(question.LanguageCode == "ja", "selected", ""),
-	)
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(html))
 }
 
 // UpdateQuestionHandler updates a question
@@ -496,62 +383,36 @@ func (ah *AdminAPIHandler) ListCategoriesHandler(w http.ResponseWriter, r *http.
 	// Get question counts per category
 	counts, _ := ah.questionService.GetQuestionCountsByCategory(ctx, "en")
 
-	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprintf(w, `<div id="categories-list">
-	<table>
-		<thead>
-			<tr>
-				<th>Icon</th>
-				<th>Label</th>
-				<th>Key</th>
-				<th>Questions</th>
-				<th>Actions</th>
-			</tr>
-		</thead>
-		<tbody>`)
-
-	for _, cat := range categories {
+	// Build data for template
+	categoryInfos := make([]services.AdminCategoryInfo, len(categories))
+	for i, cat := range categories {
 		count := 0
 		if c, ok := counts[cat.ID.String()]; ok {
 			count = c
 		}
 
-		fmt.Fprintf(w, `
-			<tr>
-				<td>%s</td>
-				<td>%s</td>
-				<td>%s</td>
-				<td>%d</td>
-				<td>
-					<button hx-get="/admin/api/categories/%s/edit-form"
-					        hx-target="#edit-modal-content"
-					        hx-swap="innerHTML"
-					        onclick="document.getElementById('edit-modal').style.display='block'"
-					        class="btn btn-sm">
-						Edit
-					</button>
-					<button hx-delete="/admin/api/categories/%s"
-					        hx-target="#categories-list"
-					        hx-swap="outerHTML"
-					        hx-confirm="Are you sure you want to delete this category?"
-					        class="btn btn-sm btn-danger">
-						Delete
-					</button>
-				</td>
-			</tr>`,
-			html.EscapeString(cat.Icon),
-			html.EscapeString(cat.Label),
-			html.EscapeString(cat.Key),
-			count,
-			cat.ID.String(),
-			cat.ID.String(),
-		)
+		categoryInfos[i] = services.AdminCategoryInfo{
+			ID:            cat.ID.String(),
+			Icon:          cat.Icon,
+			Label:         cat.Label,
+			Key:           cat.Key,
+			QuestionCount: count,
+		}
 	}
 
-	fmt.Fprintf(w, `
-		</tbody>
-	</table>
-</div>`)
+	data := services.CategoriesListData{
+		Categories: categoryInfos,
+	}
+
+	html, err := ah.handler.TemplateService.RenderFragment("categories_list.html", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error rendering categories list: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(html))
 }
 
 // GetCategoryEditFormHandler returns an HTML form for editing a category
@@ -570,29 +431,22 @@ func (ah *AdminAPIHandler) GetCategoryEditFormHandler(w http.ResponseWriter, r *
 		return
 	}
 
+	data := services.CategoryEditFormData{
+		ID:    category.ID.String(),
+		Key:   category.Key,
+		Label: category.Label,
+		Icon:  category.Icon,
+	}
+
+	html, err := ah.handler.TemplateService.RenderFragment("category_edit_form.html", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error rendering category edit form: %v", err)
+		return
+	}
+
 	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprintf(w, `
-<form hx-put="/admin/api/categories/%s"
-      hx-target="#categories-list"
-      hx-swap="outerHTML"
-      onclick="document.getElementById('edit-modal').style.display='none'">
-	<label>Key:</label>
-	<input type="text" name="key" value="%s" required />
-
-	<label>Label:</label>
-	<input type="text" name="label" value="%s" required />
-
-	<label>Icon:</label>
-	<input type="text" name="icon" value="%s" required placeholder="e.g., 💬" />
-
-	<button type="submit" class="btn">Save Changes</button>
-	<button type="button" class="btn" onclick="document.getElementById('edit-modal').style.display='none'">Cancel</button>
-</form>`,
-		category.ID.String(),
-		html.EscapeString(category.Key),
-		html.EscapeString(category.Label),
-		html.EscapeString(category.Icon),
-	)
+	w.Write([]byte(html))
 }
 
 // UpdateCategoryHandler updates a category
@@ -693,30 +547,17 @@ func (ah *AdminAPIHandler) ListRoomsHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprintf(w, `<div id="rooms-list">
-	<table>
-		<thead>
-			<tr>
-				<th>Room ID</th>
-				<th>Owner</th>
-				<th>Guest</th>
-				<th>Status</th>
-				<th>Created</th>
-				<th>Actions</th>
-			</tr>
-		</thead>
-		<tbody>`)
-
-	for _, room := range rooms {
+	// Build data for template
+	roomInfos := make([]services.AdminRoomInfo, len(rooms))
+	for i, room := range rooms {
 		owner := "Unknown"
 		if room.OwnerUsername != nil {
-			owner = html.EscapeString(*room.OwnerUsername)
+			owner = *room.OwnerUsername
 		}
 
 		guest := "Waiting..."
 		if room.GuestUsername != nil {
-			guest = html.EscapeString(*room.GuestUsername)
+			guest = *room.GuestUsername
 		}
 
 		statusColor := ""
@@ -729,37 +570,30 @@ func (ah *AdminAPIHandler) ListRoomsHandler(w http.ResponseWriter, r *http.Reque
 			statusColor = "color: #6b7280;"
 		}
 
-		fmt.Fprintf(w, `
-			<tr>
-				<td><code>%s</code></td>
-				<td>%s</td>
-				<td>%s</td>
-				<td style="%s">%s</td>
-				<td>%s</td>
-				<td>
-					<button hx-post="/admin/api/rooms/%s/close"
-					        hx-target="#rooms-list"
-					        hx-swap="outerHTML"
-					        hx-confirm="Are you sure you want to force close this room?"
-					        class="btn btn-sm btn-danger">
-						Force Close
-					</button>
-				</td>
-			</tr>`,
-			room.ID.String()[:8],
-			owner,
-			guest,
-			statusColor,
-			html.EscapeString(room.Status),
-			room.CreatedAt.Format("2006-01-02 15:04"),
-			room.ID.String(),
-		)
+		roomInfos[i] = services.AdminRoomInfo{
+			ID:          room.ID.String(),
+			ShortID:     room.ID.String()[:8],
+			Owner:       owner,
+			Guest:       guest,
+			Status:      room.Status,
+			StatusColor: statusColor,
+			CreatedAt:   room.CreatedAt.Format("2006-01-02 15:04"),
+		}
 	}
 
-	fmt.Fprintf(w, `
-		</tbody>
-	</table>
-</div>`)
+	data := services.RoomsListData{
+		Rooms: roomInfos,
+	}
+
+	html, err := ah.handler.TemplateService.RenderFragment("rooms_list.html", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error rendering rooms list: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(html))
 }
 
 // CloseRoomHandler forces a room to close
@@ -782,15 +616,7 @@ func (ah *AdminAPIHandler) CloseRoomHandler(w http.ResponseWriter, r *http.Reque
 	ah.ListRoomsHandler(w, r)
 }
 
-// Helper function for ternary operator
-func tern(condition bool, trueVal, falseVal string) string {
-	if condition {
-		return trueVal
-	}
-	return falseVal
-}
-
-// GetDashboardStatsHandler returns dashboard statistics as JSON for HTMX
+// GetDashboardStatsHandler returns dashboard statistics as HTML for HTMX
 func (ah *AdminAPIHandler) GetDashboardStatsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 
@@ -801,8 +627,27 @@ func (ah *AdminAPIHandler) GetDashboardStatsHandler(w http.ResponseWriter, r *ht
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stats)
+	data := services.DashboardStatsData{
+		TotalUsers:      stats.TotalUsers,
+		AnonymousUsers:  stats.AnonymousUsers,
+		RegisteredUsers: stats.RegisteredUsers,
+		AdminUsers:      stats.AdminUsers,
+		TotalRooms:      stats.TotalRooms,
+		ActiveRooms:     stats.ActiveRooms,
+		CompletedRooms:  stats.CompletedRooms,
+		TotalQuestions:  stats.TotalQuestions,
+		TotalCategories: stats.TotalCategories,
+	}
+
+	html, err := ah.handler.TemplateService.RenderFragment("dashboard_stats.html", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error rendering dashboard stats: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(html))
 }
 
 // BulkDeleteUsersHandler deletes multiple users at once

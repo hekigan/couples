@@ -1,0 +1,34 @@
+<div class="stats-grid">
+    <div class="stat-card">
+        <h4><a href="/admin/users">Total Users</a></h4>
+        <p class="stat-value">{{.TotalUsers}}</p>
+        <ul class="stat-list text-muted">
+            <li>{{.AnonymousUsers}} anonymous</li>
+            <li>{{.RegisteredUsers}} registered</li>
+        </ul>
+    </div>
+    <div class="stat-card">
+        <h4>Admin Users</h4>
+        <p class="stat-value">{{.AdminUsers}}</p>
+    </div>
+    <div class="stat-card">
+        <h4><a href="/admin/rooms">Total Rooms</a></h4>
+        <p class="stat-value">{{.TotalRooms}}</p>
+        <ul class="stat-list text-muted">
+            <li>{{.ActiveRooms}} active</li>
+            <li>{{.CompletedRooms}} completed</li>
+        </ul>
+    </div>
+    <div class="stat-card">
+        <h4><a href="/admin/questions">Questions</a></h4>
+        <p class="stat-value">{{.TotalQuestions}}</p>
+    </div>
+    <div class="stat-card">
+        <h4><a href="/admin/categories">Categories</a></h4>
+        <p class="stat-value">{{.TotalCategories}}</p>
+    </div>
+    <div class="stat-card">
+        <h4><a href="/admin/translations">Translations</a></h4>
+        <p>Manage multi-language</p>
+    </div>
+</div>

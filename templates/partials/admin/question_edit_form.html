@@ -1,0 +1,24 @@
+<form hx-put="/admin/api/questions/{{.QuestionID}}"
+      hx-target="#questions-list"
+      hx-swap="outerHTML"
+      onclick="document.getElementById('edit-modal').style.display='none'">
+	<label>Question Text:</label>
+	<textarea name="question_text" required rows="4">{{.QuestionText}}</textarea>
+
+	<label>Category:</label>
+	<select name="category_id" required>
+		{{range .Categories}}
+		<option value="{{.ID}}" {{if .Selected}}selected{{end}}>{{.Icon}} {{.Label}}</option>
+		{{end}}
+	</select>
+
+	<label>Language:</label>
+	<select name="lang_code" required>
+		<option value="en" {{if .LangEN}}selected{{end}}>English</option>
+		<option value="fr" {{if .LangFR}}selected{{end}}>French</option>
+		<option value="ja" {{if .LangJA}}selected{{end}}>Japanese</option>
+	</select>
+
+	<button type="submit" class="btn">Save Changes</button>
+	<button type="button" class="btn" onclick="document.getElementById('edit-modal').style.display='none'">Cancel</button>
+</form>

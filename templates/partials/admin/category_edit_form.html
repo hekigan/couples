@@ -1,0 +1,16 @@
+<form hx-put="/admin/api/categories/{{.ID}}"
+      hx-target="#categories-list"
+      hx-swap="outerHTML"
+      onclick="document.getElementById('edit-modal').style.display='none'">
+	<label>Key:</label>
+	<input type="text" name="key" value="{{.Key}}" required />
+
+	<label>Label:</label>
+	<input type="text" name="label" value="{{.Label}}" required />
+
+	<label>Icon:</label>
+	<input type="text" name="icon" value="{{.Icon}}" required placeholder="e.g., 💬" />
+
+	<button type="submit" class="btn">Save Changes</button>
+	<button type="button" class="btn" onclick="document.getElementById('edit-modal').style.display='none'">Cancel</button>
+</form>

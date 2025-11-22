@@ -1,0 +1,67 @@
+<div id="users-list">
+	<form id="bulk-users-form">
+		<!-- Bulk Actions Bar (Top) -->
+		<div class="bulk-actions-bar">
+			<input type="checkbox" id="select-all-users-top" onclick="toggleAllCheckboxes(this, 'user-checkbox')" />
+			<label for="select-all-users-top">Select All</label>
+			<select name="bulk_action" id="bulk-action-users">
+				<option value="">Bulk Actions...</option>
+				<option value="delete">Delete Selected</option>
+			</select>
+			<button type="button" onclick="submitBulkAction('users')" class="btn btn-sm">Apply</button>
+		</div>
+
+	<table>
+		<thead>
+			<tr>
+				<th class="checkbox-col"></th>
+				<th>Username</th>
+				<th>Email</th>
+				<th>Type</th>
+				<th>Admin</th>
+				<th>Created</th>
+				<th>Actions</th>
+			</tr>
+		</thead>
+		<tbody>
+			{{range .Users}}
+			<tr>
+				<td><input type="checkbox" class="user-checkbox" name="user_ids[]" value="{{.ID}}" /></td>
+				<td>{{.Username}}</td>
+				<td>{{.Email}}</td>
+				<td>{{.UserType}}</td>
+				<td>{{if .IsAdmin}}<span class="admin-check">✓</span>{{end}}</td>
+				<td>{{.CreatedAt}}</td>
+				<td>
+					<button hx-post="/admin/api/users/{{.ID}}/toggle-admin"
+					        hx-target="#users-list"
+					        hx-swap="outerHTML"
+					        class="btn btn-sm">
+						Toggle Admin
+					</button>
+					<button hx-delete="/admin/api/users/{{.ID}}"
+					        hx-target="#users-list"
+					        hx-swap="outerHTML"
+					        hx-confirm="Are you sure you want to delete this user?"
+					        class="btn btn-sm btn-danger">
+						Delete
+					</button>
+				</td>
+			</tr>
+			{{end}}
+		</tbody>
+	</table>
+
+		<!-- Bulk Actions Bar (Bottom) -->
+		<div class="bulk-actions-bar bulk-actions-bottom">
+			<input type="checkbox" id="select-all-users-bottom" onclick="toggleAllCheckboxes(this, 'user-checkbox')" />
+			<label for="select-all-users-bottom">Select All</label>
+			<select name="bulk_action_bottom">
+				<option value="">Bulk Actions...</option>
+				<option value="delete">Delete Selected</option>
+			</select>
+			<button type="button" onclick="submitBulkAction('users')" class="btn btn-sm">Apply</button>
+			<span class="item-count">Total: {{.TotalCount}} users (Page {{.Page}})</span>
+		</div>
+	</form>
+</div>

@@ -2,12 +2,11 @@
 <div class="admin-container">
     <h1>User Management</h1>
     <div class="admin-table">
-        <div id="users-list"
-             hx-get="/admin/api/users/list"
-             hx-trigger="load"
-             hx-swap="outerHTML">
-            <p>Loading users...</p>
-        </div>
+        {{if .Data}}
+            {{.Data}}
+        {{else}}
+            <p>No users found.</p>
+        {{end}}
     </div>
 </div>
 {{end}}

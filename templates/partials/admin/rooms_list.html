@@ -1,0 +1,34 @@
+<div id="rooms-list">
+	<table>
+		<thead>
+			<tr>
+				<th>Room ID</th>
+				<th>Owner</th>
+				<th>Guest</th>
+				<th>Status</th>
+				<th>Created</th>
+				<th>Actions</th>
+			</tr>
+		</thead>
+		<tbody>
+			{{range .Rooms}}
+			<tr>
+				<td><code>{{.ShortID}}</code></td>
+				<td>{{.Owner}}</td>
+				<td>{{.Guest}}</td>
+				<td style="{{.StatusColor}}">{{.Status}}</td>
+				<td>{{.CreatedAt}}</td>
+				<td>
+					<button hx-post="/admin/api/rooms/{{.ID}}/close"
+					        hx-target="#rooms-list"
+					        hx-swap="outerHTML"
+					        hx-confirm="Are you sure you want to force close this room?"
+					        class="btn btn-sm btn-danger">
+						Force Close
+					</button>
+				</td>
+			</tr>
+			{{end}}
+		</tbody>
+	</table>
+</div>

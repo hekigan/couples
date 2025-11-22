@@ -11,12 +11,11 @@
     </div>
 
     <div class="admin-table">
-        <div id="questions-list"
-             hx-get="/admin/api/questions/list"
-             hx-trigger="load"
-             hx-swap="outerHTML">
-            <p>Loading questions...</p>
-        </div>
+        {{if .Data}}
+            {{.Data}}
+        {{else}}
+            <p>No questions found.</p>
+        {{end}}
     </div>
 </div>
 

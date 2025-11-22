@@ -224,3 +224,110 @@ type ProgressCounterData struct {
 	CurrentQuestion int
 	MaxQuestions    int
 }
+
+// Admin data structures
+
+// AdminUserInfo represents a user in the admin list
+type AdminUserInfo struct {
+	ID          string
+	Username    string
+	Email       string
+	UserType    string // "Registered" or "Anonymous"
+	IsAdmin     bool
+	CreatedAt   string
+}
+
+// UsersListData represents data for admin users list partial
+type UsersListData struct {
+	Users      []AdminUserInfo
+	TotalCount int
+	Page       int
+}
+
+// AdminQuestionInfo represents a question in the admin list
+type AdminQuestionInfo struct {
+	ID            string
+	Text          string
+	CategoryLabel string // Combined icon + label
+	LanguageCode  string
+}
+
+// AdminCategoryOption represents a category option for dropdowns
+type AdminCategoryOption struct {
+	ID       string
+	Icon     string
+	Label    string
+	Selected bool
+}
+
+// QuestionsListData represents data for admin questions list partial
+type QuestionsListData struct {
+	Questions            []AdminQuestionInfo
+	Categories           []AdminCategoryOption
+	SelectedCategoryID   string
+	SelectedLanguage     string
+	LanguageEnSelected   bool
+	LanguageFrSelected   bool
+	LanguageJaSelected   bool
+}
+
+// QuestionEditFormData represents data for question edit form partial
+type QuestionEditFormData struct {
+	QuestionID   string
+	QuestionText string
+	Categories   []AdminCategoryOption
+	LangEN       bool
+	LangFR       bool
+	LangJA       bool
+}
+
+// AdminCategoryInfo represents a category in the admin list
+type AdminCategoryInfo struct {
+	ID            string
+	Icon          string
+	Label         string
+	Key           string
+	QuestionCount int
+}
+
+// CategoriesListData represents data for admin categories list partial
+type CategoriesListData struct {
+	Categories []AdminCategoryInfo
+}
+
+// CategoryEditFormData represents data for category edit form partial
+type CategoryEditFormData struct {
+	ID    string
+	Key   string
+	Label string
+	Icon  string
+}
+
+// AdminRoomInfo represents a room in the admin list
+type AdminRoomInfo struct {
+	ID          string
+	ShortID     string // First 8 chars of ID
+	Owner       string
+	Guest       string
+	Status      string
+	StatusColor string
+	CreatedAt   string
+}
+
+// RoomsListData represents data for admin rooms list partial
+type RoomsListData struct {
+	Rooms []AdminRoomInfo
+}
+
+// DashboardStatsData represents data for dashboard stats partial
+type DashboardStatsData struct {
+	TotalUsers      int
+	AnonymousUsers  int
+	RegisteredUsers int
+	AdminUsers      int
+	TotalRooms      int
+	ActiveRooms     int
+	CompletedRooms  int
+	TotalQuestions  int
+	TotalCategories int
+}

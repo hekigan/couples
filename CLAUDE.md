@@ -9,10 +9,19 @@ This is a **Couple Card Game** - a Go-based web application built with HTMX and 
 **Tech Stack:**
 - Backend: Go 1.22+ with gorilla/mux router
 - Database: PostgreSQL via Supabase (supabase-community/supabase-go)
-- Frontend: HTMX + SASS (transitioning from vanilla JavaScript)
+- Frontend: HTMX + SASS
 - Real-time: Server-Sent Events (SSE)
 - Session: gorilla/sessions
 - Testing: Go test + Supabase CLI (local test database)
+
+## Guidelines
+
+- Respect DRY and KISS concepts
+- Keep separation of concerns (html, js, css, go)
+- Clean architecture
+- No JSON, use HTMX
+- pages first loaded or on page refresh should use SSR. Then use HTMX for following interactions
+- Use PicoCSS guidelines for CSS and HTML implementation and use semantic HTML
 
 ## Build & Run Commands
 
@@ -128,14 +137,7 @@ The application uses **Server-Sent Events** for real-time updates, not WebSocket
 4. `RealtimeService` sends events to all connected clients in that room
 5. HTMX receives HTML fragments and swaps them into the DOM
 
-**Two SSE modes (transitioning from JSON to HTML):**
-
-**Legacy JSON SSE (being phased out):**
-```go
-h.RoomService.GetRealtimeService().BroadcastPlayerJoined(roomID, playerData)
-// Sends: event: player_joined
-//        data: {"user_id":"...", "username":"..."}
-```
+**Do not use JSON, only HTMX**
 
 **New HTML SSE (for HTMX):**
 ```go
@@ -162,8 +164,6 @@ h.RoomService.GetRealtimeService().BroadcastHTMLFragment(roomID, services.HTMLFr
 - ⏸️ **Phase 4:** Convert handlers to render HTML fragments (PENDING)
 - ⏸️ **Phase 5:** HTMX integration in templates (PENDING)
 - ⏸️ **Phase 6:** E2E testing (PENDING)
-
-**See:** `PHASE1_COMPLETE.md`, `PHASE2_SSE_HTML_FRAGMENTS.md`, `PHASE3_INFRASTRUCTURE_COMPLETE.md`, `SESSION_SUMMARY.md`
 
 **When working on handlers, prefer the new HTML fragment pattern over legacy JSON SSE.**
 

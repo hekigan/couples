@@ -1,0 +1,59 @@
+<div id="questions-list">
+	<div class="filters">
+		<select hx-get="/admin/api/questions/list"
+		        hx-target="#questions-list"
+		        hx-swap="outerHTML"
+		        hx-include="[name='lang_code']"
+		        name="category_id">
+			<option value="">All Categories</option>
+			{{range .Categories}}
+			<option value="{{.ID}}" {{if .Selected}}selected{{end}}>{{.Icon}} {{.Label}}</option>
+			{{end}}
+		</select>
+		<select hx-get="/admin/api/questions/list"
+		        hx-target="#questions-list"
+		        hx-swap="outerHTML"
+		        hx-include="[name='category_id']"
+		        name="lang_code">
+			<option value="">All Languages</option>
+			<option value="en" {{if .LanguageEnSelected}}selected{{end}}>English</option>
+			<option value="fr" {{if .LanguageFrSelected}}selected{{end}}>French</option>
+			<option value="ja" {{if .LanguageJaSelected}}selected{{end}}>Japanese</option>
+		</select>
+	</div>
+	<table>
+		<thead>
+			<tr>
+				<th>Question Text</th>
+				<th>Category</th>
+				<th>Language</th>
+				<th>Actions</th>
+			</tr>
+		</thead>
+		<tbody>
+			{{range .Questions}}
+			<tr>
+				<td>{{.Text}}</td>
+				<td>{{.CategoryLabel}}</td>
+				<td>{{.LanguageCode}}</td>
+				<td>
+					<button hx-get="/admin/api/questions/{{.ID}}/edit-form"
+					        hx-target="#edit-modal-content"
+					        hx-swap="innerHTML"
+					        onclick="document.getElementById('edit-modal').style.display='block'"
+					        class="btn btn-sm">
+						Edit
+					</button>
+					<button hx-delete="/admin/api/questions/{{.ID}}"
+					        hx-target="#questions-list"
+					        hx-swap="outerHTML"
+					        hx-confirm="Are you sure you want to delete this question?"
+					        class="btn btn-sm btn-danger">
+						Delete
+					</button>
+				</td>
+			</tr>
+			{{end}}
+		</tbody>
+	</table>
+</div>

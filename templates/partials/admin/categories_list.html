@@ -1,0 +1,39 @@
+<div id="categories-list">
+	<table>
+		<thead>
+			<tr>
+				<th>Icon</th>
+				<th>Label</th>
+				<th>Key</th>
+				<th>Questions</th>
+				<th>Actions</th>
+			</tr>
+		</thead>
+		<tbody>
+			{{range .Categories}}
+			<tr>
+				<td>{{.Icon}}</td>
+				<td>{{.Label}}</td>
+				<td>{{.Key}}</td>
+				<td>{{.QuestionCount}}</td>
+				<td>
+					<button hx-get="/admin/api/categories/{{.ID}}/edit-form"
+					        hx-target="#edit-modal-content"
+					        hx-swap="innerHTML"
+					        onclick="document.getElementById('edit-modal').style.display='block'"
+					        class="btn btn-sm">
+						Edit
+					</button>
+					<button hx-delete="/admin/api/categories/{{.ID}}"
+					        hx-target="#categories-list"
+					        hx-swap="outerHTML"
+					        hx-confirm="Are you sure you want to delete this category?"
+					        class="btn btn-sm btn-danger">
+						Delete
+					</button>
+				</td>
+			</tr>
+			{{end}}
+		</tbody>
+	</table>
+</div>
