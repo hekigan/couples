@@ -1,4 +1,5 @@
 @use '../base/variables' as *;
+@use 'sass:color';
 
 // Admin pages
 .admin-container {
@@ -59,15 +60,20 @@
 }
 
 .stat-card {
-  background: $bg-secondary;
+  background: var(--pico-card-sectioning-background-color);
   padding: $spacing-xl;
   border-radius: $border-radius-lg;
 
-  h3 {
-    margin: 0 0 $spacing-sm 0;
-    font-size: $font-size-base;
+  h4 {
     color: $text-secondary;
-    font-weight: $font-weight-medium;
+
+    a {
+      text-decoration: none;
+
+      &:hover {
+        color: color.adjust($primary-color, $lightness: 20%);
+      }
+    }
   }
 
   p {

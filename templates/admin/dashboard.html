@@ -5,7 +5,7 @@
     {{if .Data}}
     <div class="stats-grid">
         <div class="stat-card">
-            <h3><a href="/admin/users">Total Users</a></h3>
+            <h4><a href="/admin/users">Total Users</a></h4>
             <p class="stat-value">{{.Data.TotalUsers}}</p>
             <ul class="stat-list text-muted">
                 <li>{{.Data.AnonymousUsers}} anonymous</li>
@@ -13,11 +13,11 @@
             </ul>
         </div>
         <div class="stat-card">
-            <h3>Admin Users</h3>
+            <h4>Admin Users</h4>
             <p class="stat-value">{{.Data.AdminUsers}}</p>
         </div>
         <div class="stat-card">
-            <h3><a href="/admin/rooms">Total Rooms</a></h3>
+            <h4><a href="/admin/rooms">Total Rooms</a></h4>
             <p class="stat-value">{{.Data.TotalRooms}}</p>
             <ul class="stat-list text-muted">
                 <li>{{.Data.ActiveRooms}} active</li>
@@ -25,15 +25,15 @@
             </ul>
         </div>
         <div class="stat-card">
-            <h3><a href="/admin/questions">Questions</a></h3>
+            <h4><a href="/admin/questions">Questions</a></h4>
             <p class="stat-value">{{.Data.TotalQuestions}}</p>
         </div>
         <div class="stat-card">
-            <h3><a href="/admin/categories">Categories</a></h3>
+            <h4><a href="/admin/categories">Categories</a></h4>
             <p class="stat-value">{{.Data.TotalCategories}}</p>
         </div>
         <div class="stat-card">
-            <h3><a href="/admin/translations">Translations</a></h3>
+            <h4><a href="/admin/translations">Translations</a></h4>
             <p>Manage multi-language</p>
         </div>
     </div>

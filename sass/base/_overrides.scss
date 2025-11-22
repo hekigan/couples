@@ -6,7 +6,8 @@
 // Custom pastel color scheme for the Couple Card Game
 // Colors: Pink (#FFB6C1), Powder Blue (#B0E0E6), Mint (#98D8C8)
 
-:root {
+:root,
+:root:not([data-theme=dark]) {
   // ============================================
   // Primary Color - Blood Red
   // ============================================
@@ -68,7 +69,7 @@
   // Card styling with subtle pink tint
   --pico-card-background-color: #FFFFFF;
   --pico-card-border-color: #E0E0E0;
-  --pico-card-sectioning-background-color: #FFF5F7;
+  --pico-card-sectioning-background-color: #f5f5f5;
 
   // ============================================
   // Spacing & Sizing
@@ -126,10 +127,6 @@
   // Buttons
   // ============================================
   --pico-button-hover-box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-:root:not([data-theme]) {
-  --pico-background-color: #{$bg-primary};
 }
 
 // ============================================
