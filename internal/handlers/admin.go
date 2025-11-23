@@ -182,8 +182,6 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		log.Printf("⚠️ Failed to fetch questions: %v", err)
 		questions = nil
-	} else {
-		log.Printf("✅ Fetched %d questions (page %d, perPage %d, offset %d)", len(questions), page, perPage, offset)
 	}
 
 	// Get total count for pagination (English only)
@@ -214,8 +212,6 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 	categories, err := h.QuestionService.GetCategories(ctx)
 	if err != nil {
 		log.Printf("⚠️ Failed to get categories: %v", err)
-	} else {
-		log.Printf("✅ Fetched %d categories", len(categories))
 	}
 
 	// Get question counts by category (for dropdown)
@@ -326,8 +322,6 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 		questionsListHTML, err = h.TemplateService.RenderFragment("questions_list.html", questionsData)
 		if err != nil {
 			log.Printf("⚠️ Failed to render questions list template: %v", err)
-		} else {
-			log.Printf("✅ Rendered questions list HTML (%d bytes)", len(questionsListHTML))
 		}
 	} else {
 		log.Printf("⚠️ Categories is nil, cannot render questions list")
