@@ -154,11 +154,7 @@ func (ah *AdminAPIHandler) ListQuestionsHandler(w http.ResponseWriter, r *http.R
 		}
 	}
 
-	var langCode *string
-	if lang := r.URL.Query().Get("lang_code"); lang != "" {
-		langCode = &lang
-	}
-
+	// Parse pagination
 	page := 1
 	if p := r.URL.Query().Get("page"); p != "" {
 		if parsed, err := strconv.Atoi(p); err == nil && parsed > 0 {
@@ -166,28 +162,96 @@ func (ah *AdminAPIHandler) ListQuestionsHandler(w http.ResponseWriter, r *http.R
 		}
 	}
 
-	limit := 50
-	offset := (page - 1) * limit
+	perPage := 25 // Default
+	if pp := r.URL.Query().Get("per_page"); pp != "" {
+		if parsed, err := strconv.Atoi(pp); err == nil {
+			// Validate against allowed values
+			if parsed == 25 || parsed == 50 || parsed == 100 {
+				perPage = parsed
+			}
+		}
+	}
 
-	questions, err := ah.questionService.ListQuestions(ctx, limit, offset, categoryID, langCode)
+	// Always filter to English only
+	langCode := "en"
+
+	// Calculate offset
+	offset := (page - 1) * perPage
+
+	// Fetch questions
+	questions, err := ah.questionService.ListQuestions(ctx, perPage, offset, categoryID, &langCode)
 	if err != nil {
 		http.Error(w, "Failed to list questions", http.StatusInternalServerError)
 		log.Printf("Error listing questions: %v", err)
 		return
 	}
 
+	// Get total count for pagination (English only)
+	totalCount, _ := ah.questionService.GetQuestionCountsByCategory(ctx, "en")
+	total := 0
+	for _, count := range totalCount {
+		total += count
+	}
+	if categoryID != nil {
+		// Filter count by category
+		if count, ok := totalCount[categoryID.String()]; ok {
+			total = count
+		} else {
+			total = 0
+		}
+	}
+
+	// Calculate pagination
+	totalPages := (total + perPage - 1) / perPage
+	if totalPages == 0 {
+		totalPages = 1
+	}
+
 	// Get categories for dropdown
 	categories, _ := ah.questionService.GetCategories(ctx)
+
+	// Get question counts by category (for dropdown)
+	counts, err := ah.questionService.GetQuestionCountsByCategory(ctx, "en")
+	if err != nil {
+		log.Printf("⚠️ Failed to get question counts: %v", err)
+		counts = make(map[string]int)
+	}
+
+	// Get translation status for current page questions
+	questionIDs := make([]uuid.UUID, len(questions))
+	for i, q := range questions {
+		questionIDs[i] = q.ID
+	}
+	translationStatus, _ := ah.questionService.GetQuestionTranslationStatus(ctx, questionIDs)
+
+	// Calculate total missing translations (across ALL English questions)
+	allEnglishQuestions, _ := ah.questionService.ListQuestions(ctx, 10000, 0, nil, &langCode)
+	allIDs := make([]uuid.UUID, len(allEnglishQuestions))
+	for i, q := range allEnglishQuestions {
+		allIDs[i] = q.ID
+	}
+	allTranslationStatus, _ := ah.questionService.GetQuestionTranslationStatus(ctx, allIDs)
+	missingTranslationsCount := 0
+	for _, count := range allTranslationStatus {
+		if count < 3 {
+			missingTranslationsCount += (3 - count)
+		}
+	}
 
 	// Build category options
 	categoryOptions := make([]services.AdminCategoryOption, len(categories))
 	for i, cat := range categories {
+		count := 0
+		if c, ok := counts[cat.ID.String()]; ok {
+			count = c
+		}
 		selected := categoryID != nil && *categoryID == cat.ID
 		categoryOptions[i] = services.AdminCategoryOption{
-			ID:       cat.ID.String(),
-			Icon:     cat.Icon,
-			Label:    cat.Label,
-			Selected: selected,
+			ID:           cat.ID.String(),
+			Icon:         cat.Icon,
+			Label:        cat.Label,
+			Selected:     selected,
+			QuestionCount: count,
 		}
 	}
 
@@ -205,26 +269,34 @@ func (ah *AdminAPIHandler) ListQuestionsHandler(w http.ResponseWriter, r *http.R
 			categoryLabel = fmt.Sprintf("%s %s", cat.Icon, cat.Label)
 		}
 
+		tCount := 1 // Default to 1 (at least English exists)
+		if count, ok := translationStatus[q.ID.String()]; ok {
+			tCount = count
+		}
+
 		questionInfos[i] = services.AdminQuestionInfo{
-			ID:            q.ID.String(),
-			Text:          q.Text,
-			CategoryLabel: categoryLabel,
-			LanguageCode:  q.LanguageCode,
+			ID:               q.ID.String(),
+			Text:             q.Text,
+			CategoryLabel:    categoryLabel,
+			LanguageCode:     q.LanguageCode,
+			TranslationCount: tCount,
 		}
 	}
 
-	selectedLang := ""
-	if langCode != nil {
-		selectedLang = *langCode
+	selectedCategoryID := ""
+	if categoryID != nil {
+		selectedCategoryID = categoryID.String()
 	}
 
 	data := services.QuestionsListData{
-		Questions:          questionInfos,
-		Categories:         categoryOptions,
-		SelectedLanguage:   selectedLang,
-		LanguageEnSelected: selectedLang == "en",
-		LanguageFrSelected: selectedLang == "fr",
-		LanguageJaSelected: selectedLang == "ja",
+		Questions:                questionInfos,
+		Categories:               categoryOptions,
+		SelectedCategoryID:       selectedCategoryID,
+		TotalCount:               total,
+		CurrentPage:              page,
+		TotalPages:               totalPages,
+		ItemsPerPage:             perPage,
+		MissingTranslationsCount: missingTranslationsCount,
 	}
 
 	html, err := ah.handler.TemplateService.RenderFragment("questions_list.html", data)

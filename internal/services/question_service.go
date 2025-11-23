@@ -245,6 +245,86 @@ func (s *QuestionService) GetQuestionCountsByCategory(ctx context.Context, langu
 	return counts, nil
 }
 
+// GetQuestionTranslationStatus returns the number of translations (0-3) for each question ID
+// This checks how many language versions exist for each question (en, fr, ja)
+// Note: Questions are matched by text content since there's no base_question_id in the schema
+func (s *QuestionService) GetQuestionTranslationStatus(ctx context.Context, questionIDs []uuid.UUID) (map[string]int, error) {
+	if len(questionIDs) == 0 {
+		return make(map[string]int), nil
+	}
+
+	// Convert UUIDs to strings for the query
+	idStrings := make([]string, len(questionIDs))
+	for i, id := range questionIDs {
+		idStrings[i] = id.String()
+	}
+
+	// Step 1: Fetch the English questions to get their texts
+	data, _, err := s.client.From("questions").
+		Select("id, question_text", "", false).
+		In("id", idStrings).
+		Execute()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch questions: %w", err)
+	}
+
+	var englishQuestions []struct {
+		ID   string `json:"id"`
+		Text string `json:"question_text"`
+	}
+	if err := json.Unmarshal(data, &englishQuestions); err != nil {
+		return nil, fmt.Errorf("failed to parse questions: %w", err)
+	}
+
+	// Step 2: Build a map of ID → Text and collect all texts
+	idToText := make(map[string]string)
+	texts := make([]string, 0, len(englishQuestions))
+	for _, q := range englishQuestions {
+		idToText[q.ID] = q.Text
+		texts = append(texts, q.Text)
+	}
+
+	// Step 3: Query all questions with these texts across all languages
+	data, _, err = s.client.From("questions").
+		Select("question_text, lang_code", "", false).
+		In("question_text", texts).
+		Execute()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch translations: %w", err)
+	}
+
+	var allTranslations []struct {
+		Text     string `json:"question_text"`
+		LangCode string `json:"lang_code"`
+	}
+	if err := json.Unmarshal(data, &allTranslations); err != nil {
+		return nil, fmt.Errorf("failed to parse translations: %w", err)
+	}
+
+	// Step 4: Count distinct languages per question text
+	textToLanguages := make(map[string]map[string]bool)
+	for _, t := range allTranslations {
+		if textToLanguages[t.Text] == nil {
+			textToLanguages[t.Text] = make(map[string]bool)
+		}
+		textToLanguages[t.Text][t.LangCode] = true
+	}
+
+	// Step 5: Map back to question IDs
+	counts := make(map[string]int)
+	for id, text := range idToText {
+		if langs, ok := textToLanguages[text]; ok {
+			counts[id] = len(langs)
+		} else {
+			counts[id] = 1 // At least the English version exists
+		}
+	}
+
+	return counts, nil
+}
+
 // CountQuestionsForCategories counts total questions available for selected categories and language
 func (s *QuestionService) CountQuestionsForCategories(ctx context.Context, language string, categoryIDs []uuid.UUID) (int, error) {
 	query := s.client.From("questions").

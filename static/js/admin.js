@@ -123,3 +123,49 @@ document.addEventListener('click', function(event) {
 		}
 	}
 });
+
+/**
+ * Save items-per-page preference to localStorage
+ * Used across all admin tables for consistent pagination
+ * @param {string|number} value - The number of items per page (25, 50, or 100)
+ */
+function savePerPagePref(value) {
+	try {
+		localStorage.setItem('admin_table_per_page', value.toString());
+		console.log('Saved per-page preference:', value);
+	} catch (e) {
+		console.error('Failed to save per-page preference:', e);
+	}
+}
+
+/**
+ * Get items-per-page preference from localStorage
+ * @returns {number} The saved preference or default (25)
+ */
+function getPerPagePref() {
+	try {
+		const saved = localStorage.getItem('admin_table_per_page');
+		if (saved) {
+			const value = parseInt(saved, 10);
+			// Validate against allowed values
+			if (value === 25 || value === 50 || value === 100) {
+				return value;
+			}
+		}
+	} catch (e) {
+		console.error('Failed to get per-page preference:', e);
+	}
+	return 25; // Default
+}
+
+/**
+ * Initialize per-page selects with saved preference
+ * Called on page load for admin pages
+ */
+document.addEventListener('DOMContentLoaded', function() {
+	const perPageSelect = document.getElementById('per-page-select');
+	if (perPageSelect) {
+		const savedValue = getPerPagePref();
+		perPageSelect.value = savedValue.toString();
+	}
+});

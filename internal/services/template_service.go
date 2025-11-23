@@ -9,6 +9,22 @@ import (
 	"sync"
 )
 
+// TemplateFuncMap contains custom template functions for partials
+var TemplateFuncMap = template.FuncMap{
+	"add": func(a, b int) int { return a + b },
+	"sub": func(a, b int) int { return a - b },
+	"mul": func(a, b int) int { return a * b },
+	"gte": func(a, b int) bool { return a >= b },
+	"lte": func(a, b int) bool { return a <= b },
+	"until": func(count int) []int {
+		result := make([]int, count)
+		for i := range result {
+			result[i] = i
+		}
+		return result
+	},
+}
+
 // TemplateService handles rendering of HTML fragments for SSE
 type TemplateService struct {
 	templates    *template.Template
@@ -27,7 +43,7 @@ func NewTemplateService(templatesDir string) (*TemplateService, error) {
 	// Production mode: Parse and cache all templates at startup
 	if isProduction {
 		partialsPattern := filepath.Join(templatesDir, "partials/**/*.html")
-		templates, err = template.ParseGlob(partialsPattern)
+		templates, err = template.New("").Funcs(TemplateFuncMap).ParseGlob(partialsPattern)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse templates: %w", err)
 		}
@@ -49,7 +65,7 @@ func (s *TemplateService) RenderFragment(templateName string, data interface{}) 
 	if !s.isProduction {
 		partialsPattern := filepath.Join(s.templatesDir, "partials/**/*.html")
 		var err error
-		templates, err = template.ParseGlob(partialsPattern)
+		templates, err = template.New("").Funcs(TemplateFuncMap).ParseGlob(partialsPattern)
 		if err != nil {
 			return "", fmt.Errorf("failed to parse templates: %w", err)
 		}
@@ -274,29 +290,32 @@ type UsersListData struct {
 
 // AdminQuestionInfo represents a question in the admin list
 type AdminQuestionInfo struct {
-	ID            string
-	Text          string
-	CategoryLabel string // Combined icon + label
-	LanguageCode  string
+	ID               string
+	Text             string
+	CategoryLabel    string // Combined icon + label
+	LanguageCode     string
+	TranslationCount int // Number of translations (0-3) for this question
 }
 
 // AdminCategoryOption represents a category option for dropdowns
 type AdminCategoryOption struct {
-	ID       string
-	Icon     string
-	Label    string
-	Selected bool
+	ID           string
+	Icon         string
+	Label        string
+	Selected     bool
+	QuestionCount int // Number of questions in this category
 }
 
 // QuestionsListData represents data for admin questions list partial
 type QuestionsListData struct {
-	Questions            []AdminQuestionInfo
-	Categories           []AdminCategoryOption
-	SelectedCategoryID   string
-	SelectedLanguage     string
-	LanguageEnSelected   bool
-	LanguageFrSelected   bool
-	LanguageJaSelected   bool
+	Questions                []AdminQuestionInfo
+	Categories               []AdminCategoryOption
+	SelectedCategoryID       string
+	TotalCount               int // Total number of questions (for pagination)
+	CurrentPage              int // Current page number
+	TotalPages               int // Total number of pages
+	ItemsPerPage             int // Number of items per page
+	MissingTranslationsCount int // Total number of incomplete translations
 }
 
 // QuestionEditFormData represents data for question edit form partial

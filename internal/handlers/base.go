@@ -30,6 +30,16 @@ type Handler struct {
 var TemplateFuncMap = template.FuncMap{
 	"add": func(a, b int) int { return a + b },
 	"sub": func(a, b int) int { return a - b },
+	"mul": func(a, b int) int { return a * b },
+	"gte": func(a, b int) bool { return a >= b },
+	"lte": func(a, b int) bool { return a <= b },
+	"until": func(count int) []int {
+		result := make([]int, count)
+		for i := range result {
+			result[i] = i
+		}
+		return result
+	},
 }
 
 // Template cache for development mode (lazy loading)

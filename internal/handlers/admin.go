@@ -5,8 +5,10 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/google/uuid"
+	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/services"
 )
 
@@ -109,28 +111,127 @@ func (h *Handler) AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 
-	// Fetch questions list for SSR
-	limit := 50
-	offset := 0
-	questions, err := h.QuestionService.ListQuestions(ctx, limit, offset, nil, nil)
+	// Parse query parameters
+	page := 1
+	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	perPage := 25 // Default
+	if perPageStr := r.URL.Query().Get("per_page"); perPageStr != "" {
+		if pp, err := strconv.Atoi(perPageStr); err == nil {
+			// Validate against allowed values
+			if pp == 25 || pp == 50 || pp == 100 {
+				perPage = pp
+			}
+		}
+	}
+
+	var categoryID *uuid.UUID
+	if catIDStr := r.URL.Query().Get("category_id"); catIDStr != "" {
+		if catID, err := uuid.Parse(catIDStr); err == nil {
+			categoryID = &catID
+		}
+	}
+
+	// Always filter to English only
+	langCode := "en"
+
+	// Calculate offset
+	offset := (page - 1) * perPage
+
+	// Fetch questions for current page
+	questions, err := h.QuestionService.ListQuestions(ctx, perPage, offset, categoryID, &langCode)
 	if err != nil {
 		log.Printf("⚠️ Failed to fetch questions: %v", err)
 		questions = nil
+	} else {
+		log.Printf("✅ Fetched %d questions (page %d, perPage %d, offset %d)", len(questions), page, perPage, offset)
 	}
 
-	categories, _ := h.QuestionService.GetCategories(ctx)
+	// Get total count for pagination (English only)
+	totalCount, err := h.QuestionService.GetQuestionCountsByCategory(ctx, "en")
+	if err != nil {
+		log.Printf("⚠️ Failed to get question counts: %v", err)
+	}
+	total := 0
+	for _, count := range totalCount {
+		total += count
+	}
+	if categoryID != nil {
+		// Filter count by category
+		if count, ok := totalCount[categoryID.String()]; ok {
+			total = count
+		} else {
+			total = 0
+		}
+	}
+
+	// Calculate pagination
+	totalPages := (total + perPage - 1) / perPage
+	if totalPages == 0 {
+		totalPages = 1
+	}
+
+	// Get categories
+	categories, err := h.QuestionService.GetCategories(ctx)
+	if err != nil {
+		log.Printf("⚠️ Failed to get categories: %v", err)
+	} else {
+		log.Printf("✅ Fetched %d categories", len(categories))
+	}
+
+	// Get question counts by category (for dropdown)
+	counts, err := h.QuestionService.GetQuestionCountsByCategory(ctx, "en")
+	if err != nil {
+		log.Printf("⚠️ Failed to get question counts: %v", err)
+		counts = make(map[string]int)
+	}
 
 	// Build questions list HTML
 	var questionsListHTML string
-	if questions != nil && categories != nil {
+	if categories != nil {
+		// Handle nil questions as empty slice
+		if questions == nil {
+			questions = []models.Question{}
+		}
+		// Get translation status for current page questions
+		questionIDs := make([]uuid.UUID, len(questions))
+		for i, q := range questions {
+			questionIDs[i] = q.ID
+		}
+		translationStatus, _ := h.QuestionService.GetQuestionTranslationStatus(ctx, questionIDs)
+
+		// Calculate total missing translations (across ALL English questions, not just current page)
+		allEnglishQuestions, _ := h.QuestionService.ListQuestions(ctx, 10000, 0, nil, &langCode) // Get all
+		allIDs := make([]uuid.UUID, len(allEnglishQuestions))
+		for i, q := range allEnglishQuestions {
+			allIDs[i] = q.ID
+		}
+		allTranslationStatus, _ := h.QuestionService.GetQuestionTranslationStatus(ctx, allIDs)
+		missingTranslationsCount := 0
+		for _, count := range allTranslationStatus {
+			if count < 3 {
+				missingTranslationsCount += (3 - count)
+			}
+		}
+
 		// Build category options
-		categoryOptions := make([]interface{}, len(categories))
+		categoryOptions := make([]services.AdminCategoryOption, len(categories))
 		for i, cat := range categories {
-			categoryOptions[i] = map[string]interface{}{
-				"ID":       cat.ID.String(),
-				"Icon":     cat.Icon,
-				"Label":    cat.Label,
-				"Selected": false,
+			count := 0
+			if c, ok := counts[cat.ID.String()]; ok {
+				count = c
+			}
+			selected := categoryID != nil && *categoryID == cat.ID
+			categoryOptions[i] = services.AdminCategoryOption{
+				ID:           cat.ID.String(),
+				Icon:         cat.Icon,
+				Label:        cat.Label,
+				Selected:     selected,
+				QuestionCount: count,
 			}
 		}
 
@@ -141,31 +242,51 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 		}
 
 		// Build question infos
-		questionInfos := make([]interface{}, len(questions))
+		questionInfos := make([]services.AdminQuestionInfo, len(questions))
 		for i, q := range questions {
 			categoryLabel := "Unknown"
 			if label, ok := categoryMap[q.CategoryID]; ok {
 				categoryLabel = label
 			}
 
-			questionInfos[i] = map[string]interface{}{
-				"ID":            q.ID.String(),
-				"Text":          q.Text,
-				"CategoryLabel": categoryLabel,
-				"LanguageCode":  q.LanguageCode,
+			tCount := 1 // Default to 1 (at least English exists)
+			if count, ok := translationStatus[q.ID.String()]; ok {
+				tCount = count
+			}
+
+			questionInfos[i] = services.AdminQuestionInfo{
+				ID:               q.ID.String(),
+				Text:             q.Text,
+				CategoryLabel:    categoryLabel,
+				LanguageCode:     q.LanguageCode,
+				TranslationCount: tCount,
 			}
 		}
 
-		questionsData := map[string]interface{}{
-			"Questions":          questionInfos,
-			"Categories":         categoryOptions,
-			"SelectedLanguage":   "",
-			"LanguageEnSelected": false,
-			"LanguageFrSelected": false,
-			"LanguageJaSelected": false,
+		selectedCategoryID := ""
+		if categoryID != nil {
+			selectedCategoryID = categoryID.String()
 		}
 
-		questionsListHTML, _ = h.TemplateService.RenderFragment("questions_list.html", questionsData)
+		questionsData := services.QuestionsListData{
+			Questions:                questionInfos,
+			Categories:               categoryOptions,
+			SelectedCategoryID:       selectedCategoryID,
+			TotalCount:               total,
+			CurrentPage:              page,
+			TotalPages:               totalPages,
+			ItemsPerPage:             perPage,
+			MissingTranslationsCount: missingTranslationsCount,
+		}
+
+		questionsListHTML, err = h.TemplateService.RenderFragment("questions_list.html", questionsData)
+		if err != nil {
+			log.Printf("⚠️ Failed to render questions list template: %v", err)
+		} else {
+			log.Printf("✅ Rendered questions list HTML (%d bytes)", len(questionsListHTML))
+		}
+	} else {
+		log.Printf("⚠️ Categories is nil, cannot render questions list")
 	}
 
 	data := &TemplateData{

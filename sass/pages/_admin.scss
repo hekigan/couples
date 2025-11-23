@@ -8,6 +8,8 @@ $admin-color-admin: red;
 // Admin pages
 
 [data-is-admin] {
+  background-image: none;
+  
   main {
     width: 100vw;
     max-width: none;
@@ -336,4 +338,124 @@ dialog {
       font-size: $font-size-sm;
     }
   }
+}
+
+// ==============================================
+// Pagination Controls
+// ==============================================
+
+.pagination {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+  padding: $spacing-md;
+  background: $bg-secondary;
+  border-radius: $border-radius-md;
+
+  .pagination-info {
+    font-size: $font-size-sm;
+    color: $text-secondary;
+  }
+
+  .pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    flex-wrap: wrap;
+
+    label {
+      margin: 0;
+      font-size: $font-size-sm;
+      color: $text-secondary;
+    }
+
+    select {
+      margin: 0;
+      padding: $spacing-xs $spacing-sm;
+      border: $border-width solid $border-color;
+      border-radius: $border-radius-sm;
+      background: white;
+      font-size: $font-size-sm;
+    }
+  }
+
+  .pagination-buttons {
+    display: flex;
+    gap: $spacing-xs;
+    flex-wrap: wrap;
+
+    button {
+      margin: 0;
+      padding: $spacing-xs $spacing-sm;
+      min-width: 36px;
+      font-size: $font-size-sm;
+      background: white;
+      border: $border-width solid $border-color;
+      border-radius: $border-radius-sm;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: $bg-accent;
+        border-color: $primary-color;
+      }
+
+      &.active {
+        background: $primary-color;
+        color: white;
+        border-color: $primary-color;
+        font-weight: $font-weight-medium;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+
+    .pagination-ellipsis {
+      display: inline-flex;
+      align-items: center;
+      padding: 0 $spacing-xs;
+      color: $text-muted;
+    }
+  }
+}
+
+// ==============================================
+// Translation Status Badges
+// ==============================================
+
+.translation-badge {
+  display: inline-block;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $border-radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  font-family: monospace;
+
+  &.complete {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+  }
+
+  &.incomplete {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+  }
+}
+
+.missing-translations-badge {
+  display: inline-block;
+  padding: $spacing-xs $spacing-sm;
+  margin-left: $spacing-md;
+  border-radius: $border-radius-sm;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  border: 1px solid #fca5a5;
 }
