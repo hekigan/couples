@@ -4,37 +4,64 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"os"
 	"path/filepath"
 	"sync"
 )
 
 // TemplateService handles rendering of HTML fragments for SSE
 type TemplateService struct {
-	templates *template.Template
-	mu        sync.RWMutex
+	templates    *template.Template
+	templatesDir string
+	isProduction bool
+	mu           sync.RWMutex
 }
 
 // NewTemplateService creates a new template service
 func NewTemplateService(templatesDir string) (*TemplateService, error) {
-	// Parse all partial templates
-	partialsPattern := filepath.Join(templatesDir, "partials/**/*.html")
-	templates, err := template.ParseGlob(partialsPattern)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse templates: %w", err)
+	isProduction := os.Getenv("ENV") == "production"
+
+	var templates *template.Template
+	var err error
+
+	// Production mode: Parse and cache all templates at startup
+	if isProduction {
+		partialsPattern := filepath.Join(templatesDir, "partials/**/*.html")
+		templates, err = template.ParseGlob(partialsPattern)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse templates: %w", err)
+		}
 	}
+	// Development mode: Skip caching, parse on-demand for hot-reload
 
 	return &TemplateService{
-		templates: templates,
+		templates:    templates,
+		templatesDir: templatesDir,
+		isProduction: isProduction,
 	}, nil
 }
 
 // RenderFragment renders a template fragment with the given data
 func (s *TemplateService) RenderFragment(templateName string, data interface{}) (string, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	var templates *template.Template
+
+	// Development mode: Parse templates on-demand for hot-reload
+	if !s.isProduction {
+		partialsPattern := filepath.Join(s.templatesDir, "partials/**/*.html")
+		var err error
+		templates, err = template.ParseGlob(partialsPattern)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse templates: %w", err)
+		}
+	} else {
+		// Production mode: Use cached templates
+		s.mu.RLock()
+		defer s.mu.RUnlock()
+		templates = s.templates
+	}
 
 	var buf bytes.Buffer
-	if err := s.templates.ExecuteTemplate(&buf, templateName, data); err != nil {
+	if err := templates.ExecuteTemplate(&buf, templateName, data); err != nil {
 		return "", fmt.Errorf("failed to render template %s: %w", templateName, err)
 	}
 

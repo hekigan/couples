@@ -11,7 +11,7 @@ help:
 	@echo "Build & Run:"
 	@echo "  make build         - Build the Go binary"
 	@echo "  make run           - Run the server"
-	@echo "  make dev           - Run in development mode (with sass watch)"
+	@echo "  make dev           - Run in development mode with Air hot-reload"
 	@echo ""
 	@echo "Testing:"
 	@echo "  make test          - Run short tests (unit tests only)"
@@ -110,11 +110,12 @@ sass-watch:
 	@echo "Watching SASS files..."
 	@npx sass --watch sass/main.scss static/css/main.css
 
-# Development mode
-dev:
-	@echo "Starting development mode..."
+# Development mode with Air hot-reload
+dev: deps
+	@echo "Starting development mode with Air hot-reload..."
+	@echo "Note: Run 'make sass-watch' in a separate terminal for SASS auto-compilation"
 	@make sass
-	@go run ./cmd/server/main.go
+	@$(shell go env GOPATH)/bin/air
 
 # Build Docker image
 docker-build:
@@ -142,6 +143,8 @@ deps:
 	@go mod download
 	@echo "Installing Node dependencies..."
 	@npm install -g sass
+	@echo "Installing Air hot-reload tool..."
+	@go install github.com/air-verse/air@latest
 	@echo "Dependencies installed"
 
 # Format code
