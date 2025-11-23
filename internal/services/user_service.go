@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/supabase-community/supabase-go"
-	"github.com/yourusername/couple-card-game/internal/models"
+	"github.com/hekigan/couples/internal/models"
 )
 
 // UserService handles user-related operations

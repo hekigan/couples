@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	supabase "github.com/supabase-community/supabase-go"
 
-	"github.com/yourusername/couple-card-game/internal/models"
+	"github.com/hekigan/couples/internal/models"
 )
 
 type NotificationService struct {

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/hekigan/couples/internal/services"
 )
 
 // AdminDashboardHandler displays admin dashboard
@@ -56,7 +57,7 @@ func (h *Handler) AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 	// Build users list HTML
 	var usersListHTML string
 	if users != nil {
-		userInfos := make([]interface{}, len(users))
+		userInfos := make([]services.AdminUserInfo, len(users))
 		for i, user := range users {
 			email := ""
 			if user.Email != nil {
@@ -68,20 +69,28 @@ func (h *Handler) AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 				userType = "Anonymous"
 			}
 
-			userInfos[i] = map[string]interface{}{
-				"ID":        user.ID.String(),
-				"Username":  user.Username,
-				"Email":     email,
-				"UserType":  userType,
-				"IsAdmin":   user.IsAdmin,
-				"CreatedAt": user.CreatedAt.Format("2006-01-02"),
+			userInfos[i] = services.AdminUserInfo{
+				ID:        user.ID.String(),
+				Username:  user.Username,
+				Email:     email,
+				UserType:  userType,
+				IsAdmin:   user.IsAdmin,
+				CreatedAt: user.CreatedAt.Format("2006-01-02"),
 			}
 		}
 
-		usersData := map[string]interface{}{
-			"Users":      userInfos,
-			"TotalCount": totalCount,
-			"Page":       1,
+		// Get current user ID from session
+		currentUser := GetSessionUser(r)
+		currentUserID := ""
+		if currentUser != nil {
+			currentUserID = currentUser.ID
+		}
+
+		usersData := services.UsersListData{
+			Users:         userInfos,
+			TotalCount:    totalCount,
+			Page:          1,
+			CurrentUserID: currentUserID,
 		}
 
 		usersListHTML, _ = h.TemplateService.RenderFragment("users_list.html", usersData)

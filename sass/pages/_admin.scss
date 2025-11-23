@@ -249,3 +249,37 @@ dialog {
     max-width: 600px;
   }
 }
+
+// User list
+#users-list {
+  tr {
+    &:hover td {
+      background-color: $bg-secondary;
+    }
+
+
+    &[data-user-type] td:first-child {
+      border-left-color: transparent;
+      border-left-width: 5px;
+      border-left-style: solid;
+    }
+
+    &[data-user-type="admin"] td:first-child {
+      border-left-color: red;
+    }
+
+    &[data-user-type="registered"] td:first-child {
+      border-left-color: green;
+    }
+
+    [data-username] {
+      display: block;
+      margin-bottom: -$spacing-sm;
+    }
+
+    [data-email] {
+      color: $text-muted;
+      font-size: $font-size-sm;
+    }
+  }
+}

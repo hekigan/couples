@@ -22,6 +22,7 @@
 // ==================================================
 @use 'components/custom';         // Custom styles extracted from inline styles
 @use 'components/navigation';     // Keep custom navigation
+@use 'components/buttons';         
 @use 'components/alerts';         // Keep - Pico doesn't have alerts
 @use 'components/badges';         // Keep - Pico doesn't have badges
 

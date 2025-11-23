@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/supabase-community/postgrest-go"
 	"github.com/supabase-community/supabase-go"
-	"github.com/yourusername/couple-card-game/internal/models"
+	"github.com/hekigan/couples/internal/models"
 )
 
 // QuestionService handles question-related operations

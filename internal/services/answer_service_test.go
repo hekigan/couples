@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/yourusername/couple-card-game/internal/models"
+	"github.com/hekigan/couples/internal/models"
 )
 
 // TestCreateAnswer_Validation tests answer creation with validation

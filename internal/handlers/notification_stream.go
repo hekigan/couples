@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/yourusername/couple-card-game/internal/middleware"
+	"github.com/hekigan/couples/internal/middleware"
 )
 
 // NotificationStreamHandler handles SSE connections for real-time notifications

@@ -3,7 +3,7 @@ package admin
 import (
 	"net/http"
 
-	"github.com/yourusername/couple-card-game/internal/handlers"
+	"github.com/hekigan/couples/internal/handlers"
 )
 
 // TranslationHandler handles translation admin operations

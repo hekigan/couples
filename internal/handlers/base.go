@@ -7,8 +7,8 @@ import (
 	"os"
 	"sync"
 
-	"github.com/yourusername/couple-card-game/internal/middleware"
-	"github.com/yourusername/couple-card-game/internal/services"
+	"github.com/hekigan/couples/internal/middleware"
+	"github.com/hekigan/couples/internal/services"
 )
 
 // Handler holds all service dependencies
@@ -160,41 +160,23 @@ func (h *Handler) RenderTemplate(w http.ResponseWriter, tmpl string, data *Templ
 		t = h.Templates
 	} else {
 		// Development mode: Lazy caching with hot-reload capability
-		cacheKey := tmpl
 
-		// Check if template is cached
-		templateCacheMutex.RLock()
-		cachedTemplate, exists := templateCache[cacheKey]
-		templateCacheMutex.RUnlock()
-
-		if exists {
-			// Use cached template
-			t = cachedTemplate
-		} else {
-			// Parse and cache on first use
-			t, err = template.New("").Funcs(TemplateFuncMap).ParseFiles(
-				"templates/layout.html",
-				"templates/"+tmpl,
-			)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			// Parse component templates
-			t.ParseGlob("templates/components/*.html")
-
-			// Parse partial templates
-			t.ParseGlob("templates/partials/*/*.html")
-			t.ParseGlob("templates/partials/*/*/*.html")
-
-			// Cache the parsed template
-			templateCacheMutex.Lock()
-			templateCache[cacheKey] = t
-			templateCacheMutex.Unlock()
-
-			log.Printf("🔄 Cached template: %s", tmpl)
+		// Parse and cache on first use
+		t, err = template.New("").Funcs(TemplateFuncMap).ParseFiles(
+			"templates/layout.html",
+			"templates/"+tmpl,
+		)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
+
+		// Parse component templates
+		t.ParseGlob("templates/components/*.html")
+
+		// Parse partial templates
+		t.ParseGlob("templates/partials/*/*.html")
+		t.ParseGlob("templates/partials/*/*/*.html")
 	}
 
 	// Execute layout.html which will include the content template
@@ -203,4 +185,3 @@ func (h *Handler) RenderTemplate(w http.ResponseWriter, tmpl string, data *Templ
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
-

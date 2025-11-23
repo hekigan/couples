@@ -27,7 +27,8 @@
       "Bash(xargs kill:*)",
       "Bash(cat:*)",
       "Bash(go doc:*)",
-      "Bash(./server)"
+      "Bash(./server)",
+      "Bash(make dev:*)"
     ],
     "deny": [],
     "ask": []

@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/yourusername/couple-card-game/internal/services"
+	"github.com/hekigan/couples/internal/services"
 )
 
 // CSVHandler handles CSV import/export

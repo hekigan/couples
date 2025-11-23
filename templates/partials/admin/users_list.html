@@ -8,49 +8,49 @@
 				<option value="">Bulk Actions...</option>
 				<option value="delete">Delete Selected</option>
 			</select>
-			<button type="button" onclick="submitBulkAction('users')" class="btn btn-sm">Apply</button>
+			<button type="button" onclick="submitBulkAction('users')">Apply</button>
 		</div>
 
-	<table>
-		<thead>
-			<tr>
-				<th class="checkbox-col"></th>
-				<th>Username</th>
-				<th>Email</th>
-				<th>Type</th>
-				<th>Admin</th>
-				<th>Created</th>
-				<th>Actions</th>
-			</tr>
-		</thead>
-		<tbody>
-			{{range .Users}}
-			<tr>
-				<td><input type="checkbox" class="user-checkbox" name="user_ids[]" value="{{.ID}}" /></td>
-				<td>{{.Username}}</td>
-				<td>{{.Email}}</td>
-				<td>{{.UserType}}</td>
-				<td>{{if .IsAdmin}}<span class="admin-check">✓</span>{{end}}</td>
-				<td>{{.CreatedAt}}</td>
-				<td>
-					<button hx-post="/admin/api/users/{{.ID}}/toggle-admin"
-					        hx-target="#users-list"
-					        hx-swap="outerHTML"
-					        class="btn btn-sm">
-						Toggle Admin
-					</button>
-					<button hx-delete="/admin/api/users/{{.ID}}"
-					        hx-target="#users-list"
-					        hx-swap="outerHTML"
-					        hx-confirm="Are you sure you want to delete this user?"
-					        class="btn btn-sm btn-danger">
-						Delete
-					</button>
-				</td>
-			</tr>
-			{{end}}
-		</tbody>
-	</table>
+		<h5>Total: {{.TotalCount}} users (Page {{.Page}})</h5>
+
+		<table>
+			<thead>
+				<tr>
+					<th class="checkbox-col"></th>
+					<th>Username</th>
+					<th>Created</th>
+					<th>Actions</th>
+				</tr>
+			</thead>
+			<tbody>
+				{{range .Users}}
+				<tr data-user-type="{{if .IsAdmin}}admin{{else}}{{.UserType}}{{end}}">
+					<td><input type="checkbox" class="user-checkbox" name="user_ids[]" value="{{.ID}}" /></td>
+					<td title="{{if .IsAdmin}}admin{{else}}{{.UserType}}{{end}}">
+						<span data-username>{{.Username}}</span>
+						<span data-email>{{.Email}}</span>
+					</td>
+					<td>{{.CreatedAt}}</td>
+					<td>
+						{{if ne .ID $.CurrentUserID}}
+						<button hx-post="/admin/api/users/{{.ID}}/toggle-admin"
+								hx-target="#users-list"
+								hx-swap="outerHTML">
+							Toggle Admin
+						</button>
+						<button hx-delete="/admin/api/users/{{.ID}}"
+								hx-target="#users-list"
+								hx-swap="outerHTML"
+								hx-confirm="Are you sure you want to delete this user?"
+								class="danger">
+							Delete
+						</button>
+						{{end}}
+					</td>
+				</tr>
+				{{end}}
+			</tbody>
+		</table>
 
 		<!-- Bulk Actions Bar (Bottom) -->
 		<div class="bulk-actions-bar bulk-actions-bottom">
@@ -61,7 +61,6 @@
 				<option value="delete">Delete Selected</option>
 			</select>
 			<button type="button" onclick="submitBulkAction('users')" class="btn btn-sm">Apply</button>
-			<span class="item-count">Total: {{.TotalCount}} users (Page {{.Page}})</span>
 		</div>
 	</form>
 </div>

@@ -239,9 +239,10 @@ type AdminUserInfo struct {
 
 // UsersListData represents data for admin users list partial
 type UsersListData struct {
-	Users      []AdminUserInfo
-	TotalCount int
-	Page       int
+	Users         []AdminUserInfo
+	TotalCount    int
+	Page          int
+	CurrentUserID string
 }
 
 // AdminQuestionInfo represents a question in the admin list

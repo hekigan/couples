@@ -8,8 +8,8 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/yourusername/couple-card-game/internal/middleware"
-	"github.com/yourusername/couple-card-game/internal/services"
+	"github.com/hekigan/couples/internal/middleware"
+	"github.com/hekigan/couples/internal/services"
 )
 
 // LoginHandler displays the login page

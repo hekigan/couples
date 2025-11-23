@@ -9,9 +9,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/yourusername/couple-card-game/internal/handlers"
-	"github.com/yourusername/couple-card-game/internal/models"
-	"github.com/yourusername/couple-card-game/internal/services"
+	"github.com/hekigan/couples/internal/handlers"
+	"github.com/hekigan/couples/internal/models"
+	"github.com/hekigan/couples/internal/services"
 )
 
 // AdminAPIHandler handles admin API requests
@@ -77,10 +77,18 @@ func (ah *AdminAPIHandler) ListUsersHandler(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
+	// Get current user ID from session
+	currentUser := handlers.GetSessionUser(r)
+	currentUserID := ""
+	if currentUser != nil {
+		currentUserID = currentUser.ID
+	}
+
 	data := services.UsersListData{
-		Users:      userInfos,
-		TotalCount: totalCount,
-		Page:       page,
+		Users:         userInfos,
+		TotalCount:    totalCount,
+		Page:          page,
+		CurrentUserID: currentUserID,
 	}
 
 	html, err := ah.handler.TemplateService.RenderFragment("users_list.html", data)

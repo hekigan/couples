@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/google/uuid"
-	"github.com/yourusername/couple-card-game/internal/services"
+	"github.com/hekigan/couples/internal/services"
 )
 
 // AdminPasswordGate checks for admin password authentication

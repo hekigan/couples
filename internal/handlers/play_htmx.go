@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/yourusername/couple-card-game/internal/middleware"
-	"github.com/yourusername/couple-card-game/internal/models"
-	"github.com/yourusername/couple-card-game/internal/services"
+	"github.com/hekigan/couples/internal/middleware"
+	"github.com/hekigan/couples/internal/models"
+	"github.com/hekigan/couples/internal/services"
 )
 
 // GetTurnIndicatorHandler returns HTML fragment for turn indicator

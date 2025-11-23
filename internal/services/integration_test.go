@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	_ "github.com/google/uuid"                                    // Used in test logic
-	_ "github.com/yourusername/couple-card-game/internal/models" // Used in test logic
+	_ "github.com/hekigan/couples/internal/models" // Used in test logic
 )
 
 // TestCompleteGameFlow_HappyPath tests the entire game flow from start to finish
