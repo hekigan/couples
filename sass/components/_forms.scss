@@ -17,4 +17,8 @@ select {
     --pico-border-color: var(--pico-success-hover);
     --pico-form-element-focus-color: var(--pico-success-hover);
   }
+
+  [role=group], [role=fieldset] {
+    align-items: center;
+  }
 }

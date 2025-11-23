@@ -221,8 +221,8 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 		counts = make(map[string]int)
 	}
 
-	// Build questions list HTML
-	var questionsListHTML string
+	// Build questions list data
+	var questionsData *services.QuestionsListData
 	if categories != nil {
 		// Handle nil questions as empty slice
 		if questions == nil {
@@ -301,7 +301,7 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 			extraParams = "&category_id=" + selectedCategoryID
 		}
 
-		questionsData := services.QuestionsListData{
+		questionsData = &services.QuestionsListData{
 			Questions:                questionInfos,
 			Categories:               categoryOptions,
 			SelectedCategoryID:       selectedCategoryID,
@@ -318,11 +318,6 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 			ExtraParams:     extraParams,
 			ItemName:        "questions",
 		}
-
-		questionsListHTML, err = h.TemplateService.RenderFragment("questions_list.html", questionsData)
-		if err != nil {
-			log.Printf("⚠️ Failed to render questions list template: %v", err)
-		}
 	} else {
 		log.Printf("⚠️ Categories is nil, cannot render questions list")
 	}
@@ -331,7 +326,7 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 		Title:   "Question Management",
 		User:    GetSessionUser(r), // Get user from session (no DB call)
 		IsAdmin: true,
-		Data:    template.HTML(questionsListHTML),
+		Data:    questionsData,
 	}
 	h.RenderTemplate(w, "admin/questions.html", data)
 }

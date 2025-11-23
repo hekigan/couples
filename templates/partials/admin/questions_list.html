@@ -1,3 +1,4 @@
+{{define "questions_list"}}
 <div id="questions-list">
 	<div class="filters">
 		<select hx-get="/admin/api/questions/list"
@@ -17,7 +18,7 @@
 		{{end}}
 	</div>
 
-	<table>
+	<table class="striped">
 		<thead>
 			<tr>
 				<th>Question Text</th>
@@ -42,7 +43,8 @@
 					<button hx-get="/admin/api/questions/{{.ID}}/edit-form"
 					        hx-target="#edit-modal-content"
 					        hx-swap="innerHTML"
-					        onclick="document.getElementById('edit-modal').style.display='block'"
+					        data-target="edit-modal"
+					        onclick="toggleModal(event)"
 					        class="btn btn-sm">
 						Edit
 					</button>
@@ -63,3 +65,4 @@
 	{{/* Use reusable pagination template */}}
 	{{template "pagination" .}}
 </div>
+{{end}}

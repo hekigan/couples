@@ -63,68 +63,6 @@ function toggleAllCheckboxes(checkbox, targetClass) {
 }
 
 /**
- * Show a modal dialog using native HTMLDialogElement API
- * @param {string} modalId - The ID of the dialog to show
- */
-function showModal(modalId) {
-	const dialog = document.getElementById(modalId);
-	if (dialog && dialog.tagName === 'DIALOG') {
-		// Add animation class
-		document.documentElement.classList.add('modal-is-opening');
-
-		// Show modal
-		dialog.showModal();
-
-		// Remove animation class after animation completes
-		setTimeout(() => {
-			document.documentElement.classList.remove('modal-is-opening');
-		}, 400);
-	}
-}
-
-/**
- * Hide a modal dialog using native HTMLDialogElement API
- * @param {string} modalId - The ID of the dialog to hide
- */
-function hideModal(modalId) {
-	const dialog = document.getElementById(modalId);
-	if (dialog && dialog.tagName === 'DIALOG') {
-		// Add closing animation
-		document.documentElement.classList.add('modal-is-closing');
-
-		// Close after animation
-		setTimeout(() => {
-			dialog.close();
-			document.documentElement.classList.remove('modal-is-closing');
-		}, 400);
-	}
-}
-
-/**
- * Close dialog when clicking on backdrop (outside dialog content)
- */
-document.addEventListener('click', function(event) {
-	if (event.target.tagName === 'DIALOG') {
-		const rect = event.target.getBoundingClientRect();
-		const isInDialog = (
-			rect.top <= event.clientY &&
-			event.clientY <= rect.top + rect.height &&
-			rect.left <= event.clientX &&
-			event.clientX <= rect.left + rect.width
-		);
-
-		if (!isInDialog) {
-			return;
-		}
-
-		// Check if click is outside the article (modal content)
-		if (event.target === event.currentTarget) {
-			hideModal(event.target.id);
-		}
-	}
-});
-
-/**
  * Save items-per-page preference to localStorage
  * Used across all admin tables for consistent pagination
  * @param {string|number} value - The number of items per page (25, 50, or 100)
