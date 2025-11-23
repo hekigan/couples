@@ -46,7 +46,7 @@ help:
 	@echo ""
 	@echo "Utilities:"
 	@echo "  make clean         - Clean build artifacts"
-	@echo "  make deps          - Install dependencies"
+	@echo "  make install       - Install dependencies (one-time setup)"
 	@echo "  make fmt           - Format code"
 	@echo "  make lint          - Lint code"
 	@echo ""
@@ -103,15 +103,16 @@ clean:
 sass:
 	@echo "Compiling SASS..."
 	@npx sass sass/main.scss static/css/main.css
+	@npx sass sass/admin.scss static/css/admin.css
 	@echo "SASS compilation complete"
 
 # Watch and compile SASS
 sass-watch:
 	@echo "Watching SASS files..."
-	@npx sass --watch sass/main.scss static/css/main.css
+	@npx sass --watch sass/main.scss:static/css/main.css sass/admin.scss:static/css/admin.css
 
 # Development mode with Air hot-reload
-dev: deps
+dev:
 	@echo "Starting development mode with Air hot-reload..."
 	@echo "Note: Run 'make sass-watch' in a separate terminal for SASS auto-compilation"
 	@make sass
@@ -137,8 +138,8 @@ docker-stop:
 docker-logs:
 	@docker-compose logs -f
 
-# Install dependencies
-deps:
+# Install dependencies (one-time setup)
+install:
 	@echo "Installing Go dependencies..."
 	@go mod download
 	@echo "Installing Node dependencies..."
@@ -146,6 +147,9 @@ deps:
 	@echo "Installing Air hot-reload tool..."
 	@go install github.com/air-verse/air@latest
 	@echo "Dependencies installed"
+
+# Alias for backward compatibility
+deps: install
 
 # Format code
 fmt:
@@ -165,7 +169,7 @@ db-setup:
 	@echo "Please run sql/schema.sql and sql/seed.sql in your Supabase dashboard"
 
 # Full setup
-setup: deps sass db-setup
+setup: install sass db-setup
 	@echo "Setup complete!"
 	@echo "1. Copy .env.example to .env"
 	@echo "2. Update .env with your Supabase credentials"

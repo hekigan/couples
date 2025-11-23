@@ -23,6 +23,7 @@
 @use 'components/custom';         // Custom styles extracted from inline styles
 @use 'components/navigation';     // Keep custom navigation
 @use 'components/buttons';         
+@use 'components/forms';         
 @use 'components/alerts';         // Keep - Pico doesn't have alerts
 @use 'components/badges';         // Keep - Pico doesn't have badges
 
@@ -34,7 +35,7 @@
 @use 'pages/auth';
 @use 'pages/game';
 @use 'pages/rooms';
-@use 'pages/admin';
+// Admin styles are loaded separately via admin.scss (only on admin pages)
 @use 'pages/friends';
 
 

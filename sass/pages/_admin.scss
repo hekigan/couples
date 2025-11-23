@@ -1,9 +1,22 @@
 @use '../base/variables' as *;
 @use 'sass:color';
 
+$admin-color-guest: #fff;
+$admin-color-registered: green;
+$admin-color-admin: red;
+
 // Admin pages
+
+[data-is-admin] {
+  main {
+    width: 100vw;
+    max-width: none;
+  }
+}
+
 .admin-container {
   padding: $spacing-xl;
+  width: 100% !important;
 }
 
 .admin-header {
@@ -138,7 +151,12 @@
     cursor: pointer;
   }
 
+  button {
+    margin-bottom: 0;
+  }
+
   select {
+    margin-bottom: 0;
     padding: $spacing-sm;
     border: $border-width solid $border-color;
     border-radius: $border-radius-sm;
@@ -252,11 +270,43 @@ dialog {
 
 // User list
 #users-list {
+  .table-legend {
+    justify-content: flex-start;
+
+    [data-user-type] {
+      display: flex;
+      align-items: center;
+      list-style-type: none;
+      padding: 0;
+
+      &::before {
+        border: 1px solid $border-color;
+        content: '';
+        display: inline-block;
+        width: 1em;
+        height: 1em;
+        margin-right: $spacing-sm;
+        background-color: transparent;
+      }
+    }
+
+    [data-user-type="admin"]::before {
+      background-color: $admin-color-admin;
+    }
+
+    [data-user-type="registered"]::before {
+      background-color: $admin-color-registered;
+    }
+
+    [data-user-type="guest"]::before {
+      background-color: $admin-color-guest;
+    }
+  }
+
   tr {
     &:hover td {
       background-color: $bg-secondary;
     }
-
 
     &[data-user-type] td:first-child {
       border-left-color: transparent;
@@ -265,11 +315,15 @@ dialog {
     }
 
     &[data-user-type="admin"] td:first-child {
-      border-left-color: red;
+      border-left-color: $admin-color-admin;
     }
 
     &[data-user-type="registered"] td:first-child {
-      border-left-color: green;
+      border-left-color: $admin-color-registered;
+    }
+
+    &[data-user-type="guest"] td:first-child {
+      border-left-color: $admin-color-guest;
     }
 
     [data-username] {

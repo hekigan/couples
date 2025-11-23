@@ -1,0 +1,10 @@
+// Admin-specific SASS file
+// This file is only loaded on admin pages for better performance
+// Compile with: npx sass sass/admin.scss static/css/admin.css
+
+// Import base variables needed for admin styles
+@use 'base/variables' as *;
+@use 'sass:color';
+
+// Import admin page styles
+@use 'pages/admin';

@@ -119,9 +119,9 @@
   --pico-form-element-placeholder-color: #999999;
 
   // Focus states - pink theme
-  --pico-form-element-focus-color: #FFB6C1;
-  --pico-form-element-active-border-color: #FFB6C1;
-  --pico-form-element-invalid-border-color: #FFB6B9;
+  --pico-form-element-focus-color: var(--pico-success-hover);
+  --pico-form-element-active-border-color: var(--pico-success-hover);
+  --pico-form-element-invalid-border-color: var(--pico-danger);
 
   // ============================================
   // Buttons

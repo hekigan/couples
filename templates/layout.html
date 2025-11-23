@@ -8,7 +8,12 @@
     
     <!-- CSS - Pico CSS with custom pastel theme -->
     <link rel="stylesheet" href="/static/css/main.css">
-    
+
+    <!-- Admin CSS (only for admin pages) -->
+    {{if .IsAdmin}}
+    <link rel="stylesheet" href="/static/css/admin.css">
+    {{end}}
+
     <!-- HTMX Core and SSE Extension -->
     <script src="/static/js/htmx.min.js"></script>
     <script src="/static/js/sse.js"></script>
@@ -29,7 +34,7 @@
 
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 </head>
-<body>
+<body {{if .IsAdmin}}data-is-admin="true"{{end}}>
     <header class="main-header">
         <div class="container">
             <div class="header-content">
