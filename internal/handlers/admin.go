@@ -45,16 +45,41 @@ func (h *Handler) AdminDashboardHandler(w http.ResponseWriter, r *http.Request) 
 func (h *Handler) AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 
+	// Parse pagination parameters
+	page := 1
+	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	perPage := 25 // Default
+	if perPageStr := r.URL.Query().Get("per_page"); perPageStr != "" {
+		if pp, err := strconv.Atoi(perPageStr); err == nil {
+			// Validate against allowed values
+			if pp == 25 || pp == 50 || pp == 100 {
+				perPage = pp
+			}
+		}
+	}
+
+	// Calculate offset
+	offset := (page - 1) * perPage
+
 	// Fetch users list for SSR
-	limit := 50
-	offset := 0
-	users, err := h.AdminService.ListAllUsers(ctx, limit, offset)
+	users, err := h.AdminService.ListAllUsers(ctx, perPage, offset)
 	if err != nil {
 		log.Printf("⚠️ Failed to fetch users: %v", err)
 		users = nil
 	}
 
 	totalCount, _ := h.AdminService.GetUserCount(ctx)
+
+	// Calculate pagination
+	totalPages := (totalCount + perPage - 1) / perPage
+	if totalPages == 0 {
+		totalPages = 1
+	}
 
 	// Build users list HTML
 	var usersListHTML string
@@ -91,8 +116,18 @@ func (h *Handler) AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 		usersData := services.UsersListData{
 			Users:         userInfos,
 			TotalCount:    totalCount,
-			Page:          1,
+			Page:          page,
 			CurrentUserID: currentUserID,
+			// Pagination fields
+			CurrentPage:     page,
+			TotalPages:      totalPages,
+			ItemsPerPage:    perPage,
+			BaseURL:         "/admin/api/users/list",
+			PageURL:         "/admin/users",
+			Target:          "#users-list",
+			IncludeSelector: "",
+			ExtraParams:     "",
+			ItemName:        "users",
 		}
 
 		usersListHTML, _ = h.TemplateService.RenderFragment("users_list.html", usersData)
@@ -264,8 +299,10 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 		}
 
 		selectedCategoryID := ""
+		extraParams := ""
 		if categoryID != nil {
 			selectedCategoryID = categoryID.String()
+			extraParams = "&category_id=" + selectedCategoryID
 		}
 
 		questionsData := services.QuestionsListData{
@@ -277,6 +314,13 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 			TotalPages:               totalPages,
 			ItemsPerPage:             perPage,
 			MissingTranslationsCount: missingTranslationsCount,
+			// Pagination template fields
+			BaseURL:         "/admin/api/questions/list",
+			PageURL:         "/admin/questions",
+			Target:          "#questions-list",
+			IncludeSelector: "[name='category_id']",
+			ExtraParams:     extraParams,
+			ItemName:        "questions",
 		}
 
 		questionsListHTML, err = h.TemplateService.RenderFragment("questions_list.html", questionsData)
@@ -302,11 +346,40 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 func (h *Handler) AdminCategoriesHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 
+	// Parse pagination parameters
+	page := 1
+	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	perPage := 25 // Default
+	if perPageStr := r.URL.Query().Get("per_page"); perPageStr != "" {
+		if pp, err := strconv.Atoi(perPageStr); err == nil {
+			// Validate against allowed values
+			if pp == 25 || pp == 50 || pp == 100 {
+				perPage = pp
+			}
+		}
+	}
+
+	// Calculate offset
+	offset := (page - 1) * perPage
+
 	// Fetch categories list for SSR
-	categories, err := h.QuestionService.GetCategories(ctx)
+	categories, err := h.QuestionService.ListCategories(ctx, perPage, offset)
 	if err != nil {
 		log.Printf("⚠️ Failed to fetch categories: %v", err)
 		categories = nil
+	}
+
+	totalCount, _ := h.QuestionService.GetCategoryCount(ctx)
+
+	// Calculate pagination
+	totalPages := (totalCount + perPage - 1) / perPage
+	if totalPages == 0 {
+		totalPages = 1
 	}
 
 	counts, _ := h.QuestionService.GetQuestionCountsByCategory(ctx, "en")
@@ -314,24 +387,35 @@ func (h *Handler) AdminCategoriesHandler(w http.ResponseWriter, r *http.Request)
 	// Build categories list HTML
 	var categoriesListHTML string
 	if categories != nil {
-		categoryInfos := make([]interface{}, len(categories))
+		categoryInfos := make([]services.AdminCategoryInfo, len(categories))
 		for i, cat := range categories {
 			count := 0
 			if c, ok := counts[cat.ID.String()]; ok {
 				count = c
 			}
 
-			categoryInfos[i] = map[string]interface{}{
-				"ID":            cat.ID.String(),
-				"Icon":          cat.Icon,
-				"Label":         cat.Label,
-				"Key":           cat.Key,
-				"QuestionCount": count,
+			categoryInfos[i] = services.AdminCategoryInfo{
+				ID:            cat.ID.String(),
+				Icon:          cat.Icon,
+				Label:         cat.Label,
+				Key:           cat.Key,
+				QuestionCount: count,
 			}
 		}
 
-		categoriesData := map[string]interface{}{
-			"Categories": categoryInfos,
+		categoriesData := services.CategoriesListData{
+			Categories: categoryInfos,
+			// Pagination fields
+			TotalCount:      totalCount,
+			CurrentPage:     page,
+			TotalPages:      totalPages,
+			ItemsPerPage:    perPage,
+			BaseURL:         "/admin/api/categories/list",
+			PageURL:         "/admin/categories",
+			Target:          "#categories-list",
+			IncludeSelector: "",
+			ExtraParams:     "",
+			ItemName:        "categories",
 		}
 
 		categoriesListHTML, _ = h.TemplateService.RenderFragment("categories_list.html", categoriesData)
@@ -350,19 +434,46 @@ func (h *Handler) AdminCategoriesHandler(w http.ResponseWriter, r *http.Request)
 func (h *Handler) AdminRoomsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 
+	// Parse pagination parameters
+	page := 1
+	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	perPage := 25 // Default
+	if perPageStr := r.URL.Query().Get("per_page"); perPageStr != "" {
+		if pp, err := strconv.Atoi(perPageStr); err == nil {
+			// Validate against allowed values
+			if pp == 25 || pp == 50 || pp == 100 {
+				perPage = pp
+			}
+		}
+	}
+
+	// Calculate offset
+	offset := (page - 1) * perPage
+
 	// Fetch rooms list for SSR
-	limit := 50
-	offset := 0
-	rooms, err := h.AdminService.ListAllRooms(ctx, limit, offset)
+	rooms, err := h.AdminService.ListAllRooms(ctx, perPage, offset)
 	if err != nil {
 		log.Printf("⚠️ Failed to fetch rooms: %v", err)
 		rooms = nil
 	}
 
+	totalCount, _ := h.AdminService.GetRoomCount(ctx)
+
+	// Calculate pagination
+	totalPages := (totalCount + perPage - 1) / perPage
+	if totalPages == 0 {
+		totalPages = 1
+	}
+
 	// Build rooms list HTML
 	var roomsListHTML string
 	if rooms != nil {
-		roomInfos := make([]interface{}, len(rooms))
+		roomInfos := make([]services.AdminRoomInfo, len(rooms))
 		for i, room := range rooms {
 			owner := "Unknown"
 			if room.OwnerUsername != nil {
@@ -384,19 +495,30 @@ func (h *Handler) AdminRoomsHandler(w http.ResponseWriter, r *http.Request) {
 				statusColor = "color: #6b7280;"
 			}
 
-			roomInfos[i] = map[string]interface{}{
-				"ID":          room.ID.String(),
-				"ShortID":     room.ID.String()[:8],
-				"Owner":       owner,
-				"Guest":       guest,
-				"Status":      room.Status,
-				"StatusColor": statusColor,
-				"CreatedAt":   room.CreatedAt.Format("2006-01-02 15:04"),
+			roomInfos[i] = services.AdminRoomInfo{
+				ID:          room.ID.String(),
+				ShortID:     room.ID.String()[:8],
+				Owner:       owner,
+				Guest:       guest,
+				Status:      room.Status,
+				StatusColor: statusColor,
+				CreatedAt:   room.CreatedAt.Format("2006-01-02 15:04"),
 			}
 		}
 
-		roomsData := map[string]interface{}{
-			"Rooms": roomInfos,
+		roomsData := services.RoomsListData{
+			Rooms: roomInfos,
+			// Pagination fields
+			TotalCount:      totalCount,
+			CurrentPage:     page,
+			TotalPages:      totalPages,
+			ItemsPerPage:    perPage,
+			BaseURL:         "/admin/api/rooms/list",
+			PageURL:         "/admin/rooms",
+			Target:          "#rooms-list",
+			IncludeSelector: "",
+			ExtraParams:     "",
+			ItemName:        "rooms",
 		}
 
 		roomsListHTML, _ = h.TemplateService.RenderFragment("rooms_list.html", roomsData)

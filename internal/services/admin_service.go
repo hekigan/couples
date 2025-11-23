@@ -275,3 +275,18 @@ func (s *AdminService) GetUserCount(ctx context.Context) (int, error) {
 
 	return len(users), nil
 }
+
+// GetRoomCount returns the total number of rooms
+func (s *AdminService) GetRoomCount(ctx context.Context) (int, error) {
+	data, _, err := s.client.From("rooms").Select("id", "", false).Execute()
+	if err != nil {
+		return 0, fmt.Errorf("failed to count rooms: %w", err)
+	}
+
+	var rooms []map[string]interface{}
+	if err := json.Unmarshal(data, &rooms); err != nil {
+		return 0, fmt.Errorf("failed to parse rooms: %w", err)
+	}
+
+	return len(rooms), nil
+}

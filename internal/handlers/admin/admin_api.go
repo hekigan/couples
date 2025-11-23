@@ -42,10 +42,19 @@ func (ah *AdminAPIHandler) ListUsersHandler(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	limit := 50
-	offset := (page - 1) * limit
+	perPage := 25 // Default
+	if pp := r.URL.Query().Get("per_page"); pp != "" {
+		if parsed, err := strconv.Atoi(pp); err == nil {
+			// Validate against allowed values
+			if parsed == 25 || parsed == 50 || parsed == 100 {
+				perPage = parsed
+			}
+		}
+	}
 
-	users, err := ah.adminService.ListAllUsers(ctx, limit, offset)
+	offset := (page - 1) * perPage
+
+	users, err := ah.adminService.ListAllUsers(ctx, perPage, offset)
 	if err != nil {
 		http.Error(w, "Failed to list users", http.StatusInternalServerError)
 		log.Printf("Error listing users: %v", err)
@@ -53,6 +62,12 @@ func (ah *AdminAPIHandler) ListUsersHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	totalCount, _ := ah.adminService.GetUserCount(ctx)
+
+	// Calculate pagination
+	totalPages := (totalCount + perPage - 1) / perPage
+	if totalPages == 0 {
+		totalPages = 1
+	}
 
 	// Build data for template
 	userInfos := make([]services.AdminUserInfo, len(users))
@@ -89,6 +104,16 @@ func (ah *AdminAPIHandler) ListUsersHandler(w http.ResponseWriter, r *http.Reque
 		TotalCount:    totalCount,
 		Page:          page,
 		CurrentUserID: currentUserID,
+		// Pagination fields
+		CurrentPage:     page,
+		TotalPages:      totalPages,
+		ItemsPerPage:    perPage,
+		BaseURL:         "/admin/api/users/list",
+		PageURL:         "/admin/users",
+		Target:          "#users-list",
+		IncludeSelector: "",
+		ExtraParams:     "",
+		ItemName:        "users",
 	}
 
 	html, err := ah.handler.TemplateService.RenderFragment("users_list.html", data)
@@ -284,8 +309,10 @@ func (ah *AdminAPIHandler) ListQuestionsHandler(w http.ResponseWriter, r *http.R
 	}
 
 	selectedCategoryID := ""
+	extraParams := ""
 	if categoryID != nil {
 		selectedCategoryID = categoryID.String()
+		extraParams = "&category_id=" + selectedCategoryID
 	}
 
 	data := services.QuestionsListData{
@@ -297,6 +324,13 @@ func (ah *AdminAPIHandler) ListQuestionsHandler(w http.ResponseWriter, r *http.R
 		TotalPages:               totalPages,
 		ItemsPerPage:             perPage,
 		MissingTranslationsCount: missingTranslationsCount,
+		// Pagination template fields
+		BaseURL:         "/admin/api/questions/list",
+		PageURL:         "/admin/questions",
+		Target:          "#questions-list",
+		IncludeSelector: "[name='category_id']",
+		ExtraParams:     extraParams,
+		ItemName:        "questions",
 	}
 
 	html, err := ah.handler.TemplateService.RenderFragment("questions_list.html", data)
@@ -453,11 +487,38 @@ func (ah *AdminAPIHandler) DeleteQuestionHandler(w http.ResponseWriter, r *http.
 func (ah *AdminAPIHandler) ListCategoriesHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 
-	categories, err := ah.questionService.GetCategories(ctx)
+	page := 1
+	if p := r.URL.Query().Get("page"); p != "" {
+		if parsed, err := strconv.Atoi(p); err == nil && parsed > 0 {
+			page = parsed
+		}
+	}
+
+	perPage := 25 // Default
+	if pp := r.URL.Query().Get("per_page"); pp != "" {
+		if parsed, err := strconv.Atoi(pp); err == nil {
+			// Validate against allowed values
+			if parsed == 25 || parsed == 50 || parsed == 100 {
+				perPage = parsed
+			}
+		}
+	}
+
+	offset := (page - 1) * perPage
+
+	categories, err := ah.questionService.ListCategories(ctx, perPage, offset)
 	if err != nil {
 		http.Error(w, "Failed to list categories", http.StatusInternalServerError)
 		log.Printf("Error listing categories: %v", err)
 		return
+	}
+
+	totalCount, _ := ah.questionService.GetCategoryCount(ctx)
+
+	// Calculate pagination
+	totalPages := (totalCount + perPage - 1) / perPage
+	if totalPages == 0 {
+		totalPages = 1
 	}
 
 	// Get question counts per category
@@ -482,6 +543,17 @@ func (ah *AdminAPIHandler) ListCategoriesHandler(w http.ResponseWriter, r *http.
 
 	data := services.CategoriesListData{
 		Categories: categoryInfos,
+		// Pagination fields
+		TotalCount:      totalCount,
+		CurrentPage:     page,
+		TotalPages:      totalPages,
+		ItemsPerPage:    perPage,
+		BaseURL:         "/admin/api/categories/list",
+		PageURL:         "/admin/categories",
+		Target:          "#categories-list",
+		IncludeSelector: "",
+		ExtraParams:     "",
+		ItemName:        "categories",
 	}
 
 	html, err := ah.handler.TemplateService.RenderFragment("categories_list.html", data)
@@ -617,14 +689,31 @@ func (ah *AdminAPIHandler) ListRoomsHandler(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	limit := 50
-	offset := (page - 1) * limit
+	perPage := 25 // Default
+	if pp := r.URL.Query().Get("per_page"); pp != "" {
+		if parsed, err := strconv.Atoi(pp); err == nil {
+			// Validate against allowed values
+			if parsed == 25 || parsed == 50 || parsed == 100 {
+				perPage = parsed
+			}
+		}
+	}
 
-	rooms, err := ah.adminService.ListAllRooms(ctx, limit, offset)
+	offset := (page - 1) * perPage
+
+	rooms, err := ah.adminService.ListAllRooms(ctx, perPage, offset)
 	if err != nil {
 		http.Error(w, "Failed to list rooms", http.StatusInternalServerError)
 		log.Printf("Error listing rooms: %v", err)
 		return
+	}
+
+	totalCount, _ := ah.adminService.GetRoomCount(ctx)
+
+	// Calculate pagination
+	totalPages := (totalCount + perPage - 1) / perPage
+	if totalPages == 0 {
+		totalPages = 1
 	}
 
 	// Build data for template
@@ -663,6 +752,17 @@ func (ah *AdminAPIHandler) ListRoomsHandler(w http.ResponseWriter, r *http.Reque
 
 	data := services.RoomsListData{
 		Rooms: roomInfos,
+		// Pagination fields
+		TotalCount:      totalCount,
+		CurrentPage:     page,
+		TotalPages:      totalPages,
+		ItemsPerPage:    perPage,
+		BaseURL:         "/admin/api/rooms/list",
+		PageURL:         "/admin/rooms",
+		Target:          "#rooms-list",
+		IncludeSelector: "",
+		ExtraParams:     "",
+		ItemName:        "rooms",
 	}
 
 	html, err := ah.handler.TemplateService.RenderFragment("rooms_list.html", data)

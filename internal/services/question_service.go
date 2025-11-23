@@ -210,6 +210,40 @@ func (s *QuestionService) GetCategories(ctx context.Context) ([]models.Category,
 	return categories, nil
 }
 
+// ListCategories retrieves paginated categories
+func (s *QuestionService) ListCategories(ctx context.Context, limit, offset int) ([]models.Category, error) {
+	data, _, err := s.client.From("categories").
+		Select("*", "", false).
+		Range(offset, offset+limit-1, "").
+		Execute()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch categories: %w", err)
+	}
+
+	var categories []models.Category
+	if err := json.Unmarshal(data, &categories); err != nil {
+		return nil, fmt.Errorf("failed to parse categories: %w", err)
+	}
+
+	return categories, nil
+}
+
+// GetCategoryCount returns the total number of categories
+func (s *QuestionService) GetCategoryCount(ctx context.Context) (int, error) {
+	data, _, err := s.client.From("categories").Select("id", "", false).Execute()
+	if err != nil {
+		return 0, fmt.Errorf("failed to count categories: %w", err)
+	}
+
+	var categories []map[string]interface{}
+	if err := json.Unmarshal(data, &categories); err != nil {
+		return 0, fmt.Errorf("failed to parse categories: %w", err)
+	}
+
+	return len(categories), nil
+}
+
 // CategoryCount represents a category with its question count
 type CategoryCount struct {
 	CategoryID string `json:"category_id"`

@@ -286,6 +286,16 @@ type UsersListData struct {
 	TotalCount    int
 	Page          int
 	CurrentUserID string
+	// Pagination fields
+	CurrentPage     int    // Current page number (same as Page, kept for consistency)
+	TotalPages      int    // Total number of pages
+	ItemsPerPage    int    // Number of items per page
+	BaseURL         string // API URL for fetching data
+	PageURL         string // Page URL for browser history
+	Target          string // HTMX target selector
+	IncludeSelector string // Selector for additional params
+	ExtraParams     string // Additional query parameters
+	ItemName        string // Name of items for display
 }
 
 // AdminQuestionInfo represents a question in the admin list
@@ -316,6 +326,13 @@ type QuestionsListData struct {
 	TotalPages               int // Total number of pages
 	ItemsPerPage             int // Number of items per page
 	MissingTranslationsCount int // Total number of incomplete translations
+	// Pagination template fields
+	BaseURL         string // API URL for fetching data (e.g., "/admin/api/questions/list")
+	PageURL         string // Page URL for browser history (e.g., "/admin/questions")
+	Target          string // HTMX target selector (e.g., "#questions-list")
+	IncludeSelector string // Selector for additional params (e.g., "[name='category_id']")
+	ExtraParams     string // Additional query parameters (e.g., "&category_id=xyz")
+	ItemName        string // Name of items for display (e.g., "questions")
 }
 
 // QuestionEditFormData represents data for question edit form partial
@@ -340,6 +357,17 @@ type AdminCategoryInfo struct {
 // CategoriesListData represents data for admin categories list partial
 type CategoriesListData struct {
 	Categories []AdminCategoryInfo
+	// Pagination fields
+	TotalCount      int    // Total number of categories
+	CurrentPage     int    // Current page number
+	TotalPages      int    // Total number of pages
+	ItemsPerPage    int    // Number of items per page
+	BaseURL         string // API URL for fetching data
+	PageURL         string // Page URL for browser history
+	Target          string // HTMX target selector
+	IncludeSelector string // Selector for additional params
+	ExtraParams     string // Additional query parameters
+	ItemName        string // Name of items for display
 }
 
 // CategoryEditFormData represents data for category edit form partial
@@ -364,6 +392,17 @@ type AdminRoomInfo struct {
 // RoomsListData represents data for admin rooms list partial
 type RoomsListData struct {
 	Rooms []AdminRoomInfo
+	// Pagination fields
+	TotalCount      int    // Total number of rooms
+	CurrentPage     int    // Current page number
+	TotalPages      int    // Total number of pages
+	ItemsPerPage    int    // Number of items per page
+	BaseURL         string // API URL for fetching data
+	PageURL         string // Page URL for browser history
+	Target          string // HTMX target selector
+	IncludeSelector string // Selector for additional params
+	ExtraParams     string // Additional query parameters
+	ItemName        string // Name of items for display
 }
 
 // DashboardStatsData represents data for dashboard stats partial

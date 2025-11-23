@@ -2,7 +2,7 @@
   background-image: none;
 }
 [data-is-admin] main {
-  width: 100vw;
+  width: 100%;
   max-width: none;
 }
 
