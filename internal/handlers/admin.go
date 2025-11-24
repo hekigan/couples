@@ -90,9 +90,12 @@ func (h *Handler) AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 				email = *user.Email
 			}
 
-			userType := "Registered"
+			userType := "registered"
 			if user.IsAnonymous {
-				userType = "Anonymous"
+				userType = "guest"
+			}
+			if user.IsAdmin {
+				userType = "admin"
 			}
 
 			userInfos[i] = services.AdminUserInfo{
@@ -255,9 +258,9 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 			}
 			selected := categoryID != nil && *categoryID == cat.ID
 			categoryOptions[i] = services.AdminCategoryOption{
-				ID:           cat.ID.String(),
-				Label:        cat.Label,
-				Selected:     selected,
+				ID:            cat.ID.String(),
+				Label:         cat.Label,
+				Selected:      selected,
 				QuestionCount: count,
 			}
 		}
@@ -522,6 +525,3 @@ func (h *Handler) AdminTranslationsHandler(w http.ResponseWriter, r *http.Reques
 	}
 	h.RenderTemplate(w, "admin/translations.html", data)
 }
-
-
-

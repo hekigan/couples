@@ -2,8 +2,6 @@
 @use 'sass:color';
 
 $admin-color-guest: #fff;
-$admin-color-registered: green;
-$admin-color-admin: red;
 
 // Admin pages
 
@@ -270,64 +268,86 @@ dialog {
   }
 }
 
-// User list
-#users-list {
-  .table-legend {
-    justify-content: flex-start;
+.table-legend {
+  justify-content: flex-start;
 
-    [data-user-type] {
-      display: flex;
-      align-items: center;
-      list-style-type: none;
-      padding: 0;
+  [data-legend-type] {
+    display: flex;
+    align-items: center;
+    list-style-type: none;
+    padding: 0;
 
-      &::before {
-        border: 1px solid $border-color;
-        content: '';
-        display: inline-block;
-        width: 1em;
-        height: 1em;
-        margin-right: $spacing-sm;
-        background-color: transparent;
-      }
-    }
-
-    [data-user-type="admin"]::before {
-      background-color: $admin-color-admin;
-    }
-
-    [data-user-type="registered"]::before {
-      background-color: $admin-color-registered;
-    }
-
-    [data-user-type="guest"]::before {
-      background-color: $admin-color-guest;
+    &::before {
+      border: 1px solid $border-color;
+      content: '';
+      display: inline-block;
+      width: 1em;
+      height: 1em;
+      margin-right: $spacing-sm;
+      background-color: transparent;
     }
   }
+  
+  [data-legend-type="admin"]::before {
+    background-color: var(--pico-danger);
+  }
 
+  [data-legend-type="waiting"]::before {
+    background-color: var(--pico-warning);
+  }
+
+  [data-legend-type="registered"]::before,
+  [data-legend-type="ready"]::before {
+    background-color: var(--pico-success);
+  }
+
+  [data-legend-type="guest"]::before {
+    background-color: $admin-color-guest;
+  }
+
+  [data-legend-type="playing"]::before {
+    background-color: $secondary-color;
+  }
+}
+
+table {
   tr {
     &:hover td {
       background-color: $bg-secondary;
     }
+  }
 
-    &[data-user-type] td:first-child {
-      border-left-color: transparent;
-      border-left-width: 5px;
-      border-left-style: solid;
-    }
+  td:first-child {
+    border-left-color: transparent;
+    border-left-width: 5px;
+    border-left-style: solid;
+  }
 
-    &[data-user-type="admin"] td:first-child {
-      border-left-color: $admin-color-admin;
-    }
+  [data-legend-type="admin"] td:first-child {
+    border-left-color: var(--pico-danger);
+  }
 
-    &[data-user-type="registered"] td:first-child {
-      border-left-color: $admin-color-registered;
-    }
+  [data-legend-type="waiting"] td:first-child {
+    border-left-color: var(--pico-warning);
+  }
 
-    &[data-user-type="guest"] td:first-child {
-      border-left-color: $admin-color-guest;
-    }
+  [data-legend-type="registered"] td:first-child,
+  [data-legend-type="ready"] td:first-child {
+    border-left-color: var(--pico-success);
+  }
 
+  [data-legend-type="guest"] td:first-child {
+    border-left-color: $admin-color-guest;
+  }
+
+  [data-legend-type="playing"] td:first-child {
+    border-left-color: $secondary-color;
+  }
+}
+
+// User list
+#users-list {
+  tr {
     [data-username] {
       display: block;
       margin-bottom: -$spacing-sm;

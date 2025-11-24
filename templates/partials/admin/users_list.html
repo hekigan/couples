@@ -1,23 +1,37 @@
 {{define "users_list"}}
 <div id="users-list">
+	<!-- Loading Overlay -->
+	<div id="users-list-loading" class="htmx-indicator admin-list-loading-overlay">
+		<div class="loading-overlay-content">
+			<div class="spinner"></div>
+			<p>Loading users...</p>
+		</div>
+	</div>
+
 	<form id="bulk-users-form">
 		<!-- Bulk Actions Bar (Top) -->
-		<div class="bulk-actions-bar">
-			<input type="checkbox" id="select-all-users-top" onclick="toggleAllCheckboxes(this, 'user-checkbox')" />
-			<label for="select-all-users-top">Select All</label>
-			<select name="bulk_action" id="bulk-action-users">
-				<option value="">Bulk Actions...</option>
-				<option value="delete">Delete Selected</option>
-			</select>
-			<button type="button" onclick="submitBulkAction('users')">Apply</button>
+		<div class="bulk-actions-bar grid justify-between">
+			<div>
+				<input type="checkbox" id="select-all-users-top" onclick="toggleAllCheckboxes(this, 'user-checkbox')" />
+				<label for="select-all-users-top">Select All</label>
+				<select name="bulk_action" id="bulk-action-users">
+						<option value="">Bulk Actions...</option>
+						<option value="delete">Delete Selected</option>
+					</select>
+					<button type="button" onclick="submitBulkAction('users')">Apply</button>
+			</div>
+
+			<div>
+				<button data-target="create-modal" onclick="toggleModal(event)" class="btn-add">Add User</button>
+			</div>
 		</div>
 
 		<h5>Total: {{.TotalCount}} users (Page {{.Page}})</h5>
 
 		<ul class="user-types table-legend">
-			<li data-user-type="guest">Guest</li>
-			<li data-user-type="registered">Registered</li>
-			<li data-user-type="admin">Admin</li>
+			<li data-legend-type="guest">Guest</li>
+			<li data-legend-type="registered">Registered</li>
+			<li data-legend-type="admin">Admin</li>
 		</ul>
 
 		<table>
@@ -29,26 +43,30 @@
 					<th>Actions</th>
 				</tr>
 			</thead>
-			<tbody>
-				{{range .Users}}
-				<tr data-user-type="{{if .IsAdmin}}admin{{else}}{{.UserType}}{{end}}">
+		<tbody>
+			{{range .Users}}
+			<tr data-legend-type="{{.UserType}}">
 					<td><input type="checkbox" class="user-checkbox" name="user_ids[]" value="{{.ID}}" /></td>
-					<td title="{{if .IsAdmin}}admin{{else}}{{.UserType}}{{end}}">
+					<td title="{{.UserType}}">
 						<span data-username>{{.Username}}</span>
 						<span data-email>{{.Email}}</span>
 					</td>
 					<td>{{.CreatedAt}}</td>
 					<td>
 						{{if ne .ID $.CurrentUserID}}
-						<button hx-post="/admin/api/users/{{.ID}}/toggle-admin"
-								hx-target="#users-list"
-								hx-swap="outerHTML">
-							Toggle Admin
+						<button hx-get="/admin/api/users/{{.ID}}/edit-form"
+								hx-target="#edit-modal-content"
+								hx-swap="innerHTML"
+								data-target="edit-modal"
+								onclick="toggleModal(event)"
+								class="warning">
+							Edit
 						</button>
 						<button hx-delete="/admin/api/users/{{.ID}}"
 								hx-target="#users-list"
 								hx-swap="outerHTML"
 								hx-confirm="Are you sure you want to delete this user?"
+								hx-indicator="#users-list-loading"
 								class="danger">
 							Delete
 						</button>

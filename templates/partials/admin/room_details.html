@@ -1,0 +1,92 @@
+<div id="room-details-view">
+	<div class="detail-section">
+		<h4>Room Information</h4>
+		<dl>
+			<dt>Room ID:</dt>
+			<dd><code>{{.ShortID}}</code></dd>
+
+			<dt>Full ID:</dt>
+			<dd><small><code>{{.ID}}</code></small></dd>
+
+			<dt>Name:</dt>
+			<dd>{{.Name}}</dd>
+
+			<dt>Status:</dt>
+			<dd>{{.Status}}</dd>
+
+			<dt>Language:</dt>
+			<dd>{{.Language}}</dd>
+
+			<dt>Max Questions:</dt>
+			<dd>{{.MaxQuestions}}</dd>
+
+			<dt>Created At:</dt>
+			<dd>{{.CreatedAt}}</dd>
+		</dl>
+	</div>
+
+	<div class="detail-section">
+		<h4>Players</h4>
+		<dl>
+			<dt>Owner:</dt>
+			<dd>
+				{{.OwnerUsername}}
+				{{if .OwnerEmail}}<br><small>{{.OwnerEmail}}</small>{{end}}
+			</dd>
+
+			<dt>Guest:</dt>
+			<dd>
+				{{if .GuestUsername}}
+					{{.GuestUsername}}
+					{{if .GuestEmail}}<br><small>{{.GuestEmail}}</small>{{end}}
+				{{else}}
+					<em>No guest yet</em>
+				{{end}}
+			</dd>
+		</dl>
+	</div>
+
+	<div class="detail-section">
+		<h4>Game Settings</h4>
+		<dl>
+			<dt>Selected Categories:</dt>
+			<dd>{{if gt .CategoryCount 0}}{{.CategoryCount}} categories{{else}}None selected{{end}}</dd>
+		</dl>
+	</div>
+</div>
+
+<style>
+.detail-section {
+	margin-bottom: 1.5rem;
+	padding: 1rem;
+	background: var(--pico-card-sectioning-background-color);
+	border-radius: var(--pico-border-radius);
+}
+
+.detail-section h4 {
+	margin-top: 0;
+	margin-bottom: 1rem;
+	border-bottom: 1px solid var(--pico-muted-border-color);
+	padding-bottom: 0.5rem;
+}
+
+.detail-section dl {
+	display: grid;
+	grid-template-columns: 140px 1fr;
+	gap: 0.5rem;
+	margin: 0;
+}
+
+.detail-section dt {
+	font-weight: 600;
+	color: var(--pico-secondary);
+}
+
+.detail-section dd {
+	margin: 0;
+}
+
+.detail-section code {
+	font-size: 0.875rem;
+}
+</style>

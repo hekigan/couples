@@ -272,12 +272,12 @@ type ProgressCounterData struct {
 
 // AdminUserInfo represents a user in the admin list
 type AdminUserInfo struct {
-	ID          string
-	Username    string
-	Email       string
-	UserType    string // "Registered" or "Anonymous"
-	IsAdmin     bool
-	CreatedAt   string
+	ID        string
+	Username  string
+	Email     string
+	UserType  string // "registered", "guest", "admin"
+	IsAdmin   bool
+	CreatedAt string
 }
 
 // UsersListData represents data for admin users list partial
@@ -309,9 +309,9 @@ type AdminQuestionInfo struct {
 
 // AdminCategoryOption represents a category option for dropdowns
 type AdminCategoryOption struct {
-	ID           string
-	Label        string
-	Selected     bool
+	ID            string
+	Label         string
+	Selected      bool
 	QuestionCount int // Number of questions in this category
 }
 
@@ -336,17 +336,17 @@ type QuestionsListData struct {
 
 // QuestionEditFormData represents data for question edit form partial
 type QuestionEditFormData struct {
-	QuestionID         string
-	BaseQuestionID     string
-	QuestionText       string               // English question text
-	TranslationFR      string               // French translation
-	TranslationJA      string               // Japanese translation
-	Categories         []AdminCategoryOption
-	LangEN             bool
-	LangFR             bool
-	LangJA             bool
-	SelectedLang       string               // Currently selected language code
-	Page               int                  // Current page number for pagination
+	QuestionID     string
+	BaseQuestionID string
+	QuestionText   string // English question text
+	TranslationFR  string // French translation
+	TranslationJA  string // Japanese translation
+	Categories     []AdminCategoryOption
+	LangEN         bool
+	LangFR         bool
+	LangJA         bool
+	SelectedLang   string // Currently selected language code
+	Page           int    // Current page number for pagination
 }
 
 // AdminCategoryInfo represents a category in the admin list
@@ -373,11 +373,39 @@ type CategoriesListData struct {
 	ItemName        string // Name of items for display
 }
 
-// CategoryEditFormData represents data for category edit form partial
-type CategoryEditFormData struct {
-	ID    string
+// CategoryFormData represents data for category create/edit form (shared template)
+type CategoryFormData struct {
+	ID    string // Empty for create mode, populated for edit mode
 	Key   string
 	Label string
+}
+
+// Alias for backwards compatibility
+type CategoryEditFormData = CategoryFormData
+
+// UserFormData represents data for user create/edit form (shared template)
+type UserFormData struct {
+	ID          string // Empty for create mode, populated for edit mode
+	Username    string
+	Email       string
+	IsAdmin     bool
+	IsAnonymous bool
+}
+
+// RoomDetailsData represents data for room details view (read-only)
+type RoomDetailsData struct {
+	ID            string
+	ShortID       string
+	Name          string
+	Status        string
+	Language      string
+	MaxQuestions  int
+	CreatedAt     string
+	OwnerUsername string
+	OwnerEmail    string
+	GuestUsername string
+	GuestEmail    string
+	CategoryCount int
 }
 
 // AdminRoomInfo represents a room in the admin list

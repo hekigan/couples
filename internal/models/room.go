@@ -12,7 +12,7 @@ type Room struct {
 	Name               string      `json:"name"`
 	OwnerID            uuid.UUID   `json:"owner_id"`
 	GuestID            *uuid.UUID  `json:"guest_id"`
-	Status             string      `json:"status"` // waiting, ready, playing, paused, finished
+	Status             string      `json:"status"` // 'waiting', 'ready', 'playing', 'finished'
 	Language           string      `json:"language"`
 	IsPrivate          bool        `json:"is_private"`
 	GuestReady         bool        `json:"guest_ready"`
@@ -59,11 +59,11 @@ type ActiveGame struct {
 	CreatedAt          time.Time   `json:"created_at"`
 
 	// Player information
-	OwnerID               uuid.UUID `json:"owner_id"`
-	OwnerUsername         *string   `json:"owner_username"`
+	OwnerID               uuid.UUID  `json:"owner_id"`
+	OwnerUsername         *string    `json:"owner_username"`
 	GuestID               *uuid.UUID `json:"guest_id"`
-	GuestUsername         *string   `json:"guest_username"`
-	CurrentPlayerUsername *string   `json:"current_player_username"`
+	GuestUsername         *string    `json:"guest_username"`
+	CurrentPlayerUsername *string    `json:"current_player_username"`
 
 	// Current question details
 	QuestionID            *uuid.UUID `json:"question_id"`
@@ -73,6 +73,3 @@ type ActiveGame struct {
 	QuestionCategoryKey   *string    `json:"question_category_key"`
 	QuestionCategoryLabel *string    `json:"question_category_label"`
 }
-
-
-

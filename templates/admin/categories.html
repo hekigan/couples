@@ -23,23 +23,14 @@
             <button aria-label="Close" rel="prev" data-target="create-modal" onclick="toggleModal(event)"></button>
             <h3>Create Category</h3>
         </header>
-        <form hx-post="/admin/api/categories"
-              hx-target="#categories-list"
-              hx-swap="outerHTML"
-              data-target="create-modal"
-              onsubmit="toggleModal(event)">
-            <label>
-                Key
-                <input type="text" name="key" required />
-            </label>
-            <label>
-                Label
-                <input type="text" name="label" required />
-            </label>
-        </form>
+        <div id="create-modal-content" class="modal-content"
+             hx-get="/admin/api/categories/new"
+             hx-trigger="load once">
+            <!-- Form will be loaded here via HTMX -->
+        </div>
         <footer>
             <button type="button" class="secondary" data-target="create-modal" onclick="toggleModal(event)">Cancel</button>
-            <button type="submit">Create</button>
+            <button type="button" onclick="submitModalForm(event)">Create</button>
         </footer>
     </article>
 </dialog>

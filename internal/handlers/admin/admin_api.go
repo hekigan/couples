@@ -77,9 +77,12 @@ func (ah *AdminAPIHandler) ListUsersHandler(w http.ResponseWriter, r *http.Reque
 			email = *user.Email
 		}
 
-		userType := "Registered"
+		userType := "registered"
 		if user.IsAnonymous {
-			userType = "Anonymous"
+			userType = "guest"
+		}
+		if user.IsAdmin {
+			userType = "admin"
 		}
 
 		userInfos[i] = services.AdminUserInfo{
@@ -160,6 +163,133 @@ func (ah *AdminAPIHandler) DeleteUserHandler(w http.ResponseWriter, r *http.Requ
 	if err := ah.adminService.DeleteUser(ctx, userID); err != nil {
 		http.Error(w, "Failed to delete user", http.StatusInternalServerError)
 		log.Printf("Error deleting user: %v", err)
+		return
+	}
+
+	// Return updated users list
+	ah.ListUsersHandler(w, r)
+}
+
+// GetUserCreateFormHandler returns an HTML form for creating a user
+func (ah *AdminAPIHandler) GetUserCreateFormHandler(w http.ResponseWriter, r *http.Request) {
+	// Create empty form data for create mode
+	data := services.UserFormData{
+		ID:          "", // Empty ID indicates create mode
+		Username:    "",
+		Email:       "",
+		IsAdmin:     false,
+		IsAnonymous: false,
+	}
+
+	html, err := ah.handler.TemplateService.RenderFragment("user_form.html", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error rendering user create form: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(html))
+}
+
+// GetUserEditFormHandler returns an HTML form for editing a user
+func (ah *AdminAPIHandler) GetUserEditFormHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	vars := mux.Vars(r)
+	userID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	user, err := ah.adminService.GetUserByID(ctx, userID)
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	email := ""
+	if user.Email != nil {
+		email = *user.Email
+	}
+
+	data := services.UserFormData{
+		ID:          user.ID.String(),
+		Username:    user.Username,
+		Email:       email,
+		IsAdmin:     user.IsAdmin,
+		IsAnonymous: user.IsAnonymous,
+	}
+
+	html, err := ah.handler.TemplateService.RenderFragment("user_form.html", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error rendering user edit form: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(html))
+}
+
+// CreateUserHandler creates a new user
+func (ah *AdminAPIHandler) CreateUserHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	username := r.FormValue("username")
+	email := r.FormValue("email")
+	isAdmin := r.FormValue("is_admin") == "on"
+	isAnonymous := r.FormValue("is_anonymous") == "on"
+
+	if username == "" {
+		http.Error(w, "Username is required", http.StatusBadRequest)
+		return
+	}
+
+	_, err := ah.adminService.CreateUser(ctx, username, email, isAdmin, isAnonymous)
+	if err != nil {
+		http.Error(w, "Failed to create user", http.StatusInternalServerError)
+		log.Printf("Error creating user: %v", err)
+		return
+	}
+
+	// Return updated users list
+	ah.ListUsersHandler(w, r)
+}
+
+// UpdateUserHandler updates a user
+func (ah *AdminAPIHandler) UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	vars := mux.Vars(r)
+	userID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	username := r.FormValue("username")
+	email := r.FormValue("email")
+	isAdmin := r.FormValue("is_admin") == "on"
+	isAnonymous := r.FormValue("is_anonymous") == "on"
+
+	if username == "" {
+		http.Error(w, "Username is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := ah.adminService.UpdateUser(ctx, userID, username, email, isAdmin, isAnonymous); err != nil {
+		http.Error(w, "Failed to update user", http.StatusInternalServerError)
+		log.Printf("Error updating user: %v", err)
 		return
 	}
 
@@ -763,6 +893,25 @@ func (ah *AdminAPIHandler) ListCategoriesHandler(w http.ResponseWriter, r *http.
 }
 
 // GetCategoryEditFormHandler returns an HTML form for editing a category
+func (ah *AdminAPIHandler) GetCategoryCreateFormHandler(w http.ResponseWriter, r *http.Request) {
+	// Create empty form data for create mode
+	data := services.CategoryFormData{
+		ID:    "", // Empty ID indicates create mode
+		Key:   "",
+		Label: "",
+	}
+
+	html, err := ah.handler.TemplateService.RenderFragment("category_form.html", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error rendering category create form: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(html))
+}
+
 func (ah *AdminAPIHandler) GetCategoryEditFormHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	vars := mux.Vars(r)
@@ -778,13 +927,13 @@ func (ah *AdminAPIHandler) GetCategoryEditFormHandler(w http.ResponseWriter, r *
 		return
 	}
 
-	data := services.CategoryEditFormData{
+	data := services.CategoryFormData{
 		ID:    category.ID.String(),
 		Key:   category.Key,
 		Label: category.Label,
 	}
 
-	html, err := ah.handler.TemplateService.RenderFragment("category_edit_form.html", data)
+	html, err := ah.handler.TemplateService.RenderFragment("category_form.html", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error rendering category edit form: %v", err)
@@ -986,6 +1135,71 @@ func (ah *AdminAPIHandler) CloseRoomHandler(w http.ResponseWriter, r *http.Reque
 
 	// Return updated rooms list
 	ah.ListRoomsHandler(w, r)
+}
+
+// GetRoomDetailsHandler returns room details for viewing (read-only)
+func (ah *AdminAPIHandler) GetRoomDetailsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	vars := mux.Vars(r)
+	roomID, err := uuid.Parse(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid room ID", http.StatusBadRequest)
+		return
+	}
+
+	room, err := ah.handler.RoomService.GetRoomWithPlayers(ctx, roomID)
+	if err != nil {
+		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+
+	// TODO: Get category count - for now default to 0
+	categoryCount := 0
+
+	ownerUsername := ""
+	if room.OwnerUsername != nil {
+		ownerUsername = *room.OwnerUsername
+	}
+
+	ownerEmail := ""
+	if room.OwnerEmail != nil {
+		ownerEmail = *room.OwnerEmail
+	}
+
+	guestUsername := ""
+	if room.GuestUsername != nil {
+		guestUsername = *room.GuestUsername
+	}
+
+	guestEmail := ""
+	if room.GuestEmail != nil {
+		guestEmail = *room.GuestEmail
+	}
+
+	data := services.RoomDetailsData{
+		ID:            room.ID.String(),
+		ShortID:       room.ID.String()[:8],
+		Name:          room.Name,
+		Status:        room.Status,
+		Language:      room.Language,
+		MaxQuestions:  room.MaxQuestions,
+		CreatedAt:     room.CreatedAt.Format("2006-01-02 15:04:05"),
+		OwnerUsername: ownerUsername,
+		OwnerEmail:    ownerEmail,
+		GuestUsername: guestUsername,
+		GuestEmail:    guestEmail,
+		CategoryCount: categoryCount,
+	}
+
+	html, err := ah.handler.TemplateService.RenderFragment("room_details.html", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error rendering room details: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(html))
 }
 
 // GetDashboardStatsHandler returns dashboard statistics as HTML for HTMX

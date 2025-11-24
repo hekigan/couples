@@ -224,6 +224,86 @@ func (s *AdminService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 	return nil
 }
 
+// GetUserByID retrieves a user by ID
+func (s *AdminService) GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error) {
+	data, _, err := s.client.From("users").
+		Select("*", "", false).
+		Eq("id", userID.String()).
+		Single().
+		Execute()
+
+	if err != nil {
+		return nil, fmt.Errorf("user not found: %w", err)
+	}
+
+	var user models.User
+	if err := json.Unmarshal(data, &user); err != nil {
+		return nil, fmt.Errorf("failed to parse user: %w", err)
+	}
+
+	return &user, nil
+}
+
+// CreateUser creates a new user (for admin panel)
+func (s *AdminService) CreateUser(ctx context.Context, username, email string, isAdmin, isAnonymous bool) (*models.User, error) {
+	userID := uuid.New()
+
+	userMap := map[string]interface{}{
+		"id":           userID.String(),
+		"username":     username,
+		"is_admin":     isAdmin,
+		"is_anonymous": isAnonymous,
+	}
+
+	// Only add email if provided (anonymous users may not have email)
+	if email != "" {
+		userMap["email"] = email
+		userMap["name"] = username // Set name same as username for now
+	}
+
+	data, _, err := s.client.From("users").Insert(userMap, false, "", "", "").Execute()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	var users []*models.User
+	if err := json.Unmarshal(data, &users); err != nil {
+		return nil, fmt.Errorf("failed to parse created user: %w", err)
+	}
+
+	if len(users) == 0 {
+		return nil, fmt.Errorf("no user returned after creation")
+	}
+
+	return users[0], nil
+}
+
+// UpdateUser updates a user's information
+func (s *AdminService) UpdateUser(ctx context.Context, userID uuid.UUID, username, email string, isAdmin, isAnonymous bool) error {
+	updateData := map[string]interface{}{
+		"username":     username,
+		"is_admin":     isAdmin,
+		"is_anonymous": isAnonymous,
+	}
+
+	// Only update email if provided
+	if email != "" {
+		updateData["email"] = email
+		updateData["name"] = username
+	}
+
+	_, _, err := s.client.From("users").
+		Update(updateData, "", "").
+		Eq("id", userID.String()).
+		Execute()
+
+	if err != nil {
+		return fmt.Errorf("failed to update user: %w", err)
+	}
+
+	return nil
+}
+
 // ListAllRooms retrieves all rooms with player information
 func (s *AdminService) ListAllRooms(ctx context.Context, limit, offset int) ([]*models.RoomWithPlayers, error) {
 	query := s.client.From("rooms_with_players").

@@ -1,0 +1,51 @@
+{{if .ID}}
+{{/* Edit Mode - User exists */}}
+<form
+	id="user-edit-form"
+	hx-put="/admin/api/users/{{.ID}}"
+	hx-swap="none"
+	hx-on::after-request="handleDataUpdateResponse(event, '/admin/api/users/list', '#users-list')"
+	>
+	<label>Username: <span style="color: red;">*</span></label>
+	<input type="text" name="username" value="{{.Username}}" required />
+
+	<label>Email:</label>
+	<input type="email" name="email" value="{{.Email}}" {{if .Email}}readonly{{end}} />
+	{{if .Email}}<small>Email cannot be changed for registered users</small>{{end}}
+
+	<label>
+		<input type="checkbox" name="is_admin" {{if .IsAdmin}}checked{{end}} />
+		Administrator privileges
+	</label>
+
+	<label>
+		<input type="checkbox" name="is_anonymous" {{if .IsAnonymous}}checked{{end}} />
+		Anonymous user (guest)
+	</label>
+</form>
+{{else}}
+{{/* Create Mode - New user */}}
+<form
+	id="user-create-form"
+	hx-post="/admin/api/users"
+	hx-swap="none"
+	hx-on::after-request="handleDataUpdateResponse(event, '/admin/api/users/list', '#users-list')"
+	>
+	<label>Username: <span style="color: red;">*</span></label>
+	<input type="text" name="username" placeholder="e.g., john_doe" required />
+
+	<label>Email:</label>
+	<input type="email" name="email" placeholder="e.g., john@example.com" />
+	<small>Optional for anonymous users</small>
+
+	<label>
+		<input type="checkbox" name="is_admin" />
+		Administrator privileges
+	</label>
+
+	<label>
+		<input type="checkbox" name="is_anonymous" />
+		Anonymous user (guest)
+	</label>
+</form>
+{{end}}

@@ -1,5 +1,20 @@
 {{define "rooms_list"}}
 <div id="rooms-list">
+	<!-- Loading Overlay -->
+	<div id="rooms-list-loading" class="htmx-indicator admin-list-loading-overlay">
+		<div class="loading-overlay-content">
+			<div class="spinner"></div>
+			<p>Loading rooms...</p>
+		</div>
+	</div>
+
+	<ul class="rooms-status table-legend">
+		<li data-legend-type="waiting">Waiting</li>
+		<li data-legend-type="ready">Ready</li>
+		<li data-legend-type="playing">Playing</li>
+		<li data-legend-type="finished">Finished</li>
+	</ul>
+
 	<table>
 		<thead>
 			<tr>
@@ -13,17 +28,26 @@
 		</thead>
 		<tbody>
 			{{range .Rooms}}
-			<tr>
+			<tr data-legend-type="{{.Status}}">
 				<td><code>{{.ShortID}}</code></td>
 				<td>{{.Owner}}</td>
 				<td>{{.Guest}}</td>
 				<td style="{{.StatusColor}}">{{.Status}}</td>
 				<td>{{.CreatedAt}}</td>
 				<td>
+					<button hx-get="/admin/api/rooms/{{.ID}}/details"
+					        hx-target="#view-modal-content"
+					        hx-swap="innerHTML"
+					        data-target="view-modal"
+					        onclick="toggleModal(event)"
+					        class="btn btn-sm">
+						View
+					</button>
 					<button hx-post="/admin/api/rooms/{{.ID}}/close"
 					        hx-target="#rooms-list"
 					        hx-swap="outerHTML"
 					        hx-confirm="Are you sure you want to force close this room?"
+					        hx-indicator="#rooms-list-loading"
 					        class="btn btn-sm btn-danger">
 						Force Close
 					</button>
