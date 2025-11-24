@@ -1,6 +1,7 @@
-<form id="question-edit-form" hx-put="/admin/api/questions/{{.QuestionID}}"
+<form id="question-edit-form"
+      hx-put="/admin/api/questions/{{.QuestionID}}?page={{$.Page}}"
       hx-swap="none"
-      hx-on::after-request="handleQuestionUpdateResponse(event)">
+      hx-on::after-request="handleDataUpdateResponse(event, '/admin/api/questions/list', '#questions-list')">
 	<input type="hidden" name="base_question_id" value="{{.BaseQuestionID}}">
 
 	<div class="grid">
@@ -60,40 +61,6 @@ function handleLanguageChange(event) {
 		} else if (langCode === 'ja') {
 			translationLabel.textContent = 'Japanese Translation:';
 			translationTextArea.value = '{{.TranslationJA}}';
-		}
-	}
-}
-
-function handleQuestionUpdateResponse(event) {
-	const xhr = event.detail.xhr;
-
-	if (xhr.status === 200) {
-		// Success: show toast and close modal
-		try {
-			const response = JSON.parse(xhr.responseText);
-			showToast(response.success || 'Question updated successfully', 'success');
-		} catch (e) {
-			showToast('Question updated successfully', 'success');
-		}
-
-		// Close the modal
-		const modal = document.getElementById('edit-modal');
-		if (modal) {
-			modal.close();
-		}
-
-		// Refresh the questions list
-		htmx.ajax('GET', '/admin/api/questions/list?page=1', {
-			target: '#questions-list',
-			swap: 'outerHTML'
-		});
-	} else {
-		// Error: show error toast
-		try {
-			const response = JSON.parse(xhr.responseText);
-			showToast(response.error || 'Failed to update question', 'error');
-		} catch (e) {
-			showToast('Failed to update question', 'error');
 		}
 	}
 }

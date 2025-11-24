@@ -73,3 +73,53 @@ const getScrollbarWidth = () => {
 const isScrollbarVisible = () => {
   return document.body.scrollHeight > screen.height;
 };
+
+// Submit modal form
+function submitModalForm(event) {
+    const modal = event.currentTarget.closest('dialog');
+    const form = modal.querySelector('.modal-content form');
+    console.log(form);
+    if (!form) {
+      alert('No modal content form found');
+        return;
+    }
+    console.log('trigger submit');
+    // Trigger HTMX submit
+    htmx.trigger(form, 'submit');
+    console.log('trigger ended');
+}
+
+function handleDataUpdateResponse(event, apiPath = '/admin/api/questions/list?page=1', targetSelector = '#questions-list') {
+	const xhr = event.detail.xhr;
+
+	if (xhr.status === 200) {
+		// Success: show toast and close modal
+		try {
+			const response = JSON.parse(xhr.responseText);
+			showToast(response.success || 'Data updated successfully', 'success');
+		} catch (e) {
+			showToast('Data updated successfully', 'success');
+		}
+
+		// Close the modal
+		const modal = event.currentTarget.closest('dialog');
+		if (modal) {
+			modal.close();
+		}
+
+		// Refresh the questions list
+        apiPath = apiPath + window.location.search;
+		htmx.ajax('GET', apiPath, {
+			target: targetSelector,
+			swap: 'outerHTML'
+		});
+	} else {
+		// Error: show error toast
+		try {
+			const response = JSON.parse(xhr.responseText);
+			showToast(response.error || 'Failed to update data', 'error');
+		} catch (e) {
+			showToast('Failed to update data', 'error');
+		}
+	}
+}

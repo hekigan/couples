@@ -21,7 +21,8 @@
 					<button hx-get="/admin/api/categories/{{.ID}}/edit-form"
 					        hx-target="#edit-modal-content"
 					        hx-swap="innerHTML"
-					        onclick="document.getElementById('edit-modal').style.display='block'"
+					        data-target="edit-modal"
+					        onclick="toggleModal(event)"
 					        class="btn btn-sm">
 						Edit
 					</button>

@@ -70,25 +70,16 @@
                 onclick="toggleModal(event)"></button>
             <h3>Edit Question</h3>
         </header>
-        <div id="edit-modal-content">
+        <div id="edit-modal-content" class="modal-content">
             <!-- Form will be loaded here via HTMX -->
         </div>
         <footer>
             <button type="button" class="secondary"
                 data-target="edit-modal"
                 onclick="toggleModal(event)">Cancel</button>
-            <button type="button" onclick="submitQuestionEditForm()">Save</button>
+            <button type="button" onclick="submitModalForm(event)">Save</button>
         </footer>
     </article>
 </dialog>
-
-<script>
-function submitQuestionEditForm() {
-    const form = document.getElementById('question-edit-form');
-    if (form) {
-        // Trigger HTMX submit
-        htmx.trigger(form, 'submit');
-    }
-}
-</script>
 {{end}}
+
