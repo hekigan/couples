@@ -117,7 +117,7 @@ func (ah *AdminAPIHandler) ListUsersHandler(w http.ResponseWriter, r *http.Reque
 		ItemName:        "users",
 	}
 
-	html, err := ah.handler.TemplateService.RenderFragment("users_list.html", data)
+	html, err := ah.handler.TemplateService.RenderFragment("users_list", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error rendering users list: %v", err)
@@ -660,7 +660,7 @@ func (ah *AdminAPIHandler) ListCategoriesHandler(w http.ResponseWriter, r *http.
 		ItemName:        "categories",
 	}
 
-	html, err := ah.handler.TemplateService.RenderFragment("categories_list.html", data)
+	html, err := ah.handler.TemplateService.RenderFragment("categories_list", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error rendering categories list: %v", err)
@@ -869,7 +869,7 @@ func (ah *AdminAPIHandler) ListRoomsHandler(w http.ResponseWriter, r *http.Reque
 		ItemName:        "rooms",
 	}
 
-	html, err := ah.handler.TemplateService.RenderFragment("rooms_list.html", data)
+	html, err := ah.handler.TemplateService.RenderFragment("rooms_list", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error rendering rooms list: %v", err)

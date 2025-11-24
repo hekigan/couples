@@ -3,7 +3,7 @@
     <h1>User Management</h1>
     <div class="admin-table">
         {{if .Data}}
-            {{.Data}}
+            {{template "users_list" .Data}}
         {{else}}
             <p>No users found.</p>
         {{end}}

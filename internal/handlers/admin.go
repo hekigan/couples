@@ -130,7 +130,7 @@ func (h *Handler) AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 			ItemName:        "users",
 		}
 
-		usersListHTML, _ = h.TemplateService.RenderFragment("users_list.html", usersData)
+		usersListHTML, _ = h.TemplateService.RenderFragment("users_list", usersData)
 	}
 
 	data := &TemplateData{
@@ -407,7 +407,7 @@ func (h *Handler) AdminCategoriesHandler(w http.ResponseWriter, r *http.Request)
 			ItemName:        "categories",
 		}
 
-		categoriesListHTML, _ = h.TemplateService.RenderFragment("categories_list.html", categoriesData)
+		categoriesListHTML, _ = h.TemplateService.RenderFragment("categories_list", categoriesData)
 	}
 
 	data := &TemplateData{
@@ -510,7 +510,7 @@ func (h *Handler) AdminRoomsHandler(w http.ResponseWriter, r *http.Request) {
 			ItemName:        "rooms",
 		}
 
-		roomsListHTML, _ = h.TemplateService.RenderFragment("rooms_list.html", roomsData)
+		roomsListHTML, _ = h.TemplateService.RenderFragment("rooms_list", roomsData)
 	}
 
 	data := &TemplateData{

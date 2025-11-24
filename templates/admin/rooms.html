@@ -3,7 +3,7 @@
     <h1>Room Monitoring</h1>
     <div class="admin-table">
         {{if .Data}}
-            {{.Data}}
+            {{template "rooms_list" .Data}}
         {{else}}
             <p>No rooms found.</p>
         {{end}}
