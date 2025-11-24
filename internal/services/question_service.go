@@ -44,6 +44,50 @@ func (s *QuestionService) GetQuestionByID(ctx context.Context, id uuid.UUID) (*m
 	return &question, nil
 }
 
+// QuestionTranslations holds all language versions of a question
+type QuestionTranslations struct {
+	BaseQuestionID uuid.UUID
+	English        *models.Question
+	French         *models.Question
+	Japanese       *models.Question
+}
+
+// GetQuestionTranslations retrieves all translations for a question by its base_question_id
+func (s *QuestionService) GetQuestionTranslations(ctx context.Context, baseQuestionID uuid.UUID) (*QuestionTranslations, error) {
+	// Fetch all questions with this base_question_id
+	data, _, err := s.client.From("questions").
+		Select("*", "", false).
+		Eq("base_question_id", baseQuestionID.String()).
+		Execute()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch translations: %w", err)
+	}
+
+	var questions []models.Question
+	if err := json.Unmarshal(data, &questions); err != nil {
+		return nil, fmt.Errorf("failed to parse translations: %w", err)
+	}
+
+	translations := &QuestionTranslations{
+		BaseQuestionID: baseQuestionID,
+	}
+
+	// Organize by language code
+	for i := range questions {
+		switch questions[i].LanguageCode {
+		case "en":
+			translations.English = &questions[i]
+		case "fr":
+			translations.French = &questions[i]
+		case "ja":
+			translations.Japanese = &questions[i]
+		}
+	}
+
+	return translations, nil
+}
+
 // GetRandomQuestion gets a random question for a room, filtered by categories and excluding already asked questions
 func (s *QuestionService) GetRandomQuestion(ctx context.Context, roomID uuid.UUID, language string, categoryIDs []uuid.UUID) (*models.Question, error) {
 	// First, get the list of question IDs already asked in this room
@@ -145,9 +189,10 @@ func (s *QuestionService) GetAllQuestions(ctx context.Context) ([]models.Questio
 // CreateQuestion creates a new question
 func (s *QuestionService) CreateQuestion(ctx context.Context, question *models.Question) error {
 	questionMap := map[string]interface{}{
-		"category_id":   question.CategoryID.String(),
-		"lang_code":     question.LanguageCode,
-		"question_text": question.Text,
+		"category_id":      question.CategoryID.String(),
+		"lang_code":        question.LanguageCode,
+		"question_text":    question.Text,
+		"base_question_id": question.BaseQuestionID.String(),
 	}
 
 	_, _, err := s.client.From("questions").Insert(questionMap, false, "", "", "").Execute()
@@ -161,9 +206,10 @@ func (s *QuestionService) CreateQuestion(ctx context.Context, question *models.Q
 // UpdateQuestion updates a question
 func (s *QuestionService) UpdateQuestion(ctx context.Context, question *models.Question) error {
 	questionMap := map[string]interface{}{
-		"category_id":   question.CategoryID.String(),
-		"lang_code":     question.LanguageCode,
-		"question_text": question.Text,
+		"category_id":      question.CategoryID.String(),
+		"lang_code":        question.LanguageCode,
+		"question_text":    question.Text,
+		"base_question_id": question.BaseQuestionID.String(),
 	}
 
 	_, _, err := s.client.From("questions").

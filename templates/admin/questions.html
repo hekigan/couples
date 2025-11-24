@@ -74,11 +74,21 @@
             <!-- Form will be loaded here via HTMX -->
         </div>
         <footer>
-            <button type="button" class="secondary" 
+            <button type="button" class="secondary"
                 data-target="edit-modal"
                 onclick="toggleModal(event)">Cancel</button>
-            <button type="button">Save</button>
+            <button type="button" onclick="submitQuestionEditForm()">Save</button>
         </footer>
     </article>
 </dialog>
+
+<script>
+function submitQuestionEditForm() {
+    const form = document.getElementById('question-edit-form');
+    if (form) {
+        // Trigger HTMX submit
+        htmx.trigger(form, 'submit');
+    }
+}
+</script>
 {{end}}

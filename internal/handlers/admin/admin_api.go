@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -333,7 +334,7 @@ func (ah *AdminAPIHandler) ListQuestionsHandler(w http.ResponseWriter, r *http.R
 		ItemName:        "questions",
 	}
 
-	html, err := ah.handler.TemplateService.RenderFragment("questions_list.html", data)
+	html, err := ah.handler.TemplateService.RenderFragment("questions_list", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error rendering questions list: %v", err)
@@ -360,6 +361,14 @@ func (ah *AdminAPIHandler) GetQuestionEditFormHandler(w http.ResponseWriter, r *
 		return
 	}
 
+	// Fetch all translations for this question
+	translations, err := ah.questionService.GetQuestionTranslations(ctx, question.BaseQuestionID)
+	if err != nil {
+		http.Error(w, "Failed to fetch translations", http.StatusInternalServerError)
+		log.Printf("Error fetching translations: %v", err)
+		return
+	}
+
 	categories, _ := ah.questionService.GetCategories(ctx)
 
 	// Build category options
@@ -374,13 +383,32 @@ func (ah *AdminAPIHandler) GetQuestionEditFormHandler(w http.ResponseWriter, r *
 		}
 	}
 
+	// Prepare translation texts
+	var translationFR, translationJA string
+	if translations.French != nil {
+		translationFR = translations.French.Text
+	}
+	if translations.Japanese != nil {
+		translationJA = translations.Japanese.Text
+	}
+
+	// Determine which text to show in the main question field based on selected language
+	questionText := question.Text
+	if translations.English != nil && question.LanguageCode != "en" {
+		questionText = translations.English.Text // Always show English in main field for reference
+	}
+
 	data := services.QuestionEditFormData{
-		QuestionID:   question.ID.String(),
-		QuestionText: question.Text,
-		Categories:   categoryOptions,
-		LangEN:       question.LanguageCode == "en",
-		LangFR:       question.LanguageCode == "fr",
-		LangJA:       question.LanguageCode == "ja",
+		QuestionID:     question.ID.String(),
+		BaseQuestionID: question.BaseQuestionID.String(),
+		QuestionText:   questionText,
+		TranslationFR:  translationFR,
+		TranslationJA:  translationJA,
+		Categories:     categoryOptions,
+		LangEN:         question.LanguageCode == "en",
+		LangFR:         question.LanguageCode == "fr",
+		LangJA:         question.LanguageCode == "ja",
+		SelectedLang:   question.LanguageCode,
 	}
 
 	html, err := ah.handler.TemplateService.RenderFragment("question_edit_form.html", data)
@@ -394,42 +422,118 @@ func (ah *AdminAPIHandler) GetQuestionEditFormHandler(w http.ResponseWriter, r *
 	w.Write([]byte(html))
 }
 
-// UpdateQuestionHandler updates a question
+// UpdateQuestionHandler updates a question or its translation
 func (ah *AdminAPIHandler) UpdateQuestionHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	vars := mux.Vars(r)
 	questionID, err := uuid.Parse(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid question ID", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid question ID"})
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid form data"})
+		return
+	}
+
+	// Get the current question to access base_question_id
+	currentQuestion, err := ah.questionService.GetQuestionByID(ctx, questionID)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Question not found"})
 		return
 	}
 
 	categoryID, err := uuid.Parse(r.FormValue("category_id"))
 	if err != nil {
-		http.Error(w, "Invalid category ID", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid category ID"})
 		return
 	}
 
-	question := &models.Question{
-		ID:           questionID,
-		CategoryID:   categoryID,
-		LanguageCode: r.FormValue("lang_code"),
-		Text:         r.FormValue("question_text"),
-	}
+	langCode := r.FormValue("lang_code")
+	questionText := r.FormValue("question_text")
+	translationText := r.FormValue("question_text_translation")
 
-	if err := ah.questionService.UpdateQuestion(ctx, question); err != nil {
-		http.Error(w, "Failed to update question", http.StatusInternalServerError)
-		log.Printf("Error updating question: %v", err)
+	// Fetch all translations to find the correct question to update
+	translations, err := ah.questionService.GetQuestionTranslations(ctx, currentQuestion.BaseQuestionID)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to fetch translations"})
+		log.Printf("Error fetching translations: %v", err)
 		return
 	}
 
-	// Return updated questions list
-	ah.ListQuestionsHandler(w, r)
+	// Determine which question to update based on selected language
+	var targetQuestion *models.Question
+	var textToUpdate string
+
+	if langCode == "en" {
+		targetQuestion = translations.English
+		textToUpdate = questionText
+	} else if langCode == "fr" {
+		targetQuestion = translations.French
+		textToUpdate = translationText
+	} else if langCode == "ja" {
+		targetQuestion = translations.Japanese
+		textToUpdate = translationText
+	}
+
+	if targetQuestion != nil {
+		// Update existing question
+		question := &models.Question{
+			ID:             targetQuestion.ID,
+			CategoryID:     categoryID,
+			LanguageCode:   langCode,
+			Text:           textToUpdate,
+			BaseQuestionID: currentQuestion.BaseQuestionID,
+		}
+
+		if err := ah.questionService.UpdateQuestion(ctx, question); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Failed to update question"})
+			log.Printf("Error updating question: %v", err)
+			return
+		}
+	} else {
+		// Create new translation (only for FR/JA, English should always exist)
+		if langCode == "en" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "English question not found"})
+			return
+		}
+
+		newTranslation := &models.Question{
+			ID:             uuid.New(),
+			CategoryID:     categoryID,
+			LanguageCode:   langCode,
+			Text:           textToUpdate,
+			BaseQuestionID: currentQuestion.BaseQuestionID,
+		}
+
+		if err := ah.questionService.CreateQuestion(ctx, newTranslation); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Failed to create translation"})
+			log.Printf("Error creating translation: %v", err)
+			return
+		}
+	}
+
+	// Return success response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"success": "Question updated successfully"})
 }
 
 // CreateQuestionHandler creates a new question

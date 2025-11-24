@@ -1,6 +1,8 @@
-<form hx-put="/admin/api/questions/{{.QuestionID}}"
-      hx-target="#questions-list"
-      hx-swap="outerHTML">
+<form id="question-edit-form" hx-put="/admin/api/questions/{{.QuestionID}}"
+      hx-swap="none"
+      hx-on::after-request="handleQuestionUpdateResponse(event)">
+	<input type="hidden" name="base_question_id" value="{{.BaseQuestionID}}">
+
 	<div class="grid">
 		<fieldset role="group">
 			<label>Category</label>
@@ -13,7 +15,7 @@
 
 		<fieldset role="group">
 			<label>Language:</label>
-			<select name="lang_code" required>
+			<select name="lang_code" id="lang_code" required onchange="handleLanguageChange(event)">
 				<option value="en" {{if .LangEN}}selected{{end}}>English</option>
 				<option value="fr" {{if .LangFR}}selected{{end}}>French</option>
 				<option value="ja" {{if .LangJA}}selected{{end}}>Japanese</option>
@@ -21,9 +23,78 @@
 		</fieldset>
 	</div>
 
-	<label>Question Text:</label>
-	<textarea name="question_text" required rows="2">{{.QuestionText}}</textarea>
+	<label>English Question Text:</label>
+	<textarea id="question_text" name="question_text" required rows="2" {{if ne .SelectedLang "en"}}disabled{{end}}>{{.QuestionText}}</textarea>
 
-	<label>Language Translation:</label>
-	<textarea name="question_text_translation" required rows="2"></textarea>
+	<div id="translation-section" {{if eq .SelectedLang "en"}}style="display:none"{{end}}>
+		<label id="translation-label">
+			{{if eq .SelectedLang "fr"}}French Translation:{{else if eq .SelectedLang "ja"}}Japanese Translation:{{else}}Translation:{{end}}
+		</label>
+		<textarea id="question_text_translation" name="question_text_translation" rows="2" {{if ne .SelectedLang "en"}}required{{end}}>{{if eq .SelectedLang "fr"}}{{.TranslationFR}}{{else if eq .SelectedLang "ja"}}{{.TranslationJA}}{{end}}</textarea>
+	</div>
 </form>
+
+<script>
+function handleLanguageChange(event) {
+	const langCode = event.target.value;
+	const questionTextArea = document.getElementById('question_text');
+	const translationSection = document.getElementById('translation-section');
+	const translationLabel = document.getElementById('translation-label');
+	const translationTextArea = document.getElementById('question_text_translation');
+
+	if (langCode === 'en') {
+		// Editing English: enable English textarea, hide translation section
+		questionTextArea.disabled = false;
+		translationSection.style.display = 'none';
+		translationTextArea.required = false;
+	} else {
+		// Editing translation: disable English textarea, show translation section
+		questionTextArea.disabled = true;
+		translationSection.style.display = 'block';
+		translationTextArea.required = true;
+
+		// Update label based on language
+		if (langCode === 'fr') {
+			translationLabel.textContent = 'French Translation:';
+			translationTextArea.value = '{{.TranslationFR}}';
+		} else if (langCode === 'ja') {
+			translationLabel.textContent = 'Japanese Translation:';
+			translationTextArea.value = '{{.TranslationJA}}';
+		}
+	}
+}
+
+function handleQuestionUpdateResponse(event) {
+	const xhr = event.detail.xhr;
+
+	if (xhr.status === 200) {
+		// Success: show toast and close modal
+		try {
+			const response = JSON.parse(xhr.responseText);
+			showToast(response.success || 'Question updated successfully', 'success');
+		} catch (e) {
+			showToast('Question updated successfully', 'success');
+		}
+
+		// Close the modal
+		const modal = document.getElementById('edit-modal');
+		if (modal) {
+			modal.close();
+		}
+
+		// Refresh the questions list
+		htmx.ajax('GET', '/admin/api/questions/list?page=1', {
+			target: '#questions-list',
+			swap: 'outerHTML'
+		});
+	} else {
+		// Error: show error toast
+		try {
+			const response = JSON.parse(xhr.responseText);
+			showToast(response.error || 'Failed to update question', 'error');
+		} catch (e) {
+			showToast('Failed to update question', 'error');
+		}
+	}
+}
+</script>

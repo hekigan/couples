@@ -371,4 +371,72 @@ dialog.modal-wide article {
   border: 1px solid #fca5a5;
 }
 
+.admin-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  min-width: 300px;
+  max-width: 500px;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  z-index: 10000;
+  opacity: 0;
+  transform: translateX(400px);
+  transition: all 0.3s ease-out;
+}
+.admin-toast.admin-toast-show {
+  opacity: 1;
+  transform: translateX(0);
+}
+.admin-toast.admin-toast-hide {
+  opacity: 0;
+  transform: translateX(400px);
+}
+.admin-toast .admin-toast-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+.admin-toast .admin-toast-message {
+  flex: 1;
+  font-size: 16px;
+}
+.admin-toast .admin-toast-close {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+.admin-toast .admin-toast-close:hover {
+  opacity: 1;
+}
+.admin-toast.admin-toast-success {
+  background: #d1fae5;
+  color: #065f46;
+  border-left: 4px solid #10b981;
+}
+.admin-toast.admin-toast-error {
+  background: #fee2e2;
+  color: #991b1b;
+  border-left: 4px solid #ef4444;
+}
+.admin-toast.admin-toast-warning {
+  background: #fef3c7;
+  color: #92400e;
+  border-left: 4px solid #f59e0b;
+}
+.admin-toast.admin-toast-info {
+  background: #dbeafe;
+  color: #1e40af;
+  border-left: 4px solid #3b82f6;
+}
+
 /*# sourceMappingURL=admin.css.map */

@@ -337,12 +337,16 @@ type QuestionsListData struct {
 
 // QuestionEditFormData represents data for question edit form partial
 type QuestionEditFormData struct {
-	QuestionID   string
-	QuestionText string
-	Categories   []AdminCategoryOption
-	LangEN       bool
-	LangFR       bool
-	LangJA       bool
+	QuestionID         string
+	BaseQuestionID     string
+	QuestionText       string               // English question text
+	TranslationFR      string               // French translation
+	TranslationJA      string               // Japanese translation
+	Categories         []AdminCategoryOption
+	LangEN             bool
+	LangFR             bool
+	LangJA             bool
+	SelectedLang       string               // Currently selected language code
 }
 
 // AdminCategoryInfo represents a category in the admin list
