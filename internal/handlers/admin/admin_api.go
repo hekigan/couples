@@ -1070,24 +1070,13 @@ func (ah *AdminAPIHandler) ListRoomsHandler(w http.ResponseWriter, r *http.Reque
 			guest = *room.GuestUsername
 		}
 
-		statusColor := ""
-		switch room.Status {
-		case "active":
-			statusColor = "color: #10b981;"
-		case "waiting":
-			statusColor = "color: #f59e0b;"
-		case "completed":
-			statusColor = "color: #6b7280;"
-		}
-
 		roomInfos[i] = services.AdminRoomInfo{
-			ID:          room.ID.String(),
-			ShortID:     room.ID.String()[:8],
-			Owner:       owner,
-			Guest:       guest,
-			Status:      room.Status,
-			StatusColor: statusColor,
-			CreatedAt:   room.CreatedAt.Format("2006-01-02 15:04"),
+			ID:        room.ID.String(),
+			ShortID:   room.ID.String()[:8],
+			Owner:     owner,
+			Guest:     guest,
+			Status:    room.Status,
+			CreatedAt: room.CreatedAt.Format("2006-01-02 15:04"),
 		}
 	}
 

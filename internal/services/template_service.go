@@ -410,13 +410,12 @@ type RoomDetailsData struct {
 
 // AdminRoomInfo represents a room in the admin list
 type AdminRoomInfo struct {
-	ID          string
-	ShortID     string // First 8 chars of ID
-	Owner       string
-	Guest       string
-	Status      string
-	StatusColor string
-	CreatedAt   string
+	ID        string
+	ShortID   string // First 8 chars of ID
+	Owner     string
+	Guest     string
+	Status    string
+	CreatedAt string
 }
 
 // RoomsListData represents data for admin rooms list partial
