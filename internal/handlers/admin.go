@@ -256,7 +256,6 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 			selected := categoryID != nil && *categoryID == cat.ID
 			categoryOptions[i] = services.AdminCategoryOption{
 				ID:           cat.ID.String(),
-				Icon:         cat.Icon,
 				Label:        cat.Label,
 				Selected:     selected,
 				QuestionCount: count,
@@ -266,7 +265,7 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 		// Create category map for lookups
 		categoryMap := make(map[uuid.UUID]string)
 		for _, cat := range categories {
-			categoryMap[cat.ID] = cat.Icon + " " + cat.Label
+			categoryMap[cat.ID] = cat.Label
 		}
 
 		// Build question infos
@@ -382,7 +381,6 @@ func (h *Handler) AdminCategoriesHandler(w http.ResponseWriter, r *http.Request)
 
 			categoryInfos[i] = services.AdminCategoryInfo{
 				ID:            cat.ID.String(),
-				Icon:          cat.Icon,
 				Label:         cat.Label,
 				Key:           cat.Key,
 				QuestionCount: count,

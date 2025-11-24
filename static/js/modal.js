@@ -78,15 +78,14 @@ const isScrollbarVisible = () => {
 function submitModalForm(event) {
     const modal = event.currentTarget.closest('dialog');
     const form = modal.querySelector('.modal-content form');
-    console.log(form);
+    
     if (!form) {
       alert('No modal content form found');
         return;
     }
-    console.log('trigger submit');
-    // Trigger HTMX submit
-    htmx.trigger(form, 'submit');
-    console.log('trigger ended');
+    
+    // Trigger form submit (HTMX will intercept if form has hx-* attributes)
+    form.requestSubmit();
 }
 
 function handleDataUpdateResponse(event, apiPath = '/admin/api/questions/list?page=1', targetSelector = '#questions-list') {

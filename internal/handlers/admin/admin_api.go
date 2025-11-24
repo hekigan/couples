@@ -3,7 +3,6 @@ package admin
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -17,16 +16,16 @@ import (
 
 // AdminAPIHandler handles admin API requests
 type AdminAPIHandler struct {
-	handler        *handlers.Handler
-	adminService   *services.AdminService
+	handler         *handlers.Handler
+	adminService    *services.AdminService
 	questionService *services.QuestionService
 }
 
 // NewAdminAPIHandler creates a new admin API handler
 func NewAdminAPIHandler(h *handlers.Handler, adminService *services.AdminService, questionService *services.QuestionService) *AdminAPIHandler {
 	return &AdminAPIHandler{
-		handler:        h,
-		adminService:   adminService,
+		handler:         h,
+		adminService:    adminService,
 		questionService: questionService,
 	}
 }
@@ -273,10 +272,9 @@ func (ah *AdminAPIHandler) ListQuestionsHandler(w http.ResponseWriter, r *http.R
 		}
 		selected := categoryID != nil && *categoryID == cat.ID
 		categoryOptions[i] = services.AdminCategoryOption{
-			ID:           cat.ID.String(),
-			Icon:         cat.Icon,
-			Label:        cat.Label,
-			Selected:     selected,
+			ID:            cat.ID.String(),
+			Label:         cat.Label,
+			Selected:      selected,
 			QuestionCount: count,
 		}
 	}
@@ -292,7 +290,7 @@ func (ah *AdminAPIHandler) ListQuestionsHandler(w http.ResponseWriter, r *http.R
 	for i, q := range questions {
 		categoryLabel := "Unknown"
 		if cat, ok := categoryMap[q.CategoryID]; ok {
-			categoryLabel = fmt.Sprintf("%s %s", cat.Icon, cat.Label)
+			categoryLabel = cat.Label
 		}
 
 		tCount := 1 // Default to 1 (at least English exists)
@@ -377,7 +375,6 @@ func (ah *AdminAPIHandler) GetQuestionEditFormHandler(w http.ResponseWriter, r *
 		selected := cat.ID == question.CategoryID
 		categoryOptions[i] = services.AdminCategoryOption{
 			ID:       cat.ID.String(),
-			Icon:     cat.Icon,
 			Label:    cat.Label,
 			Selected: selected,
 		}
@@ -638,7 +635,6 @@ func (ah *AdminAPIHandler) ListCategoriesHandler(w http.ResponseWriter, r *http.
 
 		categoryInfos[i] = services.AdminCategoryInfo{
 			ID:            cat.ID.String(),
-			Icon:          cat.Icon,
 			Label:         cat.Label,
 			Key:           cat.Key,
 			QuestionCount: count,
@@ -691,7 +687,6 @@ func (ah *AdminAPIHandler) GetCategoryEditFormHandler(w http.ResponseWriter, r *
 		ID:    category.ID.String(),
 		Key:   category.Key,
 		Label: category.Label,
-		Icon:  category.Icon,
 	}
 
 	html, err := ah.handler.TemplateService.RenderFragment("category_edit_form.html", data)
@@ -724,7 +719,6 @@ func (ah *AdminAPIHandler) UpdateCategoryHandler(w http.ResponseWriter, r *http.
 		ID:    categoryID,
 		Key:   r.FormValue("key"),
 		Label: r.FormValue("label"),
-		Icon:  r.FormValue("icon"),
 	}
 
 	if err := ah.questionService.UpdateCategory(ctx, category); err != nil {
@@ -749,7 +743,6 @@ func (ah *AdminAPIHandler) CreateCategoryHandler(w http.ResponseWriter, r *http.
 	category := &models.Category{
 		Key:   r.FormValue("key"),
 		Label: r.FormValue("label"),
-		Icon:  r.FormValue("icon"),
 	}
 
 	if err := ah.questionService.CreateCategory(ctx, category); err != nil {

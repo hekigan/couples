@@ -310,7 +310,6 @@ type AdminQuestionInfo struct {
 // AdminCategoryOption represents a category option for dropdowns
 type AdminCategoryOption struct {
 	ID           string
-	Icon         string
 	Label        string
 	Selected     bool
 	QuestionCount int // Number of questions in this category
@@ -347,12 +346,12 @@ type QuestionEditFormData struct {
 	LangFR             bool
 	LangJA             bool
 	SelectedLang       string               // Currently selected language code
+	Page               int                  // Current page number for pagination
 }
 
 // AdminCategoryInfo represents a category in the admin list
 type AdminCategoryInfo struct {
 	ID            string
-	Icon          string
 	Label         string
 	Key           string
 	QuestionCount int
@@ -379,7 +378,6 @@ type CategoryEditFormData struct {
 	ID    string
 	Key   string
 	Label string
-	Icon  string
 }
 
 // AdminRoomInfo represents a room in the admin list

@@ -15,4 +15,16 @@ button, [type=submit], [type=reset], [type=button], [role=button] {
   &[class*="danger"] {
     background-color: var(--pico-danger);
   }
+
+  &.success {
+    background-color: var(--pico-success);
+    color: $text-contrast;
+    border-color: var(--pico-success);
+  }
+
+  &.warning {
+    background-color: var(--pico-warning);
+    color: $text-contrast;
+    border-color: var(--pico-warning);
+  }
 }

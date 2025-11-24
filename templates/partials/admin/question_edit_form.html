@@ -9,7 +9,7 @@
 			<label>Category</label>
 			<select name="category_id" required>
 				{{range .Categories}}
-				<option value="{{.ID}}" {{if .Selected}}selected{{end}}>{{.Icon}} {{.Label}}</option>
+				<option value="{{.ID}}" {{if .Selected}}selected{{end}}>{{.Label}}</option>
 				{{end}}
 			</select>
 		</fieldset>

@@ -4,12 +4,9 @@
 	hx-swap="none"
 	hx-on::after-request="handleDataUpdateResponse(event, '/admin/api/categories/list', '#categories-list')"
 	>
-	<label>Key:</label>
-	<input type="text" name="key" value="{{.Key}}" required />
+	<p>Key: <span class="text-muted">{{.Key}}</span></p>
+	<input type="hidden" name="key" value="{{.Key}}" />
 
 	<label>Label:</label>
 	<input type="text" name="label" value="{{.Label}}" required />
-
-	<label>Icon:</label>
-	<input type="text" name="icon" value="{{.Icon}}" required placeholder="e.g., 💬" />
 </form>

@@ -445,7 +445,6 @@ func (s *QuestionService) CreateCategory(ctx context.Context, category *models.C
 	categoryMap := map[string]interface{}{
 		"key":   category.Key,
 		"label": category.Label,
-		"icon":  category.Icon,
 	}
 
 	_, _, err := s.client.From("categories").Insert(categoryMap, false, "", "", "").Execute()
@@ -461,7 +460,6 @@ func (s *QuestionService) UpdateCategory(ctx context.Context, category *models.C
 	categoryMap := map[string]interface{}{
 		"key":   category.Key,
 		"label": category.Label,
-		"icon":  category.Icon,
 	}
 
 	_, _, err := s.client.From("categories").

@@ -46,9 +46,9 @@
                         {{if eq .Status "waiting"}}
                             <a href="/game/room/{{.ID}}" role="button">Enter Room</a>
                         {{else if eq .Status "ready"}}
-                            <a href="/game/room/{{.ID}}" role="button" class="btn-success">Enter Room</a>
+                            <a href="/game/room/{{.ID}}" role="button" class="success">Enter Room</a>
                         {{else if eq .Status "playing"}}
-                            <a href="/game/play/{{.ID}}" role="button" class="btn-success">Continue Game</a>
+                            <a href="/game/play/{{.ID}}" role="button" class="success">Continue Game</a>
                         {{else if eq .Status "finished"}}
                             <a href="/game/finished/{{.ID}}" role="button" class="secondary">View Results</a>
                         {{end}}
