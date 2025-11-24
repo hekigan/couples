@@ -100,6 +100,10 @@ WHERE category_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_questions_lang_code
 ON questions(lang_code);
 
+-- Index for finding translations by base question (for translation management)
+CREATE INDEX IF NOT EXISTS idx_questions_base_question_id
+ON questions(base_question_id);
+
 -- ============================================================================
 -- FRIENDS TABLE INDEXES
 -- ============================================================================

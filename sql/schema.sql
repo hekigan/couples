@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS questions (
     category_id UUID NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
     lang_code VARCHAR(10) NOT NULL,
     question_text TEXT NOT NULL,
+    base_question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -74,8 +75,10 @@ CREATE TABLE IF NOT EXISTS questions (
 CREATE INDEX IF NOT EXISTS idx_questions_category_id ON questions(category_id);
 CREATE INDEX IF NOT EXISTS idx_questions_lang_code ON questions(lang_code);
 CREATE INDEX IF NOT EXISTS idx_questions_category_lang ON questions(category_id, lang_code);
+CREATE INDEX IF NOT EXISTS idx_questions_base_question_id ON questions(base_question_id);
 
 COMMENT ON TABLE questions IS 'Game questions in multiple languages';
+COMMENT ON COLUMN questions.base_question_id IS 'Links translations together. English questions reference themselves, translations reference the English version.';
 
 -- Rooms table
 CREATE TABLE IF NOT EXISTS rooms (

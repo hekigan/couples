@@ -116,6 +116,7 @@ SELECT
     q.id AS question_id,
     q.question_text AS current_question_text,
     q.lang_code AS current_question_lang,
+    q.base_question_id AS question_base_id,
     q.category_id AS question_category_id,
     c.key AS question_category_key,
     c.label AS question_category_label
