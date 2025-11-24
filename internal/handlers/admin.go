@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"html/template"
 	"log"
 	"net/http"
 	"strconv"
@@ -81,8 +80,8 @@ func (h *Handler) AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 		totalPages = 1
 	}
 
-	// Build users list HTML
-	var usersListHTML string
+	// Build users list data
+	var usersData *services.UsersListData
 	if users != nil {
 		userInfos := make([]services.AdminUserInfo, len(users))
 		for i, user := range users {
@@ -113,7 +112,7 @@ func (h *Handler) AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 			currentUserID = currentUser.ID
 		}
 
-		usersData := services.UsersListData{
+		usersData = &services.UsersListData{
 			Users:         userInfos,
 			TotalCount:    totalCount,
 			Page:          page,
@@ -129,15 +128,13 @@ func (h *Handler) AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 			ExtraParams:     "",
 			ItemName:        "users",
 		}
-
-		usersListHTML, _ = h.TemplateService.RenderFragment("users_list", usersData)
 	}
 
 	data := &TemplateData{
 		Title:   "User Management",
 		User:    GetSessionUser(r), // Get user from session (no DB call)
 		IsAdmin: true,
-		Data:    template.HTML(usersListHTML),
+		Data:    usersData,
 	}
 	h.RenderTemplate(w, "admin/users.html", data)
 }
@@ -373,8 +370,8 @@ func (h *Handler) AdminCategoriesHandler(w http.ResponseWriter, r *http.Request)
 
 	counts, _ := h.QuestionService.GetQuestionCountsByCategory(ctx, "en")
 
-	// Build categories list HTML
-	var categoriesListHTML string
+	// Build categories list data
+	var categoriesData *services.CategoriesListData
 	if categories != nil {
 		categoryInfos := make([]services.AdminCategoryInfo, len(categories))
 		for i, cat := range categories {
@@ -392,7 +389,7 @@ func (h *Handler) AdminCategoriesHandler(w http.ResponseWriter, r *http.Request)
 			}
 		}
 
-		categoriesData := services.CategoriesListData{
+		categoriesData = &services.CategoriesListData{
 			Categories: categoryInfos,
 			// Pagination fields
 			TotalCount:      totalCount,
@@ -406,15 +403,13 @@ func (h *Handler) AdminCategoriesHandler(w http.ResponseWriter, r *http.Request)
 			ExtraParams:     "",
 			ItemName:        "categories",
 		}
-
-		categoriesListHTML, _ = h.TemplateService.RenderFragment("categories_list", categoriesData)
 	}
 
 	data := &TemplateData{
 		Title:   "Category Management",
 		User:    GetSessionUser(r), // Get user from session (no DB call)
 		IsAdmin: true,
-		Data:    template.HTML(categoriesListHTML),
+		Data:    categoriesData,
 	}
 	h.RenderTemplate(w, "admin/categories.html", data)
 }
@@ -459,8 +454,8 @@ func (h *Handler) AdminRoomsHandler(w http.ResponseWriter, r *http.Request) {
 		totalPages = 1
 	}
 
-	// Build rooms list HTML
-	var roomsListHTML string
+	// Build rooms list data
+	var roomsData *services.RoomsListData
 	if rooms != nil {
 		roomInfos := make([]services.AdminRoomInfo, len(rooms))
 		for i, room := range rooms {
@@ -495,7 +490,7 @@ func (h *Handler) AdminRoomsHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		roomsData := services.RoomsListData{
+		roomsData = &services.RoomsListData{
 			Rooms: roomInfos,
 			// Pagination fields
 			TotalCount:      totalCount,
@@ -509,15 +504,13 @@ func (h *Handler) AdminRoomsHandler(w http.ResponseWriter, r *http.Request) {
 			ExtraParams:     "",
 			ItemName:        "rooms",
 		}
-
-		roomsListHTML, _ = h.TemplateService.RenderFragment("rooms_list", roomsData)
 	}
 
 	data := &TemplateData{
 		Title:   "Room Monitoring",
 		User:    GetSessionUser(r), // Get user from session (no DB call)
 		IsAdmin: true,
-		Data:    template.HTML(roomsListHTML),
+		Data:    roomsData,
 	}
 	h.RenderTemplate(w, "admin/rooms.html", data)
 }
