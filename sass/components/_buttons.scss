@@ -23,7 +23,7 @@ button, [type=submit], [type=reset], [type=button], [role=button] {
   }
 
   &.warning {
-    background-color: var(--pico-warning);
+    background-color: var(--pico-warning-background);
     color: $text-contrast;
     border-color: var(--pico-warning);
   }

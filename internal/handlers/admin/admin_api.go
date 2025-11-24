@@ -343,6 +343,53 @@ func (ah *AdminAPIHandler) ListQuestionsHandler(w http.ResponseWriter, r *http.R
 	w.Write([]byte(html))
 }
 
+// GetQuestionCreateFormHandler returns an HTML form for creating a new question
+func (ah *AdminAPIHandler) GetQuestionCreateFormHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+
+	categories, err := ah.questionService.GetCategories(ctx)
+	if err != nil {
+		http.Error(w, "Failed to fetch categories", http.StatusInternalServerError)
+		log.Printf("Error fetching categories: %v", err)
+		return
+	}
+
+	// Build category options (none selected)
+	categoryOptions := make([]services.AdminCategoryOption, len(categories))
+	for i, cat := range categories {
+		categoryOptions[i] = services.AdminCategoryOption{
+			ID:       cat.ID.String(),
+			Label:    cat.Label,
+			Selected: false,
+		}
+	}
+
+	// Create empty form data for new question
+	data := services.QuestionEditFormData{
+		QuestionID:     "", // Empty indicates create mode
+		BaseQuestionID: "",
+		QuestionText:   "",
+		TranslationFR:  "",
+		TranslationJA:  "",
+		Categories:     categoryOptions,
+		LangEN:         true, // Default to English
+		LangFR:         false,
+		LangJA:         false,
+		SelectedLang:   "en",
+		Page:           0, // Not needed for create
+	}
+
+	html, err := ah.handler.TemplateService.RenderFragment("question_form.html", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error rendering question create form: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(html))
+}
+
 // GetQuestionEditFormHandler returns an HTML form for editing a question
 func (ah *AdminAPIHandler) GetQuestionEditFormHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
@@ -408,7 +455,7 @@ func (ah *AdminAPIHandler) GetQuestionEditFormHandler(w http.ResponseWriter, r *
 		SelectedLang:   question.LanguageCode,
 	}
 
-	html, err := ah.handler.TemplateService.RenderFragment("question_edit_form.html", data)
+	html, err := ah.handler.TemplateService.RenderFragment("question_form.html", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error rendering question edit form: %v", err)
@@ -533,7 +580,7 @@ func (ah *AdminAPIHandler) UpdateQuestionHandler(w http.ResponseWriter, r *http.
 	json.NewEncoder(w).Encode(map[string]string{"success": "Question updated successfully"})
 }
 
-// CreateQuestionHandler creates a new question
+// CreateQuestionHandler creates a new question with optional translations
 func (ah *AdminAPIHandler) CreateQuestionHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 
@@ -548,16 +595,64 @@ func (ah *AdminAPIHandler) CreateQuestionHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	question := &models.Question{
-		CategoryID:   categoryID,
-		LanguageCode: r.FormValue("lang_code"),
-		Text:         r.FormValue("question_text"),
+	// Get form values
+	questionTextEN := r.FormValue("question_text_en")
+	questionTextFR := r.FormValue("question_text_fr")
+	questionTextJA := r.FormValue("question_text_ja")
+
+	if questionTextEN == "" {
+		http.Error(w, "English question text is required", http.StatusBadRequest)
+		return
 	}
 
-	if err := ah.questionService.CreateQuestion(ctx, question); err != nil {
-		http.Error(w, "Failed to create question", http.StatusInternalServerError)
-		log.Printf("Error creating question: %v", err)
+	// Generate UUID for the base English question
+	baseQuestionID := uuid.New()
+
+	// Create English question (base question)
+	englishQuestion := &models.Question{
+		ID:             baseQuestionID,
+		CategoryID:     categoryID,
+		LanguageCode:   "en",
+		Text:           questionTextEN,
+		BaseQuestionID: baseQuestionID, // Self-reference for base question
+	}
+
+	if err := ah.questionService.CreateQuestion(ctx, englishQuestion); err != nil {
+		http.Error(w, "Failed to create English question", http.StatusInternalServerError)
+		log.Printf("Error creating English question: %v", err)
 		return
+	}
+
+	// Create French translation if provided
+	if questionTextFR != "" {
+		frenchQuestion := &models.Question{
+			ID:             uuid.New(),
+			CategoryID:     categoryID,
+			LanguageCode:   "fr",
+			Text:           questionTextFR,
+			BaseQuestionID: baseQuestionID, // Reference to English question
+		}
+
+		if err := ah.questionService.CreateQuestion(ctx, frenchQuestion); err != nil {
+			log.Printf("Error creating French translation: %v", err)
+			// Continue even if French creation fails
+		}
+	}
+
+	// Create Japanese translation if provided
+	if questionTextJA != "" {
+		japaneseQuestion := &models.Question{
+			ID:             uuid.New(),
+			CategoryID:     categoryID,
+			LanguageCode:   "ja",
+			Text:           questionTextJA,
+			BaseQuestionID: baseQuestionID, // Reference to English question
+		}
+
+		if err := ah.questionService.CreateQuestion(ctx, japaneseQuestion); err != nil {
+			log.Printf("Error creating Japanese translation: %v", err)
+			// Continue even if Japanese creation fails
+		}
 	}
 
 	// Return updated questions list

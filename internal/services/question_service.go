@@ -195,6 +195,11 @@ func (s *QuestionService) CreateQuestion(ctx context.Context, question *models.Q
 		"base_question_id": question.BaseQuestionID.String(),
 	}
 
+	// Include ID if provided (for base questions that self-reference)
+	if question.ID != uuid.Nil {
+		questionMap["id"] = question.ID.String()
+	}
+
 	_, _, err := s.client.From("questions").Insert(questionMap, false, "", "", "").Execute()
 	if err != nil {
 		return fmt.Errorf("failed to create question: %w", err)
