@@ -27,6 +27,7 @@ Required data fields:
 		        hx-swap="outerHTML"
 		        hx-push-url="{{.PageURL}}"
 		        hx-include="{{.IncludeSelector}}"
+		        hx-indicator="#questions-list-loading"
 		        onchange="savePerPagePref(this.value)">
 			<option value="25" {{if eq .ItemsPerPage 25}}selected{{end}}>25</option>
 			<option value="50" {{if eq .ItemsPerPage 50}}selected{{end}}>50</option>
@@ -39,6 +40,7 @@ Required data fields:
 			        hx-target="{{.Target}}"
 			        hx-swap="outerHTML"
 			        hx-push-url="{{.PageURL}}?page={{sub .CurrentPage 1}}&per_page={{.ItemsPerPage}}{{.ExtraParams}}"
+			        hx-indicator="#questions-list-loading"
 			        class="btn btn-sm">◄ Prev</button>
 			{{end}}
 
@@ -49,6 +51,7 @@ Required data fields:
 			        hx-target="{{$.Target}}"
 			        hx-swap="outerHTML"
 			        hx-push-url="{{$.PageURL}}?page={{$pageNum}}&per_page={{$.ItemsPerPage}}{{$.ExtraParams}}"
+			        hx-indicator="#questions-list-loading"
 			        class="btn btn-sm {{if eq $pageNum $.CurrentPage}}active{{end}}">{{$pageNum}}</button>
 			{{else if or (eq $pageNum 2) (eq $pageNum (sub $.TotalPages 1))}}
 			<span class="pagination-ellipsis">...</span>
@@ -60,6 +63,7 @@ Required data fields:
 			        hx-target="{{.Target}}"
 			        hx-swap="outerHTML"
 			        hx-push-url="{{.PageURL}}?page={{add .CurrentPage 1}}&per_page={{.ItemsPerPage}}{{.ExtraParams}}"
+			        hx-indicator="#questions-list-loading"
 			        class="btn btn-sm">Next ►</button>
 			{{end}}
 		</div>

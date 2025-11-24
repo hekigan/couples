@@ -110,7 +110,8 @@ function handleDataUpdateResponse(event, apiPath = '/admin/api/questions/list?pa
         apiPath = apiPath + window.location.search;
 		htmx.ajax('GET', apiPath, {
 			target: targetSelector,
-			swap: 'outerHTML'
+			swap: 'outerHTML',
+			indicator: '#questions-list-loading'
 		});
 	} else {
 		// Error: show error toast
