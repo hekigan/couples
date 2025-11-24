@@ -327,7 +327,7 @@ func (s *QuestionService) GetQuestionCountsByCategory(ctx context.Context, langu
 
 // GetQuestionTranslationStatus returns the number of translations (0-3) for each question ID
 // This checks how many language versions exist for each question (en, fr, ja)
-// Note: Questions are matched by text content since there's no base_question_id in the schema
+// Uses base_question_id to link translations together
 func (s *QuestionService) GetQuestionTranslationStatus(ctx context.Context, questionIDs []uuid.UUID) (map[string]int, error) {
 	if len(questionIDs) == 0 {
 		return make(map[string]int), nil
@@ -339,9 +339,9 @@ func (s *QuestionService) GetQuestionTranslationStatus(ctx context.Context, ques
 		idStrings[i] = id.String()
 	}
 
-	// Step 1: Fetch the English questions to get their texts
+	// Step 1: Fetch the questions to get their base_question_ids
 	data, _, err := s.client.From("questions").
-		Select("id, question_text", "", false).
+		Select("id, base_question_id", "", false).
 		In("id", idStrings).
 		Execute()
 
@@ -349,26 +349,32 @@ func (s *QuestionService) GetQuestionTranslationStatus(ctx context.Context, ques
 		return nil, fmt.Errorf("failed to fetch questions: %w", err)
 	}
 
-	var englishQuestions []struct {
-		ID   string `json:"id"`
-		Text string `json:"question_text"`
+	var questions []struct {
+		ID             string `json:"id"`
+		BaseQuestionID string `json:"base_question_id"`
 	}
-	if err := json.Unmarshal(data, &englishQuestions); err != nil {
+	if err := json.Unmarshal(data, &questions); err != nil {
 		return nil, fmt.Errorf("failed to parse questions: %w", err)
 	}
 
-	// Step 2: Build a map of ID → Text and collect all texts
-	idToText := make(map[string]string)
-	texts := make([]string, 0, len(englishQuestions))
-	for _, q := range englishQuestions {
-		idToText[q.ID] = q.Text
-		texts = append(texts, q.Text)
+	// Step 2: Build map of ID → BaseQuestionID and collect all base question IDs
+	idToBaseID := make(map[string]string)
+	baseIDSet := make(map[string]bool)
+	for _, q := range questions {
+		idToBaseID[q.ID] = q.BaseQuestionID
+		baseIDSet[q.BaseQuestionID] = true
 	}
 
-	// Step 3: Query all questions with these texts across all languages
+	// Convert base IDs to slice for query
+	baseIDStrings := make([]string, 0, len(baseIDSet))
+	for baseID := range baseIDSet {
+		baseIDStrings = append(baseIDStrings, baseID)
+	}
+
+	// Step 3: Query all questions with these base_question_ids to count translations
 	data, _, err = s.client.From("questions").
-		Select("question_text, lang_code", "", false).
-		In("question_text", texts).
+		Select("base_question_id, lang_code", "", false).
+		In("base_question_id", baseIDStrings).
 		Execute()
 
 	if err != nil {
@@ -376,29 +382,29 @@ func (s *QuestionService) GetQuestionTranslationStatus(ctx context.Context, ques
 	}
 
 	var allTranslations []struct {
-		Text     string `json:"question_text"`
-		LangCode string `json:"lang_code"`
+		BaseQuestionID string `json:"base_question_id"`
+		LangCode       string `json:"lang_code"`
 	}
 	if err := json.Unmarshal(data, &allTranslations); err != nil {
 		return nil, fmt.Errorf("failed to parse translations: %w", err)
 	}
 
-	// Step 4: Count distinct languages per question text
-	textToLanguages := make(map[string]map[string]bool)
+	// Step 4: Count distinct languages per base_question_id
+	baseIDToLanguages := make(map[string]map[string]bool)
 	for _, t := range allTranslations {
-		if textToLanguages[t.Text] == nil {
-			textToLanguages[t.Text] = make(map[string]bool)
+		if baseIDToLanguages[t.BaseQuestionID] == nil {
+			baseIDToLanguages[t.BaseQuestionID] = make(map[string]bool)
 		}
-		textToLanguages[t.Text][t.LangCode] = true
+		baseIDToLanguages[t.BaseQuestionID][t.LangCode] = true
 	}
 
-	// Step 5: Map back to question IDs
+	// Step 5: Map back to original question IDs
 	counts := make(map[string]int)
-	for id, text := range idToText {
-		if langs, ok := textToLanguages[text]; ok {
+	for id, baseID := range idToBaseID {
+		if langs, ok := baseIDToLanguages[baseID]; ok {
 			counts[id] = len(langs)
 		} else {
-			counts[id] = 1 // At least the English version exists
+			counts[id] = 1 // At least one version exists
 		}
 	}
 
