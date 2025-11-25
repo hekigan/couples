@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 )
 
 func TestExtractIDFromRoute(t *testing.T) {
@@ -297,6 +298,82 @@ func TestWriteJSONSuccess(t *testing.T) {
 	body := strings.TrimSpace(w.Body.String())
 	if body != expectedBody {
 		t.Errorf("body = %s, want %s", body, expectedBody)
+	}
+}
+
+func TestExtractIDFromRouteVars(t *testing.T) {
+	tests := []struct {
+		name      string
+		setupVars func(*http.Request) *http.Request
+		key       string
+		expectErr bool
+		expected  uuid.UUID
+	}{
+		{
+			name: "valid UUID",
+			setupVars: func(r *http.Request) *http.Request {
+				return mux.SetURLVars(r, map[string]string{
+					"id": "123e4567-e89b-12d3-a456-426614174000",
+				})
+			},
+			key:       "id",
+			expectErr: false,
+			expected:  uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+		},
+		{
+			name: "invalid UUID format",
+			setupVars: func(r *http.Request) *http.Request {
+				return mux.SetURLVars(r, map[string]string{
+					"id": "not-a-uuid",
+				})
+			},
+			key:       "id",
+			expectErr: true,
+		},
+		{
+			name: "missing key",
+			setupVars: func(r *http.Request) *http.Request {
+				return mux.SetURLVars(r, map[string]string{})
+			},
+			key:       "id",
+			expectErr: true,
+		},
+		{
+			name: "different key name",
+			setupVars: func(r *http.Request) *http.Request {
+				return mux.SetURLVars(r, map[string]string{
+					"room_id": "123e4567-e89b-12d3-a456-426614174000",
+				})
+			},
+			key:       "room_id",
+			expectErr: false,
+			expected:  uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/test", nil)
+			req = tt.setupVars(req)
+
+			result, err := ExtractIDFromRouteVars(req, tt.key)
+
+			if tt.expectErr {
+				if err == nil {
+					t.Error("Expected error but got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
+
+			if result != tt.expected {
+				t.Errorf("ExtractIDFromRouteVars() = %v, want %v", result, tt.expected)
+			}
+		})
 	}
 }
 

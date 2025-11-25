@@ -120,6 +120,13 @@ func ExtractIDFromRoute(vars map[string]string, key string) (uuid.UUID, error) {
 	return id, nil
 }
 
+// ExtractIDFromRouteVars is a convenience wrapper that extracts mux vars from request
+// and parses the UUID in one call
+func ExtractIDFromRouteVars(r *http.Request, key string) (uuid.UUID, error) {
+	vars := mux.Vars(r)
+	return ExtractIDFromRoute(vars, key)
+}
+
 // ParsePaginationParams extracts pagination parameters from the request
 // Eliminates 4 duplications in admin_api.go
 // Returns: page (1-indexed), perPage (validated), offset (0-indexed)
