@@ -648,17 +648,16 @@ func (ah *AdminAPIHandler) UpdateQuestionHandler(w http.ResponseWriter, r *http.
 
 	// Determine which question to update based on selected language
 	var targetQuestion *models.Question
-	var textToUpdate string
+	textToUpdate := translationText
 
-	if langCode == "en" {
+	switch langCode {
+	case "fr":
+		targetQuestion = translations.French
+	case "ja":
+		targetQuestion = translations.Japanese
+	default:
 		targetQuestion = translations.English
 		textToUpdate = questionText
-	} else if langCode == "fr" {
-		targetQuestion = translations.French
-		textToUpdate = translationText
-	} else if langCode == "ja" {
-		targetQuestion = translations.Japanese
-		textToUpdate = translationText
 	}
 
 	if targetQuestion != nil {

@@ -260,7 +260,7 @@ Backend uses `SUPABASE_SERVICE_ROLE_KEY` to bypass RLS. This means **all authori
 SSE connections are stateful. When a room is deleted, gracefully close connections. See `internal/handlers/realtime.go` for error handling pattern.
 
 ### 5. HTMX Refactoring in Progress
-When modifying game/room handlers, prefer the new HTML fragment pattern (Phase 4+ work). See `PHASE3_INFRASTRUCTURE_COMPLETE.md` for usage examples.
+When modifying game/room handlers, prefer the new HTML fragment pattern (Phase 4+ work). See `docs/PHASE4_HANDLER_CONVERSION_COMPLETE.md` for usage examples.
 
 ### 6. UUID Parsing
 Always validate UUIDs from URL params:
@@ -315,11 +315,11 @@ couple-game/
 
 ## Documentation
 
-**Extensive documentation** exists in `docs/` and root-level markdown files. Key references:
+**Extensive documentation** exists in `docs/`. Key references:
 - `README.md` - Quick start
 - `docs/TESTING.md` - Comprehensive testing guide
 - `docs/REALTIME_NOTIFICATIONS.md` - SSE architecture
-- `SESSION_SUMMARY.md` - Recent refactoring session summary
-- `PHASE*.md` - HTMX refactoring phase documentation
+- `docs/SESSION_SUMMARY.md` - Recent refactoring session summary
+- `docs/PHASE*.md` - HTMX refactoring phase documentation
 
 When making architectural changes, update relevant documentation.
