@@ -209,7 +209,7 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Get categories
-	categories, err := h.QuestionService.GetCategories(ctx)
+	categories, err := h.CategoryService.GetCategories(ctx)
 	if err != nil {
 		log.Printf("⚠️ Failed to get categories: %v", err)
 	}
@@ -356,13 +356,13 @@ func (h *Handler) AdminCategoriesHandler(w http.ResponseWriter, r *http.Request)
 	offset := (page - 1) * perPage
 
 	// Fetch categories list for SSR
-	categories, err := h.QuestionService.ListCategories(ctx, perPage, offset)
+	categories, err := h.CategoryService.ListCategories(ctx, perPage, offset)
 	if err != nil {
 		log.Printf("⚠️ Failed to fetch categories: %v", err)
 		categories = nil
 	}
 
-	totalCount, _ := h.QuestionService.GetCategoryCount(ctx)
+	totalCount, _ := h.CategoryService.GetCategoryCount(ctx)
 
 	// Calculate pagination
 	totalPages := (totalCount + perPage - 1) / perPage

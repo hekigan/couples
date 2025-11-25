@@ -14,34 +14,16 @@ import (
 
 // QuestionService handles question-related operations
 type QuestionService struct {
+	*BaseService
 	client *supabase.Client
 }
 
 // NewQuestionService creates a new question service
 func NewQuestionService(client *supabase.Client) *QuestionService {
 	return &QuestionService{
-		client: client,
+		BaseService: NewBaseService(client, "QuestionService"),
+		client:      client,
 	}
-}
-
-// GetQuestionByID retrieves a question by ID
-func (s *QuestionService) GetQuestionByID(ctx context.Context, id uuid.UUID) (*models.Question, error) {
-	data, _, err := s.client.From("questions").
-		Select("*", "", false).
-		Eq("id", id.String()).
-		Single().
-		Execute()
-
-	if err != nil {
-		return nil, fmt.Errorf("question not found: %w", err)
-	}
-
-	var question models.Question
-	if err := json.Unmarshal(data, &question); err != nil {
-		return nil, fmt.Errorf("failed to parse question: %w", err)
-	}
-
-	return &question, nil
 }
 
 // QuestionTranslations holds all language versions of a question
@@ -52,21 +34,22 @@ type QuestionTranslations struct {
 	Japanese       *models.Question
 }
 
+// GetQuestionByID retrieves a question by ID
+func (s *QuestionService) GetQuestionByID(ctx context.Context, id uuid.UUID) (*models.Question, error) {
+	var question models.Question
+	if err := s.BaseService.GetSingleRecord(ctx, "questions", id, &question); err != nil {
+		return nil, err
+	}
+	return &question, nil
+}
+
 // GetQuestionTranslations retrieves all translations for a question by its base_question_id
 func (s *QuestionService) GetQuestionTranslations(ctx context.Context, baseQuestionID uuid.UUID) (*QuestionTranslations, error) {
-	// Fetch all questions with this base_question_id
-	data, _, err := s.client.From("questions").
-		Select("*", "", false).
-		Eq("base_question_id", baseQuestionID.String()).
-		Execute()
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch translations: %w", err)
-	}
-
 	var questions []models.Question
-	if err := json.Unmarshal(data, &questions); err != nil {
-		return nil, fmt.Errorf("failed to parse translations: %w", err)
+	if err := s.BaseService.GetRecords(ctx, "questions", map[string]interface{}{
+		"base_question_id": baseQuestionID.String(),
+	}, &questions); err != nil {
+		return nil, fmt.Errorf("failed to fetch translations: %w", err)
 	}
 
 	translations := &QuestionTranslations{
@@ -160,29 +143,15 @@ func (s *QuestionService) MarkQuestionAsked(ctx context.Context, roomID, questio
 		"question_id": questionID.String(),
 	}
 
-	_, _, err := s.client.From("question_history").Insert(historyMap, false, "", "", "").Execute()
-	if err != nil {
-		return fmt.Errorf("failed to mark question as asked: %w", err)
-	}
-
-	return nil
+	return s.BaseService.InsertRecord(ctx, "question_history", historyMap)
 }
 
 // GetAllQuestions retrieves all questions
 func (s *QuestionService) GetAllQuestions(ctx context.Context) ([]models.Question, error) {
-	data, _, err := s.client.From("questions").
-		Select("*", "", false).
-		Execute()
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch questions: %w", err)
-	}
-
 	var questions []models.Question
-	if err := json.Unmarshal(data, &questions); err != nil {
-		return nil, fmt.Errorf("failed to parse questions: %w", err)
+	if err := s.BaseService.GetRecords(ctx, "questions", map[string]interface{}{}, &questions); err != nil {
+		return nil, err
 	}
-
 	return questions, nil
 }
 
@@ -200,12 +169,7 @@ func (s *QuestionService) CreateQuestion(ctx context.Context, question *models.Q
 		questionMap["id"] = question.ID.String()
 	}
 
-	_, _, err := s.client.From("questions").Insert(questionMap, false, "", "", "").Execute()
-	if err != nil {
-		return fmt.Errorf("failed to create question: %w", err)
-	}
-
-	return nil
+	return s.BaseService.InsertRecord(ctx, "questions", questionMap)
 }
 
 // UpdateQuestion updates a question
@@ -217,88 +181,12 @@ func (s *QuestionService) UpdateQuestion(ctx context.Context, question *models.Q
 		"base_question_id": question.BaseQuestionID.String(),
 	}
 
-	_, _, err := s.client.From("questions").
-		Update(questionMap, "", "").
-		Eq("id", question.ID.String()).
-		Execute()
-
-	if err != nil {
-		return fmt.Errorf("failed to update question: %w", err)
-	}
-
-	return nil
+	return s.BaseService.UpdateRecord(ctx, "questions", question.ID, questionMap)
 }
 
 // DeleteQuestion deletes a question
 func (s *QuestionService) DeleteQuestion(ctx context.Context, id uuid.UUID) error {
-	_, _, err := s.client.From("questions").
-		Delete("", "").
-		Eq("id", id.String()).
-		Execute()
-
-	if err != nil {
-		return fmt.Errorf("failed to delete question: %w", err)
-	}
-
-	return nil
-}
-
-// GetCategories retrieves all categories
-func (s *QuestionService) GetCategories(ctx context.Context) ([]models.Category, error) {
-	data, _, err := s.client.From("categories").
-		Select("*", "", false).
-		Execute()
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch categories: %w", err)
-	}
-
-	var categories []models.Category
-	if err := json.Unmarshal(data, &categories); err != nil {
-		return nil, fmt.Errorf("failed to parse categories: %w", err)
-	}
-
-	return categories, nil
-}
-
-// ListCategories retrieves paginated categories
-func (s *QuestionService) ListCategories(ctx context.Context, limit, offset int) ([]models.Category, error) {
-	data, _, err := s.client.From("categories").
-		Select("*", "", false).
-		Range(offset, offset+limit-1, "").
-		Execute()
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch categories: %w", err)
-	}
-
-	var categories []models.Category
-	if err := json.Unmarshal(data, &categories); err != nil {
-		return nil, fmt.Errorf("failed to parse categories: %w", err)
-	}
-
-	return categories, nil
-}
-
-// GetCategoryCount returns the total number of categories
-func (s *QuestionService) GetCategoryCount(ctx context.Context) (int, error) {
-	data, _, err := s.client.From("categories").Select("id", "", false).Execute()
-	if err != nil {
-		return 0, fmt.Errorf("failed to count categories: %w", err)
-	}
-
-	var categories []map[string]interface{}
-	if err := json.Unmarshal(data, &categories); err != nil {
-		return 0, fmt.Errorf("failed to parse categories: %w", err)
-	}
-
-	return len(categories), nil
-}
-
-// CategoryCount represents a category with its question count
-type CategoryCount struct {
-	CategoryID string `json:"category_id"`
-	Count      int    `json:"count"`
+	return s.BaseService.DeleteRecord(ctx, "questions", id)
 }
 
 // GetQuestionCountsByCategory returns the number of questions per category for a given language
@@ -445,76 +333,9 @@ func (s *QuestionService) CountQuestionsForCategories(ctx context.Context, langu
 	return len(questions), nil
 }
 
-// CreateCategory creates a new category
-func (s *QuestionService) CreateCategory(ctx context.Context, category *models.Category) error {
-	categoryMap := map[string]interface{}{
-		"key":   category.Key,
-		"label": category.Label,
-	}
-
-	_, _, err := s.client.From("categories").Insert(categoryMap, false, "", "", "").Execute()
-	if err != nil {
-		return fmt.Errorf("failed to create category: %w", err)
-	}
-
-	return nil
-}
-
-// UpdateCategory updates a category
-func (s *QuestionService) UpdateCategory(ctx context.Context, category *models.Category) error {
-	categoryMap := map[string]interface{}{
-		"key":   category.Key,
-		"label": category.Label,
-	}
-
-	_, _, err := s.client.From("categories").
-		Update(categoryMap, "", "").
-		Eq("id", category.ID.String()).
-		Execute()
-
-	if err != nil {
-		return fmt.Errorf("failed to update category: %w", err)
-	}
-
-	return nil
-}
-
-// DeleteCategory deletes a category
-func (s *QuestionService) DeleteCategory(ctx context.Context, id uuid.UUID) error {
-	_, _, err := s.client.From("categories").
-		Delete("", "").
-		Eq("id", id.String()).
-		Execute()
-
-	if err != nil {
-		return fmt.Errorf("failed to delete category: %w", err)
-	}
-
-	return nil
-}
-
-// GetCategoryByID retrieves a category by ID
-func (s *QuestionService) GetCategoryByID(ctx context.Context, id uuid.UUID) (*models.Category, error) {
-	data, _, err := s.client.From("categories").
-		Select("*", "", false).
-		Eq("id", id.String()).
-		Single().
-		Execute()
-
-	if err != nil {
-		return nil, fmt.Errorf("category not found: %w", err)
-	}
-
-	var category models.Category
-	if err := json.Unmarshal(data, &category); err != nil {
-		return nil, fmt.Errorf("failed to parse category: %w", err)
-	}
-
-	return &category, nil
-}
-
 // ListQuestions retrieves questions with pagination and optional filtering
 func (s *QuestionService) ListQuestions(ctx context.Context, limit, offset int, categoryID *uuid.UUID, langCode *string) ([]models.Question, error) {
+	// Custom query - uses Order and Range with optional filters, not supported by BaseService
 	query := s.client.From("questions").
 		Select("*", "", false).
 		Order("created_at", &postgrest.OrderOpts{Ascending: false})
@@ -542,16 +363,4 @@ func (s *QuestionService) ListQuestions(ctx context.Context, limit, offset int, 
 	}
 
 	return questions, nil
-}
-
-// Helper function to join strings
-func joinStrings(strs []string, sep string) string {
-	result := ""
-	for i, s := range strs {
-		if i > 0 {
-			result += sep
-		}
-		result += "'" + s + "'"
-	}
-	return result
 }

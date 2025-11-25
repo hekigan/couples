@@ -18,14 +18,14 @@ func (ah *AdminAPIHandler) ListCategoriesHandler(w http.ResponseWriter, r *http.
 	// Use helper for pagination
 	page, perPage, offset := handlers.ParsePaginationParams(r)
 
-	categories, err := ah.questionService.ListCategories(ctx, perPage, offset)
+	categories, err := ah.categoryService.ListCategories(ctx, perPage, offset)
 	if err != nil {
 		http.Error(w, "Failed to list categories", http.StatusInternalServerError)
 		log.Printf("Error listing categories: %v", err)
 		return
 	}
 
-	totalCount, _ := ah.questionService.GetCategoryCount(ctx)
+	totalCount, _ := ah.categoryService.GetCategoryCount(ctx)
 
 	// Calculate pagination
 	totalPages := (totalCount + perPage - 1) / perPage
@@ -110,7 +110,7 @@ func (ah *AdminAPIHandler) GetCategoryEditFormHandler(w http.ResponseWriter, r *
 		return
 	}
 
-	category, err := ah.questionService.GetCategoryByID(ctx, categoryID)
+	category, err := ah.categoryService.GetCategoryByID(ctx, categoryID)
 	if err != nil {
 		http.Error(w, "Category not found", http.StatusNotFound)
 		return
@@ -156,7 +156,7 @@ func (ah *AdminAPIHandler) UpdateCategoryHandler(w http.ResponseWriter, r *http.
 		Label: r.FormValue("label"),
 	}
 
-	if err := ah.questionService.UpdateCategory(ctx, category); err != nil {
+	if err := ah.categoryService.UpdateCategory(ctx, category); err != nil {
 		http.Error(w, "Failed to update category", http.StatusInternalServerError)
 		log.Printf("Error updating category: %v", err)
 		return
@@ -180,7 +180,7 @@ func (ah *AdminAPIHandler) CreateCategoryHandler(w http.ResponseWriter, r *http.
 		Label: r.FormValue("label"),
 	}
 
-	if err := ah.questionService.CreateCategory(ctx, category); err != nil {
+	if err := ah.categoryService.CreateCategory(ctx, category); err != nil {
 		http.Error(w, "Failed to create category", http.StatusInternalServerError)
 		log.Printf("Error creating category: %v", err)
 		return
@@ -202,7 +202,7 @@ func (ah *AdminAPIHandler) DeleteCategoryHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	if err := ah.questionService.DeleteCategory(ctx, categoryID); err != nil {
+	if err := ah.categoryService.DeleteCategory(ctx, categoryID); err != nil {
 		http.Error(w, "Failed to delete category", http.StatusInternalServerError)
 		log.Printf("Error deleting category: %v", err)
 		return

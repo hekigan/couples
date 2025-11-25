@@ -16,6 +16,7 @@ type GameService struct {
 	client          *supabase.Client
 	roomService     *RoomService
 	questionService *QuestionService
+	categoryService *CategoryService
 	answerService   *AnswerService
 	realtimeService *RealtimeService
 	templateService *TemplateService
@@ -26,6 +27,7 @@ func NewGameService(
 	client *supabase.Client,
 	roomService *RoomService,
 	questionService *QuestionService,
+	categoryService *CategoryService,
 	answerService *AnswerService,
 	realtimeService *RealtimeService,
 	templateService *TemplateService,
@@ -34,6 +36,7 @@ func NewGameService(
 		client:          client,
 		roomService:     roomService,
 		questionService: questionService,
+		categoryService: categoryService,
 		answerService:   answerService,
 		realtimeService: realtimeService,
 		templateService: templateService,
@@ -184,7 +187,7 @@ func (s *GameService) DrawQuestion(ctx context.Context, roomID uuid.UUID) (*mode
 	}
 
 	// Get category for the question
-	categories, err := s.questionService.GetCategories(ctx)
+	categories, err := s.categoryService.GetCategories(ctx)
 	var categoryKey string
 	var categoryLabel string
 	if err == nil {

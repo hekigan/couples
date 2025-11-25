@@ -17,6 +17,7 @@ type Handler struct {
 	RoomService         *services.RoomService
 	GameService         *services.GameService
 	QuestionService     *services.QuestionService
+	CategoryService     *services.CategoryService
 	AnswerService       *services.AnswerService
 	FriendService       *services.FriendService
 	I18nService         *services.I18nService
@@ -55,6 +56,7 @@ func NewHandler(
 	roomService *services.RoomService,
 	gameService *services.GameService,
 	questionService *services.QuestionService,
+	categoryService *services.CategoryService,
 	answerService *services.AnswerService,
 	friendService *services.FriendService,
 	i18nService *services.I18nService,
@@ -95,6 +97,7 @@ func NewHandler(
 		RoomService:         roomService,
 		GameService:         gameService,
 		QuestionService:     questionService,
+		CategoryService:     categoryService,
 		AnswerService:       answerService,
 		FriendService:       friendService,
 		I18nService:         i18nService,

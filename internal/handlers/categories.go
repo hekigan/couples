@@ -68,7 +68,7 @@ func (h *Handler) UpdateCategoriesAPIHandler(w http.ResponseWriter, r *http.Requ
 func (h *Handler) GetCategoriesAPIHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 
-	categories, err := h.QuestionService.GetCategories(ctx)
+	categories, err := h.CategoryService.GetCategories(ctx)
 	if err != nil {
 		http.Error(w, "Failed to fetch categories", http.StatusInternalServerError)
 		return
@@ -102,7 +102,7 @@ func (h *Handler) GetRoomCategoriesHTMLHandler(w http.ResponseWriter, r *http.Re
 	ctx := context.Background()
 
 	// Get all categories
-	allCategories, err := h.QuestionService.GetCategories(ctx)
+	allCategories, err := h.CategoryService.GetCategories(ctx)
 	if err != nil {
 		log.Printf("Error fetching categories: %v", err)
 		if err := h.RenderHTMLFragment(w, "error_message.html", "Failed to load categories"); err != nil {

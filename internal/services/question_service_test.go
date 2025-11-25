@@ -211,50 +211,6 @@ func TestGetCategories(t *testing.T) {
 	})
 }
 
-// TestJoinStrings tests the helper function for joining strings
-func TestJoinStrings(t *testing.T) {
-	tests := []struct {
-		name     string
-		strs     []string
-		sep      string
-		expected string
-	}{
-		{
-			name:     "join with comma",
-			strs:     []string{"a", "b", "c"},
-			sep:      ",",
-			expected: "'a','b','c'",
-		},
-		{
-			name:     "empty slice",
-			strs:     []string{},
-			sep:      ",",
-			expected: "",
-		},
-		{
-			name:     "single element",
-			strs:     []string{"test"},
-			sep:      ",",
-			expected: "'test'",
-		},
-		{
-			name:     "join with space",
-			strs:     []string{"foo", "bar"},
-			sep:      " ",
-			expected: "'foo' 'bar'",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := joinStrings(tt.strs, tt.sep)
-			if result != tt.expected {
-				t.Errorf("joinStrings() = %v, want %v", result, tt.expected)
-			}
-		})
-	}
-}
-
 // Benchmark tests for performance-critical operations
 func BenchmarkGetRandomQuestion(b *testing.B) {
 	// Skip benchmark if no test database available

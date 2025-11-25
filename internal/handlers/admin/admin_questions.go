@@ -61,7 +61,7 @@ func (ah *AdminAPIHandler) ListQuestionsHandler(w http.ResponseWriter, r *http.R
 	}
 
 	// Get categories for dropdown
-	categories, _ := ah.questionService.GetCategories(ctx)
+	categories, _ := ah.categoryService.GetCategories(ctx)
 
 	// Get question counts by category (for dropdown)
 	counts, err := ah.questionService.GetQuestionCountsByCategory(ctx, "en")
@@ -175,7 +175,7 @@ func (ah *AdminAPIHandler) ListQuestionsHandler(w http.ResponseWriter, r *http.R
 func (ah *AdminAPIHandler) GetQuestionCreateFormHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 
-	categories, err := ah.questionService.GetCategories(ctx)
+	categories, err := ah.categoryService.GetCategories(ctx)
 	if err != nil {
 		http.Error(w, "Failed to fetch categories", http.StatusInternalServerError)
 		log.Printf("Error fetching categories: %v", err)
@@ -244,7 +244,7 @@ func (ah *AdminAPIHandler) GetQuestionEditFormHandler(w http.ResponseWriter, r *
 		return
 	}
 
-	categories, _ := ah.questionService.GetCategories(ctx)
+	categories, _ := ah.categoryService.GetCategories(ctx)
 
 	// Build category options
 	categoryOptions := make([]services.AdminCategoryOption, len(categories))

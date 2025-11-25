@@ -111,7 +111,7 @@ func (ah *AdminAPIHandler) BulkDeleteCategoriesHandler(w http.ResponseWriter, r 
 			continue
 		}
 
-		if err := ah.questionService.DeleteCategory(ctx, categoryID); err != nil {
+		if err := ah.categoryService.DeleteCategory(ctx, categoryID); err != nil {
 			log.Printf("Error deleting category %s: %v", idStr, err)
 			continue
 		}

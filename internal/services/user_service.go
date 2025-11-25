@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -12,13 +11,15 @@ import (
 
 // UserService handles user-related operations
 type UserService struct {
+	*BaseService
 	client *supabase.Client
 }
 
 // NewUserService creates a new user service
 func NewUserService(client *supabase.Client) *UserService {
 	return &UserService{
-		client: client,
+		BaseService: NewBaseService(client, "UserService"),
+		client:      client,
 	}
 }
 
@@ -27,7 +28,7 @@ func (s *UserService) GetSupabaseClient() *supabase.Client {
 	return s.client
 }
 
-// CreateAnonymousUser creates a new anonymous user  
+// CreateAnonymousUser creates a new anonymous user
 // This is a WORKING implementation that creates anonymous users
 func (s *UserService) CreateAnonymousUser(ctx context.Context) (*models.User, error) {
 	userID := uuid.New()
@@ -38,7 +39,6 @@ func (s *UserService) CreateAnonymousUser(ctx context.Context) (*models.User, er
 		Username:    fmt.Sprintf("guest_%s", userID.String()[:8]), // Temporary username
 	}
 
-	// Create a simple map with only the required fields
 	userMap := map[string]interface{}{
 		"id":           user.ID.String(),
 		"is_anonymous": true,
@@ -46,36 +46,20 @@ func (s *UserService) CreateAnonymousUser(ctx context.Context) (*models.User, er
 		"username":     user.Username, // Temporary, user will be prompted to change
 	}
 
-	// Try to insert into Supabase
-	data, count, err := s.client.From("users").Insert(userMap, false, "", "", "").Execute()
-	if err != nil {
+	if err := s.BaseService.InsertRecord(ctx, "users", userMap); err != nil {
 		return nil, fmt.Errorf("failed to create user in database: %w", err)
 	}
 
-	// Log success
-	fmt.Printf("User created successfully in database. Data: %v, Count: %d\n", string(data), count)
-
-	// Return the created user
+	s.logger.Success("User created successfully in database with user_id=%s", user.ID.String())
 	return &user, nil
 }
 
 // GetUserByID retrieves a user by ID from Supabase
 func (s *UserService) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
-	data, _, err := s.client.From("users").
-		Select("*", "", false).
-		Eq("id", id.String()).
-		Single().
-		Execute()
-	
-	if err != nil {
-		return nil, fmt.Errorf("user not found: %w", err)
-	}
-	
 	var user models.User
-	if err := json.Unmarshal(data, &user); err != nil {
-		return nil, fmt.Errorf("failed to parse user: %w", err)
+	if err := s.BaseService.GetSingleRecord(ctx, "users", id, &user); err != nil {
+		return nil, err
 	}
-	
 	return &user, nil
 }
 
@@ -84,17 +68,8 @@ func (s *UserService) UpdateUsername(ctx context.Context, userID uuid.UUID, user
 	data := map[string]interface{}{
 		"username": username,
 	}
-	
-	_, _, err := s.client.From("users").
-		Update(data, "", "").
-		Eq("id", userID.String()).
-		Execute()
-	
-	if err != nil {
-		return fmt.Errorf("failed to update username: %w", err)
-	}
-	
-	return nil
+
+	return s.BaseService.UpdateRecord(ctx, "users", userID, data)
 }
 
 // UpdateUser updates a user's information
@@ -109,142 +84,104 @@ func (s *UserService) UpdateUser(ctx context.Context, user *models.User) error {
 		updateData["is_admin"] = user.IsAdmin
 	}
 
-	_, _, err := s.client.From("users").
-		Update(updateData, "", "").
-		Eq("id", user.ID.String()).
-		Execute()
-
-	if err != nil {
-		return fmt.Errorf("failed to update user: %w", err)
-	}
-
-	return nil
+	return s.BaseService.UpdateRecord(ctx, "users", user.ID, updateData)
 }
 
 // DeleteUser deletes a user with full cascade (removes all related data)
 func (s *UserService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
-	fmt.Printf("DEBUG: Starting cascade delete for user %s\n", userID)
+	s.logger.Debug("Starting cascade delete for user_id=%s", userID.String())
 
 	// 1. Delete user's rooms (as owner)
-	fmt.Printf("DEBUG: Deleting rooms where user is owner...\n")
-	_, _, err := s.client.From("rooms").
-		Delete("", "").
-		Eq("owner_id", userID.String()).
-		Execute()
-	if err != nil {
-		fmt.Printf("WARNING: Failed to delete rooms: %v\n", err)
+	s.logger.Debug("Deleting rooms where user is owner...")
+	if err := s.BaseService.DeleteRecordsWithFilter(ctx, "rooms", map[string]interface{}{
+		"owner_id": userID.String(),
+	}); err != nil {
+		s.logger.Warn("Failed to delete rooms: %v", err)
 	}
 
 	// 2. Update rooms where user is guest (set guest_id to NULL)
-	fmt.Printf("DEBUG: Removing user as guest from rooms...\n")
-	_, _, err = s.client.From("rooms").
-		Update(map[string]interface{}{"guest_id": nil, "status": "waiting"}, "", "").
-		Eq("guest_id", userID.String()).
-		Execute()
-	if err != nil {
-		fmt.Printf("WARNING: Failed to update rooms: %v\n", err)
+	s.logger.Debug("Removing user as guest from rooms...")
+	if err := s.BaseService.UpdateRecordsWithFilter(ctx, "rooms",
+		map[string]interface{}{"guest_id": userID.String()},
+		map[string]interface{}{"guest_id": nil, "status": "waiting"},
+	); err != nil {
+		s.logger.Warn("Failed to update rooms: %v", err)
 	}
 
 	// 3. Delete user's answers
-	fmt.Printf("DEBUG: Deleting user's answers...\n")
-	_, _, err = s.client.From("answers").
-		Delete("", "").
-		Eq("user_id", userID.String()).
-		Execute()
-	if err != nil {
-		fmt.Printf("WARNING: Failed to delete answers: %v\n", err)
+	s.logger.Debug("Deleting user's answers...")
+	if err := s.BaseService.DeleteRecordsWithFilter(ctx, "answers", map[string]interface{}{
+		"user_id": userID.String(),
+	}); err != nil {
+		s.logger.Warn("Failed to delete answers: %v", err)
 	}
 
 	// 4. Delete user's join requests
-	fmt.Printf("DEBUG: Deleting user's join requests...\n")
-	_, _, err = s.client.From("room_join_requests").
-		Delete("", "").
-		Eq("user_id", userID.String()).
-		Execute()
-	if err != nil {
-		fmt.Printf("WARNING: Failed to delete join requests: %v\n", err)
+	s.logger.Debug("Deleting user's join requests...")
+	if err := s.BaseService.DeleteRecordsWithFilter(ctx, "room_join_requests", map[string]interface{}{
+		"user_id": userID.String(),
+	}); err != nil {
+		s.logger.Warn("Failed to delete join requests: %v", err)
 	}
 
 	// 5. Delete friendships (both as user_id and friend_id)
-	fmt.Printf("DEBUG: Deleting friendships...\n")
-	_, _, err = s.client.From("friends").
-		Delete("", "").
-		Eq("user_id", userID.String()).
-		Execute()
-	if err != nil {
-		fmt.Printf("WARNING: Failed to delete friends (as user): %v\n", err)
+	s.logger.Debug("Deleting friendships...")
+	if err := s.BaseService.DeleteRecordsWithFilter(ctx, "friends", map[string]interface{}{
+		"user_id": userID.String(),
+	}); err != nil {
+		s.logger.Warn("Failed to delete friends (as user): %v", err)
 	}
 
-	_, _, err = s.client.From("friends").
-		Delete("", "").
-		Eq("friend_id", userID.String()).
-		Execute()
-	if err != nil {
-		fmt.Printf("WARNING: Failed to delete friends (as friend): %v\n", err)
+	if err := s.BaseService.DeleteRecordsWithFilter(ctx, "friends", map[string]interface{}{
+		"friend_id": userID.String(),
+	}); err != nil {
+		s.logger.Warn("Failed to delete friends (as friend): %v", err)
 	}
 
 	// 6. Delete room invitations
-	fmt.Printf("DEBUG: Deleting room invitations...\n")
-	_, _, err = s.client.From("room_invitations").
-		Delete("", "").
-		Eq("inviter_id", userID.String()).
-		Execute()
-	if err != nil {
-		fmt.Printf("WARNING: Failed to delete invitations (as inviter): %v\n", err)
+	s.logger.Debug("Deleting room invitations...")
+	if err := s.BaseService.DeleteRecordsWithFilter(ctx, "room_invitations", map[string]interface{}{
+		"inviter_id": userID.String(),
+	}); err != nil {
+		s.logger.Warn("Failed to delete invitations (as inviter): %v", err)
 	}
 
-	_, _, err = s.client.From("room_invitations").
-		Delete("", "").
-		Eq("invitee_id", userID.String()).
-		Execute()
-	if err != nil {
-		fmt.Printf("WARNING: Failed to delete invitations (as invitee): %v\n", err)
+	if err := s.BaseService.DeleteRecordsWithFilter(ctx, "room_invitations", map[string]interface{}{
+		"invitee_id": userID.String(),
+	}); err != nil {
+		s.logger.Warn("Failed to delete invitations (as invitee): %v", err)
 	}
 
 	// 7. Delete notifications
-	fmt.Printf("DEBUG: Deleting notifications...\n")
-	_, _, err = s.client.From("notifications").
-		Delete("", "").
-		Eq("user_id", userID.String()).
-		Execute()
-	if err != nil {
-		fmt.Printf("WARNING: Failed to delete notifications: %v\n", err)
+	s.logger.Debug("Deleting notifications...")
+	if err := s.BaseService.DeleteRecordsWithFilter(ctx, "notifications", map[string]interface{}{
+		"user_id": userID.String(),
+	}); err != nil {
+		s.logger.Warn("Failed to delete notifications: %v", err)
 	}
 
 	// 8. Finally, delete the user
-	fmt.Printf("DEBUG: Deleting user record...\n")
-	_, _, err = s.client.From("users").
-		Delete("", "").
-		Eq("id", userID.String()).
-		Execute()
-
-	if err != nil {
+	s.logger.Debug("Deleting user record...")
+	if err := s.BaseService.DeleteRecord(ctx, "users", userID); err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
 	}
 
-	fmt.Printf("DEBUG: User %s successfully deleted with all related data\n", userID)
+	s.logger.Success("User successfully deleted with all related data user_id=%s", userID.String())
 	return nil
 }
 
 // CleanupExpiredAnonymousUsers deletes anonymous users older than the specified duration
 func (s *UserService) CleanupExpiredAnonymousUsers(ctx context.Context, olderThanHours int) (int, error) {
-	fmt.Printf("DEBUG: Starting cleanup of anonymous users older than %d hours\n", olderThanHours)
+	s.logger.Debug("Starting cleanup of anonymous users older_than_hours=%d", olderThanHours)
 
 	// Query for expired anonymous users
-	// Note: Supabase doesn't support direct time calculations in Go client,
-	// so we need to use a different approach
-	data, _, err := s.client.From("users").
-		Select("id,created_at", "", false).
-		Eq("is_anonymous", "true").
-		Execute()
-
-	if err != nil {
-		return 0, fmt.Errorf("failed to query anonymous users: %w", err)
+	filters := map[string]interface{}{
+		"is_anonymous": "true",
 	}
 
 	var users []models.User
-	if err := json.Unmarshal(data, &users); err != nil {
-		return 0, fmt.Errorf("failed to parse users: %w", err)
+	if err := s.BaseService.GetRecords(ctx, "users", filters, &users); err != nil {
+		return 0, err
 	}
 
 	// Filter users by age manually (since Supabase Go client doesn't support lt() for dates easily)
@@ -261,52 +198,37 @@ func (s *UserService) CleanupExpiredAnonymousUsers(ctx context.Context, olderTha
 	deletedCount := 0
 	for _, userID := range expiredUsers {
 		if err := s.DeleteUser(ctx, userID); err != nil {
-			fmt.Printf("WARNING: Failed to delete expired user %s: %v\n", userID, err)
+			s.logger.Warn("Failed to delete expired user user_id=%s: %v", userID.String(), err)
 			continue
 		}
 		deletedCount++
 	}
 
-	fmt.Printf("DEBUG: Cleanup complete. Deleted %d expired anonymous users\n", deletedCount)
+	s.logger.Success("Cleanup complete deleted_count=%d", deletedCount)
 	return deletedCount, nil
 }
 
 // GetAnonymousUserCount returns the count of anonymous users
 func (s *UserService) GetAnonymousUserCount(ctx context.Context) (int, error) {
-	data, _, err := s.client.From("users").
-		Select("id", "exact", false).
-		Eq("is_anonymous", "true").
-		Execute()
-
-	if err != nil {
-		return 0, fmt.Errorf("failed to count anonymous users: %w", err)
+	filters := map[string]interface{}{
+		"is_anonymous": "true",
 	}
 
-	var users []models.User
-	if err := json.Unmarshal(data, &users); err != nil {
-		return 0, fmt.Errorf("failed to parse users: %w", err)
-	}
-
-	return len(users), nil
+	return s.BaseService.CountRecords(ctx, "users", filters)
 }
 
 // CleanupInactiveAnonymousUsers deletes anonymous users who have no active rooms or recent activity
 func (s *UserService) CleanupInactiveAnonymousUsers(ctx context.Context) (int, error) {
-	fmt.Printf("DEBUG: Starting cleanup of inactive anonymous users\n")
+	s.logger.Debug("Starting cleanup of inactive anonymous users")
 
 	// Get all anonymous users
-	data, _, err := s.client.From("users").
-		Select("id", "", false).
-		Eq("is_anonymous", "true").
-		Execute()
-
-	if err != nil {
-		return 0, fmt.Errorf("failed to query anonymous users: %w", err)
+	filters := map[string]interface{}{
+		"is_anonymous": "true",
 	}
 
 	var users []models.User
-	if err := json.Unmarshal(data, &users); err != nil {
-		return 0, fmt.Errorf("failed to parse users: %w", err)
+	if err := s.BaseService.GetRecords(ctx, "users", filters, &users); err != nil {
+		return 0, err
 	}
 
 	deletedCount := 0
@@ -330,13 +252,13 @@ func (s *UserService) CleanupInactiveAnonymousUsers(ctx context.Context) (int, e
 		// If user has no active involvement, delete them
 		if !hasRooms && !isGuest {
 			if err := s.DeleteUser(ctx, user.ID); err != nil {
-				fmt.Printf("WARNING: Failed to delete inactive user %s: %v\n", user.ID, err)
+				s.logger.Warn("Failed to delete inactive user user_id=%s: %v", user.ID.String(), err)
 				continue
 			}
 			deletedCount++
 		}
 	}
 
-	fmt.Printf("DEBUG: Cleanup complete. Deleted %d inactive anonymous users\n", deletedCount)
+	s.logger.Success("Cleanup complete deleted_count=%d", deletedCount)
 	return deletedCount, nil
 }

@@ -13,12 +13,14 @@ import (
 )
 
 type NotificationService struct {
+	*BaseService
 	client *supabase.Client
 }
 
 func NewNotificationService(client *supabase.Client) *NotificationService {
 	return &NotificationService{
-		client: client,
+		BaseService: NewBaseService(client, "NotificationService"),
+		client:      client,
 	}
 }
 
@@ -38,31 +40,18 @@ func (s *NotificationService) CreateNotification(ctx context.Context, notificati
 		"created_at": notification.CreatedAt,
 	}
 
-	_, _, err := s.client.From("notifications").Insert(data, false, "", "", "").Execute()
-	if err != nil {
-		return fmt.Errorf("failed to create notification: %w", err)
-	}
-
-	return nil
+	return s.BaseService.InsertRecord(ctx, "notifications", data)
 }
 
 // GetUserNotifications gets all notifications for a user
 func (s *NotificationService) GetUserNotifications(ctx context.Context, userID uuid.UUID, limit int) ([]models.Notification, error) {
-	query := s.client.From("notifications").
-		Select("*", "", false).
-		Eq("user_id", userID.String())
-
-	// Note: Order and Limit might not be available in this client version
-	// We'll sort on the client side if needed
-
-	data, _, err := query.Execute()
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch notifications: %w", err)
+	filters := map[string]interface{}{
+		"user_id": userID.String(),
 	}
 
 	var notifications []models.Notification
-	if err := json.Unmarshal(data, &notifications); err != nil {
-		return nil, fmt.Errorf("failed to parse notifications: %w", err)
+	if err := s.BaseService.GetRecords(ctx, "notifications", filters, &notifications); err != nil {
+		return nil, err
 	}
 
 	// Apply limit if specified
@@ -75,23 +64,12 @@ func (s *NotificationService) GetUserNotifications(ctx context.Context, userID u
 
 // GetUnreadCount gets count of unread notifications
 func (s *NotificationService) GetUnreadCount(ctx context.Context, userID uuid.UUID) (int, error) {
-	data, _, err := s.client.From("notifications").
-		Select("id", "", false).
-		Eq("user_id", userID.String()).
-		Eq("read", "false").
-		Execute()
-
-	if err != nil {
-		return 0, fmt.Errorf("failed to count unread notifications: %w", err)
+	filters := map[string]interface{}{
+		"user_id": userID.String(),
+		"read":    "false",
 	}
 
-	// Count from data
-	var notifications []models.Notification
-	if err := json.Unmarshal(data, &notifications); err == nil {
-		return len(notifications), nil
-	}
-
-	return 0, nil
+	return s.BaseService.CountRecords(ctx, "notifications", filters)
 }
 
 // MarkAsRead marks a notification as read
@@ -100,49 +78,26 @@ func (s *NotificationService) MarkAsRead(ctx context.Context, notificationID uui
 		"read": true,
 	}
 
-	_, _, err := s.client.From("notifications").
-		Update(data, "", "").
-		Eq("id", notificationID.String()).
-		Execute()
-
-	if err != nil {
-		return fmt.Errorf("failed to mark notification as read: %w", err)
-	}
-
-	return nil
+	return s.BaseService.UpdateRecord(ctx, "notifications", notificationID, data)
 }
 
 // MarkAllAsRead marks all notifications as read for a user
 func (s *NotificationService) MarkAllAsRead(ctx context.Context, userID uuid.UUID) error {
+	filters := map[string]interface{}{
+		"user_id": userID.String(),
+		"read":    "false",
+	}
+
 	data := map[string]interface{}{
 		"read": true,
 	}
 
-	_, _, err := s.client.From("notifications").
-		Update(data, "", "").
-		Eq("user_id", userID.String()).
-		Eq("read", "false").
-		Execute()
-
-	if err != nil {
-		return fmt.Errorf("failed to mark all notifications as read: %w", err)
-	}
-
-	return nil
+	return s.BaseService.UpdateRecordsWithFilter(ctx, "notifications", filters, data)
 }
 
 // DeleteNotification deletes a notification
 func (s *NotificationService) DeleteNotification(ctx context.Context, notificationID uuid.UUID) error {
-	_, _, err := s.client.From("notifications").
-		Delete("", "").
-		Eq("id", notificationID.String()).
-		Execute()
-
-	if err != nil {
-		return fmt.Errorf("failed to delete notification: %w", err)
-	}
-
-	return nil
+	return s.BaseService.DeleteRecord(ctx, "notifications", notificationID)
 }
 
 // CreateRoomInvitation creates a room invitation
@@ -162,16 +117,12 @@ func (s *NotificationService) CreateRoomInvitation(ctx context.Context, invitati
 		"updated_at": invitation.UpdatedAt,
 	}
 
-	_, _, err := s.client.From("room_invitations").Insert(data, false, "", "", "").Execute()
-	if err != nil {
-		return fmt.Errorf("failed to create room invitation: %w", err)
-	}
-
-	return nil
+	return s.BaseService.InsertRecord(ctx, "room_invitations", data)
 }
 
 // GetRoomInvitation gets a specific room invitation
 func (s *NotificationService) GetRoomInvitation(ctx context.Context, roomID, inviteeID uuid.UUID) (*models.RoomInvitation, error) {
+	// Custom query with multiple filters - BaseService doesn't have a GetSingleRecordWithFilters method
 	data, _, err := s.client.From("room_invitations").
 		Select("*", "", false).
 		Eq("room_id", roomID.String()).
@@ -193,16 +144,10 @@ func (s *NotificationService) GetRoomInvitation(ctx context.Context, roomID, inv
 
 // CancelRoomInvitation cancels a room invitation
 func (s *NotificationService) CancelRoomInvitation(ctx context.Context, roomID, inviteeID uuid.UUID) error {
-	_, _, err := s.client.From("room_invitations").
-		Delete("", "").
-		Eq("room_id", roomID.String()).
-		Eq("invitee_id", inviteeID.String()).
-		Execute()
-
-	if err != nil {
-		return fmt.Errorf("failed to cancel invitation: %w", err)
+	filters := map[string]interface{}{
+		"room_id":    roomID.String(),
+		"invitee_id": inviteeID.String(),
 	}
 
-	return nil
+	return s.BaseService.DeleteRecordsWithFilter(ctx, "room_invitations", filters)
 }
-

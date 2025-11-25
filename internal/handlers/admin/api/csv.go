@@ -9,12 +9,14 @@ import (
 // CSVHandler handles CSV import/export
 type CSVHandler struct {
 	questionService *services.QuestionService
+	categoryService *services.CategoryService
 }
 
 // NewCSVHandler creates a new CSV handler
-func NewCSVHandler(questionService *services.QuestionService) *CSVHandler {
+func NewCSVHandler(questionService *services.QuestionService, categoryService *services.CategoryService) *CSVHandler {
 	return &CSVHandler{
 		questionService: questionService,
+		categoryService: categoryService,
 	}
 }
 

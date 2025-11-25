@@ -17,13 +17,15 @@ type AdminAPIHandler struct {
 	handler         *handlers.Handler
 	adminService    *services.AdminService
 	questionService *services.QuestionService
+	categoryService *services.CategoryService
 }
 
 // NewAdminAPIHandler creates a new admin API handler
-func NewAdminAPIHandler(h *handlers.Handler, adminService *services.AdminService, questionService *services.QuestionService) *AdminAPIHandler {
+func NewAdminAPIHandler(h *handlers.Handler, adminService *services.AdminService, questionService *services.QuestionService, categoryService *services.CategoryService) *AdminAPIHandler {
 	return &AdminAPIHandler{
 		handler:         h,
 		adminService:    adminService,
 		questionService: questionService,
+		categoryService: categoryService,
 	}
 }

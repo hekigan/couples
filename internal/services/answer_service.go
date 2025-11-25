@@ -13,13 +13,15 @@ import (
 
 // AnswerService handles answer-related operations
 type AnswerService struct {
+	*BaseService
 	client *supabase.Client
 }
 
 // NewAnswerService creates a new answer service
 func NewAnswerService(client *supabase.Client) *AnswerService {
 	return &AnswerService{
-		client: client,
+		BaseService: NewBaseService(client, "AnswerService"),
+		client:      client,
 	}
 }
 
@@ -41,18 +43,18 @@ func (s *AnswerService) CreateAnswer(ctx context.Context, answer *models.Answer)
 	log.Printf("📝 Creating answer: room=%s, question=%s, user=%s, action=%s",
 		answer.RoomID, answer.QuestionID, answer.UserID, answer.ActionType)
 
-	data, _, err := s.client.From("answers").Insert(answerMap, false, "", "", "").Execute()
-	if err != nil {
+	if err := s.BaseService.InsertRecord(ctx, "answers", answerMap); err != nil {
 		log.Printf("❌ Failed to create answer: %v", err)
-		return fmt.Errorf("failed to create answer: %w", err)
+		return err
 	}
 
-	log.Printf("✅ Answer created successfully: %s", string(data))
+	log.Printf("✅ Answer created successfully")
 	return nil
 }
 
 // GetAnswersByRoom retrieves all answers for a room, ordered by creation time
 func (s *AnswerService) GetAnswersByRoom(ctx context.Context, roomID uuid.UUID) ([]models.Answer, error) {
+	// Custom query because we need ORDER BY - not supported by BaseService.GetRecords()
 	data, _, err := s.client.From("answers").
 		Select("*", "", false).
 		Eq("room_id", roomID.String()).
@@ -73,38 +75,22 @@ func (s *AnswerService) GetAnswersByRoom(ctx context.Context, roomID uuid.UUID) 
 
 // GetAnswerByID retrieves a specific answer by ID
 func (s *AnswerService) GetAnswerByID(ctx context.Context, id uuid.UUID) (*models.Answer, error) {
-	data, _, err := s.client.From("answers").
-		Select("*", "", false).
-		Eq("id", id.String()).
-		Single().
-		Execute()
-
-	if err != nil {
-		return nil, fmt.Errorf("answer not found: %w", err)
-	}
-
 	var answer models.Answer
-	if err := json.Unmarshal(data, &answer); err != nil {
-		return nil, fmt.Errorf("failed to parse answer: %w", err)
+	if err := s.BaseService.GetSingleRecord(ctx, "answers", id, &answer); err != nil {
+		return nil, err
 	}
-
 	return &answer, nil
 }
 
 // GetAnswersByQuestion retrieves all answers for a specific question
 func (s *AnswerService) GetAnswersByQuestion(ctx context.Context, questionID uuid.UUID) ([]models.Answer, error) {
-	data, _, err := s.client.From("answers").
-		Select("*", "", false).
-		Eq("question_id", questionID.String()).
-		Execute()
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch answers: %w", err)
+	filters := map[string]interface{}{
+		"question_id": questionID.String(),
 	}
 
 	var answers []models.Answer
-	if err := json.Unmarshal(data, &answers); err != nil {
-		return nil, fmt.Errorf("failed to parse answers: %w", err)
+	if err := s.BaseService.GetRecords(ctx, "answers", filters, &answers); err != nil {
+		return nil, err
 	}
 
 	return answers, nil
@@ -112,7 +98,7 @@ func (s *AnswerService) GetAnswersByQuestion(ctx context.Context, questionID uui
 
 // GetLastAnswerForQuestion retrieves the most recent answer for a specific question in a room
 func (s *AnswerService) GetLastAnswerForQuestion(ctx context.Context, roomID, questionID uuid.UUID) (*models.Answer, error) {
-	// Get the answer for this question in this room
+	// Custom query with multiple filters - not a perfect fit for BaseService
 	log.Printf("📥 GetLastAnswerForQuestion: room=%s, question=%s", roomID, questionID)
 
 	data, _, err := s.client.From("answers").

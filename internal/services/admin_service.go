@@ -14,13 +14,15 @@ import (
 
 // AdminService handles admin-specific operations
 type AdminService struct {
+	*BaseService
 	client *supabase.Client
 }
 
 // NewAdminService creates a new AdminService
 func NewAdminService(client *supabase.Client) *AdminService {
 	return &AdminService{
-		client: client,
+		BaseService: NewBaseService(client, "AdminService"),
+		client:      client,
 	}
 }
 
@@ -49,10 +51,9 @@ func (s *AdminService) GetDashboardStats(ctx context.Context) (*DashboardStats, 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, count, err := s.client.From("users").Select("*", "exact", true).Execute()
-		if err == nil {
+		if count, err := s.BaseService.CountRecords(ctx, "users", map[string]interface{}{}); err == nil {
 			mu.Lock()
-			stats.TotalUsers = int(count)
+			stats.TotalUsers = count
 			mu.Unlock()
 		}
 	}()
@@ -61,10 +62,9 @@ func (s *AdminService) GetDashboardStats(ctx context.Context) (*DashboardStats, 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, count, err := s.client.From("users").Select("*", "exact", true).Eq("is_anonymous", "true").Execute()
-		if err == nil {
+		if count, err := s.BaseService.CountRecords(ctx, "users", map[string]interface{}{"is_anonymous": "true"}); err == nil {
 			mu.Lock()
-			stats.AnonymousUsers = int(count)
+			stats.AnonymousUsers = count
 			mu.Unlock()
 		}
 	}()
@@ -73,10 +73,9 @@ func (s *AdminService) GetDashboardStats(ctx context.Context) (*DashboardStats, 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, count, err := s.client.From("users").Select("*", "exact", true).Eq("is_anonymous", "false").Execute()
-		if err == nil {
+		if count, err := s.BaseService.CountRecords(ctx, "users", map[string]interface{}{"is_anonymous": "false"}); err == nil {
 			mu.Lock()
-			stats.RegisteredUsers = int(count)
+			stats.RegisteredUsers = count
 			mu.Unlock()
 		}
 	}()
@@ -85,10 +84,9 @@ func (s *AdminService) GetDashboardStats(ctx context.Context) (*DashboardStats, 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, count, err := s.client.From("users").Select("*", "exact", true).Eq("is_admin", "true").Execute()
-		if err == nil {
+		if count, err := s.BaseService.CountRecords(ctx, "users", map[string]interface{}{"is_admin": "true"}); err == nil {
 			mu.Lock()
-			stats.AdminUsers = int(count)
+			stats.AdminUsers = count
 			mu.Unlock()
 		}
 	}()
@@ -97,10 +95,9 @@ func (s *AdminService) GetDashboardStats(ctx context.Context) (*DashboardStats, 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, count, err := s.client.From("rooms").Select("*", "exact", true).Execute()
-		if err == nil {
+		if count, err := s.BaseService.CountRecords(ctx, "rooms", map[string]interface{}{}); err == nil {
 			mu.Lock()
-			stats.TotalRooms = int(count)
+			stats.TotalRooms = count
 			mu.Unlock()
 		}
 	}()
@@ -109,10 +106,9 @@ func (s *AdminService) GetDashboardStats(ctx context.Context) (*DashboardStats, 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, count, err := s.client.From("rooms").Select("*", "exact", true).Eq("status", "active").Execute()
-		if err == nil {
+		if count, err := s.BaseService.CountRecords(ctx, "rooms", map[string]interface{}{"status": "active"}); err == nil {
 			mu.Lock()
-			stats.ActiveRooms = int(count)
+			stats.ActiveRooms = count
 			mu.Unlock()
 		}
 	}()
@@ -121,10 +117,9 @@ func (s *AdminService) GetDashboardStats(ctx context.Context) (*DashboardStats, 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, count, err := s.client.From("rooms").Select("*", "exact", true).Eq("status", "completed").Execute()
-		if err == nil {
+		if count, err := s.BaseService.CountRecords(ctx, "rooms", map[string]interface{}{"status": "completed"}); err == nil {
 			mu.Lock()
-			stats.CompletedRooms = int(count)
+			stats.CompletedRooms = count
 			mu.Unlock()
 		}
 	}()
@@ -133,10 +128,9 @@ func (s *AdminService) GetDashboardStats(ctx context.Context) (*DashboardStats, 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, count, err := s.client.From("questions").Select("*", "exact", true).Execute()
-		if err == nil {
+		if count, err := s.BaseService.CountRecords(ctx, "questions", map[string]interface{}{}); err == nil {
 			mu.Lock()
-			stats.TotalQuestions = int(count)
+			stats.TotalQuestions = count
 			mu.Unlock()
 		}
 	}()
@@ -145,10 +139,9 @@ func (s *AdminService) GetDashboardStats(ctx context.Context) (*DashboardStats, 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, count, err := s.client.From("categories").Select("*", "exact", true).Execute()
-		if err == nil {
+		if count, err := s.BaseService.CountRecords(ctx, "categories", map[string]interface{}{}); err == nil {
 			mu.Lock()
-			stats.TotalCategories = int(count)
+			stats.TotalCategories = count
 			mu.Unlock()
 		}
 	}()
@@ -161,6 +154,7 @@ func (s *AdminService) GetDashboardStats(ctx context.Context) (*DashboardStats, 
 
 // ListAllUsers retrieves all users with pagination
 func (s *AdminService) ListAllUsers(ctx context.Context, limit, offset int) ([]*models.User, error) {
+	// Custom query - uses Order which is not supported by BaseService
 	query := s.client.From("users").
 		Select("*", "", false).
 		Order("created_at", &postgrest.OrderOpts{Ascending: false})
@@ -185,62 +179,30 @@ func (s *AdminService) ListAllUsers(ctx context.Context, limit, offset int) ([]*
 // ToggleUserAdmin toggles the is_admin flag for a user
 func (s *AdminService) ToggleUserAdmin(ctx context.Context, userID uuid.UUID) error {
 	// First get the current user
-	data, _, err := s.client.From("users").Select("*", "", false).Eq("id", userID.String()).Execute()
-	if err != nil {
-		return fmt.Errorf("failed to get user: %w", err)
+	var user models.User
+	if err := s.BaseService.GetSingleRecord(ctx, "users", userID, &user); err != nil {
+		return err
 	}
-
-	var users []*models.User
-	if err := json.Unmarshal(data, &users); err != nil {
-		return fmt.Errorf("failed to parse user: %w", err)
-	}
-
-	if len(users) == 0 {
-		return fmt.Errorf("user not found")
-	}
-
-	user := users[0]
 
 	// Toggle the is_admin flag
 	updateData := map[string]interface{}{
 		"is_admin": !user.IsAdmin,
 	}
 
-	_, _, err = s.client.From("users").Update(updateData, "", "").Eq("id", userID.String()).Execute()
-	if err != nil {
-		return fmt.Errorf("failed to toggle admin status: %w", err)
-	}
-
-	return nil
+	return s.BaseService.UpdateRecord(ctx, "users", userID, updateData)
 }
 
-// DeleteUser soft deletes a user by setting deleted_at
+// DeleteUser deletes a user
 func (s *AdminService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
-	_, _, err := s.client.From("users").Delete("", "").Eq("id", userID.String()).Execute()
-	if err != nil {
-		return fmt.Errorf("failed to delete user: %w", err)
-	}
-
-	return nil
+	return s.BaseService.DeleteRecord(ctx, "users", userID)
 }
 
 // GetUserByID retrieves a user by ID
 func (s *AdminService) GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error) {
-	data, _, err := s.client.From("users").
-		Select("*", "", false).
-		Eq("id", userID.String()).
-		Single().
-		Execute()
-
-	if err != nil {
-		return nil, fmt.Errorf("user not found: %w", err)
-	}
-
 	var user models.User
-	if err := json.Unmarshal(data, &user); err != nil {
-		return nil, fmt.Errorf("failed to parse user: %w", err)
+	if err := s.BaseService.GetSingleRecord(ctx, "users", userID, &user); err != nil {
+		return nil, err
 	}
-
 	return &user, nil
 }
 
@@ -261,21 +223,12 @@ func (s *AdminService) CreateUser(ctx context.Context, username, email string, i
 		userMap["name"] = username // Set name same as username for now
 	}
 
-	data, _, err := s.client.From("users").Insert(userMap, false, "", "", "").Execute()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create user: %w", err)
+	if err := s.BaseService.InsertRecord(ctx, "users", userMap); err != nil {
+		return nil, err
 	}
 
-	var users []*models.User
-	if err := json.Unmarshal(data, &users); err != nil {
-		return nil, fmt.Errorf("failed to parse created user: %w", err)
-	}
-
-	if len(users) == 0 {
-		return nil, fmt.Errorf("no user returned after creation")
-	}
-
-	return users[0], nil
+	// Return the created user
+	return s.GetUserByID(ctx, userID)
 }
 
 // UpdateUser updates a user's information
@@ -292,20 +245,12 @@ func (s *AdminService) UpdateUser(ctx context.Context, userID uuid.UUID, usernam
 		updateData["name"] = username
 	}
 
-	_, _, err := s.client.From("users").
-		Update(updateData, "", "").
-		Eq("id", userID.String()).
-		Execute()
-
-	if err != nil {
-		return fmt.Errorf("failed to update user: %w", err)
-	}
-
-	return nil
+	return s.BaseService.UpdateRecord(ctx, "users", userID, updateData)
 }
 
 // ListAllRooms retrieves all rooms with player information
 func (s *AdminService) ListAllRooms(ctx context.Context, limit, offset int) ([]*models.RoomWithPlayers, error) {
+	// Custom query - uses database view and Order, not a perfect fit for BaseService
 	query := s.client.From("rooms_with_players").
 		Select("*", "", false).
 		Order("created_at", &postgrest.OrderOpts{Ascending: false})
@@ -333,40 +278,15 @@ func (s *AdminService) ForceCloseRoom(ctx context.Context, roomID uuid.UUID) err
 		"status": "completed",
 	}
 
-	_, _, err := s.client.From("rooms").Update(updateData, "", "").Eq("id", roomID.String()).Execute()
-	if err != nil {
-		return fmt.Errorf("failed to close room: %w", err)
-	}
-
-	return nil
+	return s.BaseService.UpdateRecord(ctx, "rooms", roomID, updateData)
 }
 
 // GetUserCount returns the total number of users
 func (s *AdminService) GetUserCount(ctx context.Context) (int, error) {
-	data, _, err := s.client.From("users").Select("id", "", false).Execute()
-	if err != nil {
-		return 0, fmt.Errorf("failed to count users: %w", err)
-	}
-
-	var users []map[string]interface{}
-	if err := json.Unmarshal(data, &users); err != nil {
-		return 0, fmt.Errorf("failed to parse users: %w", err)
-	}
-
-	return len(users), nil
+	return s.BaseService.CountRecords(ctx, "users", map[string]interface{}{})
 }
 
 // GetRoomCount returns the total number of rooms
 func (s *AdminService) GetRoomCount(ctx context.Context) (int, error) {
-	data, _, err := s.client.From("rooms").Select("id", "", false).Execute()
-	if err != nil {
-		return 0, fmt.Errorf("failed to count rooms: %w", err)
-	}
-
-	var rooms []map[string]interface{}
-	if err := json.Unmarshal(data, &rooms); err != nil {
-		return 0, fmt.Errorf("failed to parse rooms: %w", err)
-	}
-
-	return len(rooms), nil
+	return s.BaseService.CountRecords(ctx, "rooms", map[string]interface{}{})
 }

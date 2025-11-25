@@ -12,38 +12,36 @@ import (
 
 // FriendService handles friend-related operations
 type FriendService struct {
+	*BaseService
 	client *supabase.Client
 }
 
 // NewFriendService creates a new friend service
 func NewFriendService(client *supabase.Client) *FriendService {
 	return &FriendService{
-		client: client,
+		BaseService: NewBaseService(client, "FriendService"),
+		client:      client,
 	}
 }
 
 // GetFriends retrieves all accepted friends for a user
 func (s *FriendService) GetFriends(ctx context.Context, userID uuid.UUID) ([]models.FriendWithUserInfo, error) {
 	// Query friends where user is the sender (user_id)
-	data1, _, err1 := s.client.From("friends").
-		Select("*", "", false).
-		Eq("user_id", userID.String()).
-		Eq("status", "accepted").
-		Execute()
+	var friends1 []models.Friend
+	if err := s.BaseService.GetRecords(ctx, "friends", map[string]interface{}{
+		"user_id": userID.String(),
+		"status":  "accepted",
+	}, &friends1); err != nil {
+		friends1 = []models.Friend{}
+	}
 
 	// Query friends where user is the receiver (friend_id)
-	data2, _, err2 := s.client.From("friends").
-		Select("*", "", false).
-		Eq("friend_id", userID.String()).
-		Eq("status", "accepted").
-		Execute()
-
-	var friends1, friends2 []models.Friend
-	if err1 == nil {
-		json.Unmarshal(data1, &friends1)
-	}
-	if err2 == nil {
-		json.Unmarshal(data2, &friends2)
+	var friends2 []models.Friend
+	if err := s.BaseService.GetRecords(ctx, "friends", map[string]interface{}{
+		"friend_id": userID.String(),
+		"status":    "accepted",
+	}, &friends2); err != nil {
+		friends2 = []models.Friend{}
 	}
 
 	// Combine and enrich with user info
@@ -88,19 +86,12 @@ func (s *FriendService) GetFriends(ctx context.Context, userID uuid.UUID) ([]mod
 
 // GetPendingRequests retrieves all pending friend requests for a user (requests they received)
 func (s *FriendService) GetPendingRequests(ctx context.Context, userID uuid.UUID) ([]models.FriendWithUserInfo, error) {
-	data, _, err := s.client.From("friends").
-		Select("*", "", false).
-		Eq("friend_id", userID.String()).
-		Eq("status", "pending").
-		Execute()
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch pending requests: %w", err)
-	}
-
 	var requests []models.Friend
-	if err := json.Unmarshal(data, &requests); err != nil {
-		return nil, fmt.Errorf("failed to parse requests: %w", err)
+	if err := s.BaseService.GetRecords(ctx, "friends", map[string]interface{}{
+		"friend_id": userID.String(),
+		"status":    "pending",
+	}, &requests); err != nil {
+		return nil, err
 	}
 
 	// Enrich with sender info
@@ -126,19 +117,12 @@ func (s *FriendService) GetPendingRequests(ctx context.Context, userID uuid.UUID
 
 // GetSentRequests retrieves all pending friend requests sent by a user
 func (s *FriendService) GetSentRequests(ctx context.Context, userID uuid.UUID) ([]models.FriendWithUserInfo, error) {
-	data, _, err := s.client.From("friends").
-		Select("*", "", false).
-		Eq("user_id", userID.String()).
-		Eq("status", "pending").
-		Execute()
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch sent requests: %w", err)
-	}
-
 	var requests []models.Friend
-	if err := json.Unmarshal(data, &requests); err != nil {
-		return nil, fmt.Errorf("failed to parse requests: %w", err)
+	if err := s.BaseService.GetRecords(ctx, "friends", map[string]interface{}{
+		"user_id": userID.String(),
+		"status":  "pending",
+	}, &requests); err != nil {
+		return nil, err
 	}
 
 	// Enrich with receiver info
@@ -181,89 +165,44 @@ func (s *FriendService) CreateFriendRequest(ctx context.Context, senderID, recei
 		"status":    "pending",
 	}
 
-	_, _, err = s.client.From("friends").Insert(friendData, false, "", "", "").Execute()
-	if err != nil {
-		return fmt.Errorf("failed to create friend request: %w", err)
-	}
-
-	return nil
+	return s.BaseService.InsertRecord(ctx, "friends", friendData)
 }
 
 // AcceptFriendRequest accepts a friend request
 func (s *FriendService) AcceptFriendRequest(ctx context.Context, requestID uuid.UUID) error {
-	// Update status to accepted
 	data := map[string]interface{}{
 		"status": "accepted",
 	}
 
-	_, _, err := s.client.From("friends").
-		Update(data, "", "").
-		Eq("id", requestID.String()).
-		Execute()
-
-	if err != nil {
-		return fmt.Errorf("failed to accept friend request: %w", err)
-	}
-
-	return nil
+	return s.BaseService.UpdateRecord(ctx, "friends", requestID, data)
 }
 
 // DeclineFriendRequest declines a friend request
 func (s *FriendService) DeclineFriendRequest(ctx context.Context, requestID uuid.UUID) error {
-	// Update status to declined
 	data := map[string]interface{}{
 		"status": "declined",
 	}
 
-	_, _, err := s.client.From("friends").
-		Update(data, "", "").
-		Eq("id", requestID.String()).
-		Execute()
-
-	if err != nil {
-		return fmt.Errorf("failed to decline friend request: %w", err)
-	}
-
-	return nil
+	return s.BaseService.UpdateRecord(ctx, "friends", requestID, data)
 }
 
 // RemoveFriend removes a friendship (deletes the record)
 func (s *FriendService) RemoveFriend(ctx context.Context, friendshipID uuid.UUID) error {
-	_, _, err := s.client.From("friends").
-		Delete("", "").
-		Eq("id", friendshipID.String()).
-		Execute()
-
-	if err != nil {
-		return fmt.Errorf("failed to remove friend: %w", err)
-	}
-
-	return nil
+	return s.BaseService.DeleteRecord(ctx, "friends", friendshipID)
 }
 
 // GetFriendshipByID retrieves a specific friendship/request by ID
 func (s *FriendService) GetFriendshipByID(ctx context.Context, friendshipID uuid.UUID) (*models.Friend, error) {
-	data, _, err := s.client.From("friends").
-		Select("*", "", false).
-		Eq("id", friendshipID.String()).
-		Single().
-		Execute()
-
-	if err != nil {
-		return nil, fmt.Errorf("friendship not found: %w", err)
-	}
-
 	var friend models.Friend
-	if err := json.Unmarshal(data, &friend); err != nil {
-		return nil, fmt.Errorf("failed to parse friendship: %w", err)
+	if err := s.BaseService.GetSingleRecord(ctx, "friends", friendshipID, &friend); err != nil {
+		return nil, err
 	}
-
 	return &friend, nil
 }
 
 // SearchUsersByUsername searches for users by username (for adding friends)
 func (s *FriendService) SearchUsersByUsername(ctx context.Context, query string) ([]models.User, error) {
-	// Use ilike for case-insensitive search
+	// Custom query - uses Ilike and Limit which are not supported by BaseService
 	data, _, err := s.client.From("users").
 		Select("id,username,name,is_anonymous", "", false).
 		Ilike("username", fmt.Sprintf("%%%s%%", query)).
@@ -284,6 +223,7 @@ func (s *FriendService) SearchUsersByUsername(ctx context.Context, query string)
 
 // Helper function to get user info
 func (s *FriendService) getUserInfo(ctx context.Context, userID uuid.UUID) (*models.User, error) {
+	// Custom query - only selecting specific fields, not all (*)
 	data, _, err := s.client.From("users").
 		Select("id,username,name", "", false).
 		Eq("id", userID.String()).
@@ -304,6 +244,7 @@ func (s *FriendService) getUserInfo(ctx context.Context, userID uuid.UUID) (*mod
 
 // Helper function to check if friendship already exists
 func (s *FriendService) checkExistingFriendship(ctx context.Context, userID1, userID2 uuid.UUID) (*models.Friend, error) {
+	// Custom query - complex logic checking both directions
 	// Check direction 1: userID1 -> userID2
 	data1, _, _ := s.client.From("friends").
 		Select("*", "", false).
