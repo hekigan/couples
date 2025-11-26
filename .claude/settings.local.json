@@ -28,7 +28,8 @@
       "Bash(cat:*)",
       "Bash(go doc:*)",
       "Bash(./server)",
-      "Bash(make dev:*)"
+      "Bash(make dev:*)",
+      "Bash(make test-db-status:*)"
     ],
     "deny": [],
     "ask": []
