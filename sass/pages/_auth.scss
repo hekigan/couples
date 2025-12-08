@@ -27,16 +27,44 @@
 
   section {
     margin-bottom: 0;
+
+    &.divider {
+      margin: 0;
+      padding: 0;
+    }
   }
 
   section + section {
-    border-top: $border-width solid $border-color;
-    padding-top: $spacing-xl;
+    padding-top: 10px;
   }
 
   [role=button] {
     display: flex;
     margin-bottom: $spacing-md;
+  }
+}
+
+@media screen and (min-width: $breakpoint-md) {
+  .auth-options {
+    flex-direction: row;
+
+    section {
+      flex: 1;
+
+      &.divider {
+        flex: 0;
+        margin-top: 15px;
+
+        &::before, &::after {
+          display: none;
+        }
+      }
+    }
+
+    section + section {
+      border-top: none;
+      padding-top: 0;
+    }
   }
 }
 
