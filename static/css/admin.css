@@ -78,7 +78,7 @@
 .stat-card .stat-value {
   font-size: 2rem;
   font-weight: 700;
-  color: #B0E0E6;
+  color: #7115c7;
   text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
 }
 .stat-card:nth-child(2) .stat-value {
@@ -250,7 +250,7 @@ dialog.modal-wide article {
   background-color: #fff;
 }
 .table-legend [data-legend-type=playing]::before {
-  background-color: #B0E0E6;
+  background-color: #7115c7;
 }
 
 table tr:hover td {
@@ -275,7 +275,7 @@ table [data-legend-type=guest] td:first-child {
   border-left-color: #fff;
 }
 table [data-legend-type=playing] td:first-child {
-  border-left-color: #B0E0E6;
+  border-left-color: #7115c7;
 }
 
 #users-list tr [data-username] {

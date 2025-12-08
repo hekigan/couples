@@ -19,9 +19,10 @@
 
 .home-features {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: $spacing-xl;
   margin: $spacing-xxl 0;
+  padding: 0 $spacing-lg;
 }
 
 .feature-card {
@@ -29,18 +30,21 @@
   padding: $spacing-xl;
   border-radius: $border-radius-lg;
   box-shadow: $shadow-md;
-  transition: transform $transition-base;
-  
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: $shadow-lg;
+
+  h3 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-md;
+  }
+
+  p {
+    margin-bottom: 0;
   }
 }
 
 .feature-icon {
-  font-size: 3rem;
-  display: block;
-  margin-bottom: $spacing-md;
+  font-size: 2rem;
 }
 
 .home-actions {
@@ -49,6 +53,12 @@
   justify-content: center;
   flex-wrap: wrap;
   margin-top: $spacing-xxl;
+
+  button, [role=button] {
+    font-size: $font-size-lg;
+    margin-bottom: 0;
+    padding: $spacing-md $spacing-lg;
+  }
 }
 
 @media (max-width: $breakpoint-md) {

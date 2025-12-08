@@ -8,18 +8,24 @@
 
         <section class="home-features">
             <article class="feature-card">
-                <span class="feature-icon">❤️</span>
-                <h3>Connect Deeper</h3>
+                <h3>
+                    <span class="feature-icon">❤️</span>
+                    Connect Deeper
+                </h3>
                 <p>Ask meaningful questions and strengthen your bond</p>
             </article>
             <article class="feature-card">
-                <span class="feature-icon">🎮</span>
-                <h3>Fun & Easy</h3>
+                <h3>
+                    <span class="feature-icon">🎮</span>
+                    Fun & Easy
+                </h3>
                 <p>Simple gameplay, profound conversations</p>
             </article>
             <article class="feature-card">
-                <span class="feature-icon">🌍</span>
-                <h3>Multilingual</h3>
+                <h3>
+                    <span class="feature-icon">🌍</span>
+                    Multilingual
+                </h3>
                 <p>Available in multiple languages</p>
             </article>
         </section>
@@ -29,7 +35,9 @@
                 <a href="/game/create-room" role="button" data-testid="create-room-link">Create Room</a>
                 <a href="/game/join-room" role="button" class="secondary" data-testid="join-room-link">Join Room</a>
             {{else}}
-                <a href="/auth/login" role="button" data-testid="login-link">Login/Signup to Play</a>
+                <a href="/auth/login" role="button" 
+                    data-testid="login-link"
+                    class="success">Login/Signup to Play</a>
                 <form action="/auth/anonymous" method="POST" class="d-inline-block">
                     <button type="submit" class="secondary" data-testid="play-as-guest-button">Play as Guest</button>
                 </form>

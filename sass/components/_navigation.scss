@@ -3,7 +3,7 @@
 
 // Navigation
 .main-header {
-  background-color: #{$primary-color};
+  background-color: #{color.adjust($secondary-color, $lightness: -10%)};
   box-shadow: $shadow-heavy-md;
   padding: $spacing-md 0;
   width: inherit;
@@ -44,6 +44,15 @@
   display: flex;
   align-items: center;
   gap: $spacing-lg;
+
+  button, [role=button] {
+    background-color: transparent;
+
+    &:hover {
+      background-color: var(--pico-primary-inverse);
+      color: var(--pico-primary);
+    }
+  }
 }
 
 .nav-link {
@@ -139,7 +148,7 @@
   align-items: center;
   padding: $spacing-lg;
   border-bottom: $border-width solid $border-color;
-  background-color: $primary-color;
+  background-color: #{color.adjust($secondary-color, $lightness: -10%)};
   
   .menu-title {
     font-size: $font-size-lg;
