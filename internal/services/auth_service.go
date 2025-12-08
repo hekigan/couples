@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/supabase-community/gotrue-go"
+	"github.com/supabase-community/gotrue-go/types"
 	"github.com/supabase-community/supabase-go"
 	"github.com/hekigan/couples/internal/models"
 )
@@ -216,5 +217,55 @@ func (s *AuthService) RefreshAccessToken(ctx context.Context, refreshToken strin
 func (s *AuthService) SignOut(ctx context.Context, accessToken string) error {
 	client := s.authClient.WithToken(accessToken)
 	return client.Logout()
+}
+
+// LoginWithPassword authenticates a user with email/password
+func (s *AuthService) LoginWithPassword(ctx context.Context, email, password string) (*OAuthSession, error) {
+	// Use gotrue-go SignInWithEmailPassword convenience method
+	resp, err := s.authClient.SignInWithEmailPassword(email, password)
+	if err != nil {
+		return nil, fmt.Errorf("authentication failed: %w", err)
+	}
+
+	user, err := s.GetUserFromAccessToken(ctx, resp.AccessToken)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	return &OAuthSession{
+		AccessToken:  resp.AccessToken,
+		RefreshToken: resp.RefreshToken,
+		User:         user,
+		ExpiresIn:    resp.ExpiresIn,
+	}, nil
+}
+
+// SignupWithPassword creates a new user account with email/password
+func (s *AuthService) SignupWithPassword(ctx context.Context, email, password, username string) (*OAuthSession, error) {
+	// Create user in Supabase Auth
+	resp, err := s.authClient.Signup(types.SignupRequest{
+		Email:    email,
+		Password: password,
+		Data: map[string]interface{}{
+			"username":     username,
+			"display_name": username,
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("signup failed: %w", err)
+	}
+
+	// Get user details from access token
+	user, err := s.GetUserFromAccessToken(ctx, resp.AccessToken)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	return &OAuthSession{
+		AccessToken:  resp.AccessToken,
+		RefreshToken: resp.RefreshToken,
+		User:         user,
+		ExpiresIn:    resp.ExpiresIn,
+	}, nil
 }
 

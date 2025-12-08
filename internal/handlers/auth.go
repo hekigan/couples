@@ -20,6 +20,216 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	h.RenderTemplate(w, "auth/login.html", data)
 }
 
+// LoginPostHandler handles email/password login via HTMX
+func (h *Handler) LoginPostHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse form data
+	email := r.FormValue("email")
+	password := r.FormValue("password")
+
+	// Validate inputs
+	if email == "" || password == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Email and password are required",
+		})
+		return
+	}
+
+	// Create auth service
+	authService, err := services.NewAuthService(h.UserService.GetSupabaseClient())
+	if err != nil {
+		log.Printf("Failed to initialize auth service: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Authentication service unavailable",
+		})
+		return
+	}
+
+	// Authenticate with Supabase
+	session, err := authService.LoginWithPassword(ctx, email, password)
+	if err != nil {
+		log.Printf("Login failed for %s: %v", email, err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Invalid email or password",
+		})
+		return
+	}
+
+	// Create or update user in database (reuse OAuth pattern)
+	user, err := authService.CreateOrUpdateUserFromOAuth(ctx, session.User)
+	if err != nil {
+		log.Printf("Failed to create/update user: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Failed to create user session",
+		})
+		return
+	}
+
+	// Create session (pattern from processOAuthTokens, lines 224-241)
+	sess, _ := middleware.Store.Get(r, "couple-card-game-session")
+	sess.Values["user_id"] = user.ID.String()
+	sess.Values["username"] = user.Username
+	if user.Email != nil {
+		sess.Values["email"] = *user.Email
+	}
+	sess.Values["is_anonymous"] = false
+	sess.Values["is_admin"] = user.IsAdmin
+	sess.Values["access_token"] = session.AccessToken
+	if session.RefreshToken != "" {
+		sess.Values["refresh_token"] = session.RefreshToken
+	}
+
+	if err := sess.Save(r, w); err != nil {
+		log.Printf("Failed to save session: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Failed to save session",
+		})
+		return
+	}
+
+	log.Printf("Login successful for user: %s", user.Username)
+
+	// Return HX-Redirect header for HTMX to handle
+	w.Header().Set("HX-Redirect", "/")
+	w.WriteHeader(http.StatusOK)
+}
+
+// SignupHandler displays the signup page
+func (h *Handler) SignupHandler(w http.ResponseWriter, r *http.Request) {
+	data := &TemplateData{
+		Title: "Sign Up - Couple Card Game",
+	}
+	h.RenderTemplate(w, "auth/signup.html", data)
+}
+
+// SignupPostHandler handles user registration via HTMX
+func (h *Handler) SignupPostHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse form data
+	email := r.FormValue("email")
+	password := r.FormValue("password")
+	passwordConfirm := r.FormValue("password_confirm")
+	username := r.FormValue("username")
+
+	// Validate inputs
+	if email == "" || password == "" || username == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "All fields are required",
+		})
+		return
+	}
+
+	// Validate password match
+	if password != passwordConfirm {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Passwords do not match",
+		})
+		return
+	}
+
+	// Validate password strength (minimum 6 characters)
+	if len(password) < 6 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Password must be at least 6 characters long",
+		})
+		return
+	}
+
+	// Validate username (alphanumeric, 3-50 characters)
+	if len(username) < 3 || len(username) > 50 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Username must be between 3 and 50 characters",
+		})
+		return
+	}
+
+	// Create auth service
+	authService, err := services.NewAuthService(h.UserService.GetSupabaseClient())
+	if err != nil {
+		log.Printf("Failed to initialize auth service: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Authentication service unavailable",
+		})
+		return
+	}
+
+	// Create user in Supabase Auth
+	session, err := authService.SignupWithPassword(ctx, email, password, username)
+	if err != nil {
+		log.Printf("Signup failed for %s: %v", email, err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Signup failed. Email may already be in use.",
+		})
+		return
+	}
+
+	// Create user in application database
+	user, err := authService.CreateOrUpdateUserFromOAuth(ctx, session.User)
+	if err != nil {
+		log.Printf("Failed to create user in database: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Failed to create user account",
+		})
+		return
+	}
+
+	// Create session
+	sess, _ := middleware.Store.Get(r, "couple-card-game-session")
+	sess.Values["user_id"] = user.ID.String()
+	sess.Values["username"] = user.Username
+	if user.Email != nil {
+		sess.Values["email"] = *user.Email
+	}
+	sess.Values["is_anonymous"] = false
+	sess.Values["is_admin"] = user.IsAdmin
+	sess.Values["access_token"] = session.AccessToken
+	if session.RefreshToken != "" {
+		sess.Values["refresh_token"] = session.RefreshToken
+	}
+
+	if err := sess.Save(r, w); err != nil {
+		log.Printf("Failed to save session: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Failed to save session",
+		})
+		return
+	}
+
+	log.Printf("Signup successful for user: %s", user.Username)
+
+	// Return HX-Redirect header for HTMX to handle
+	w.Header().Set("HX-Redirect", "/")
+	w.WriteHeader(http.StatusOK)
+}
+
 // LogoutHandler logs out the user
 func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := middleware.Store.Get(r, "couple-card-game-session")

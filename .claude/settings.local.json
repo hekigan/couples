@@ -29,7 +29,10 @@
       "Bash(go doc:*)",
       "Bash(./server)",
       "Bash(make dev:*)",
-      "Bash(make test-db-status:*)"
+      "Bash(make test-db-status:*)",
+      "Bash(grep:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs"
     ],
     "deny": [],
     "ask": []

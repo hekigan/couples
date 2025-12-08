@@ -11,10 +11,6 @@
 
 .auth-card {
   background-color: $bg-primary;
-  border-radius: $border-radius-lg;
-  box-shadow: $shadow-lg;
-  padding: $spacing-xxl;
-  max-width: 400px;
   width: 100%;
   
   h1 {
@@ -28,6 +24,20 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-md;
+
+  section {
+    margin-bottom: 0;
+  }
+
+  section + section {
+    border-top: $border-width solid $border-color;
+    padding-top: $spacing-xl;
+  }
+
+  [role=button] {
+    display: flex;
+    margin-bottom: $spacing-md;
+  }
 }
 
 .btn-oauth {

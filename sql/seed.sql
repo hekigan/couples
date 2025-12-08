@@ -1,7 +1,39 @@
 -- Seed data for Couple Card Game
 -- Run this after schema.sql
 
--- Insert admin user (password: admin123 - change this in production!)
+-- ============================================================================
+-- ADMIN USER SETUP
+-- ============================================================================
+--
+-- IMPORTANT: To create the admin user with email/password authentication:
+--
+-- Option 1: Use Supabase Dashboard (Production/Hosted)
+--   1. Go to Supabase Dashboard → Authentication → Users
+--   2. Click "Add User" → "Create new user"
+--   3. Enter:
+--      - Email: admin@example.com
+--      - Password: admin123 (change in production!)
+--      - Set user_metadata: {"username": "admin"}
+--   4. Copy the user UUID
+--   5. Update the INSERT below with that UUID
+--
+-- Option 2: Use Signup Form (Recommended for local development)
+--   1. Start the server: make dev
+--   2. Navigate to: http://localhost:8080/auth/signup
+--   3. Create account with:
+--      - Username: admin
+--      - Email: admin@example.com
+--      - Password: admin123
+--   4. This automatically creates the user in both Supabase Auth and application DB
+--   5. Update the user to admin: UPDATE users SET is_admin = TRUE WHERE email = 'admin@example.com';
+--
+-- Option 3: Dev Login (Development Only)
+--   - Visit /auth/dev-login-admin to login as the seeded admin user
+--   - This bypasses authentication (development only!)
+--
+-- ============================================================================
+
+-- Insert admin user profile (authentication credentials stored in Supabase Auth)
 INSERT INTO users (id, email, name, username, is_admin, is_anonymous) VALUES
 ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'admin@example.com', 'Admin', 'admin', TRUE, FALSE)
 ON CONFLICT (id) DO NOTHING;
