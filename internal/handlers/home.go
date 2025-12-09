@@ -10,21 +10,20 @@ import (
 
 // HomeHandler handles the home page
 func (h *Handler) HomeHandler(w http.ResponseWriter, r *http.Request) {
-	// Get user from context if logged in
-	var user interface{}
-	if userID := r.Context().Value(middleware.UserIDKey); userID != nil {
-		// User is logged in
-		user = userID
-		
-		// Check if user has a username set
+	// Get session user data
+	sessionUser := GetSessionUser(r)
+
+	// Check if user has a username set
+	if sessionUser != nil {
 		ctx := context.Background()
-		userObj, err := h.UserService.GetUserByID(ctx, userID.(uuid.UUID))
+		userID, _ := uuid.Parse(sessionUser.ID)
+		userObj, err := h.UserService.GetUserByID(ctx, userID)
 		if err == nil && userObj != nil {
 			// Check if username is temporary (starts with "guest_" or "user_")
 			isTemporary := len(userObj.Username) >= 6 && (
-				userObj.Username[:6] == "guest_" || 
+				userObj.Username[:6] == "guest_" ||
 				userObj.Username[:5] == "user_")
-			
+
 			// If username is empty or temporary, redirect to setup
 			if userObj.Username == "" || isTemporary {
 				http.Redirect(w, r, "/setup-username", http.StatusSeeOther)
@@ -34,8 +33,9 @@ func (h *Handler) HomeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := &TemplateData{
-		Title: "Home - Couple Card Game",
-		User:  user,
+		Title:   "Home - Couple Card Game",
+		User:    sessionUser,
+		IsAdmin: sessionUser != nil && sessionUser.IsAdmin,
 	}
 
 	h.RenderTemplate(w, "home.html", data)

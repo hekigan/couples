@@ -278,7 +278,6 @@ func (h *Handler) DevLoginAsAdminHandler(w http.ResponseWriter, r *http.Request)
 	}
 	session.Values["is_anonymous"] = false
 	session.Values["is_admin"] = true
-	session.Values["admin_authenticated"] = true // Required by AdminPasswordGate
 
 	if err := session.Save(r, w); err != nil {
 		log.Printf("Failed to save session: %v", err)

@@ -65,10 +65,13 @@
                             </div>
                         </div>
 
+                        {{if .IsAdmin}}
+                        <a href="/admin" role="button" class="nav-link">Admin Dashboard</a>
+                        {{end}}
                         <a href="/friends" role="button" class="nav-link">Friends</a>
                         <a href="/game/rooms" role="button" class="nav-link">Rooms</a>
                         <a href="/profile" role="button" class="nav-link">Profile</a>
-                        
+
                         <a href="#" role="button" hx-post="/auth/logout" hx-confirm="Are you sure you want to logout?" class="nav-link">Logout</a>
                     {{else}}
                         <a href="/auth/login" role="button">Login</a>
@@ -116,6 +119,9 @@
                     📧
                     <span class="notification-badge" id="notification-badge-mobile" hidden>0</span>
                 </a>
+                {{if .IsAdmin}}
+                <a href="/admin" class="nav-link">Admin Dashboard</a>
+                {{end}}
                 <a href="/friends" class="nav-link">Friends</a>
                 <a href="/game/rooms" class="nav-link">Rooms</a>
                 <a href="/profile" class="nav-link">Profile</a>
