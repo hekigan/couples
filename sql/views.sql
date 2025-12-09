@@ -32,13 +32,11 @@ SELECT
     r.owner_id,
     owner.username AS owner_username,
     owner.email AS owner_email,
-    owner.name AS owner_name,
 
     -- Guest information
     r.guest_id,
     guest.username AS guest_username,
     guest.email AS guest_email,
-    guest.name AS guest_name,
 
     -- Current player information (for turn indicator)
     current_player.username AS current_player_username
@@ -69,7 +67,6 @@ SELECT
     -- User information
     u.username,
     u.email,
-    u.name,
 
     -- Room information (for authorization checks)
     r.owner_id AS room_owner_id,
@@ -151,12 +148,10 @@ SELECT
     -- Inviter information
     inviter.username AS inviter_username,
     inviter.email AS inviter_email,
-    inviter.name AS inviter_name,
 
     -- Invitee information
     invitee.username AS invitee_username,
     invitee.email AS invitee_email,
-    invitee.name AS invitee_name,
 
     -- Room information
     r.name AS room_name,
@@ -190,7 +185,6 @@ SELECT
     -- Friend information
     friend.username AS friend_username,
     friend.email AS friend_email,
-    friend.name AS friend_name,
 
     -- User information (for reverse lookups)
     u.username AS user_username

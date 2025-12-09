@@ -98,8 +98,6 @@ func (h *Handler) LoginPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Login successful for user: %s", user.Username)
-
 	// Return HX-Redirect header for HTMX to handle
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
@@ -178,7 +176,7 @@ func (h *Handler) SignupPostHandler(w http.ResponseWriter, r *http.Request) {
 	// Create user in Supabase Auth
 	session, err := authService.SignupWithPassword(ctx, email, password, username)
 	if err != nil {
-		log.Printf("Signup failed for %s: %v", email, err)
+		log.Printf("❌ Signup failed for %s: %v", email, err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -223,8 +221,6 @@ func (h *Handler) SignupPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Signup successful for user: %s", user.Username)
-
 	// Return HX-Redirect header for HTMX to handle
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
@@ -235,7 +231,16 @@ func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := middleware.Store.Get(r, "couple-card-game-session")
 	session.Options.MaxAge = -1
 	session.Save(r, w)
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+
+	// Check if this is an HTMX request
+	if r.Header.Get("HX-Request") == "true" {
+		// For HTMX, use HX-Redirect header
+		w.Header().Set("HX-Redirect", "/")
+		w.WriteHeader(http.StatusOK)
+	} else {
+		// For regular requests, use standard redirect
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+	}
 }
 
 // DevLoginAsAdminHandler is a development-only endpoint to login as the seeded admin user

@@ -39,8 +39,8 @@ func (h *Handler) UpdateProfileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update user fields from form
-	if name := r.FormValue("name"); name != "" {
-		user.Name = name
+	if username := r.FormValue("username"); username != "" {
+		user.Username = username
 	}
 
 	if err := h.UserService.UpdateUser(ctx, user); err != nil {

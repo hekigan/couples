@@ -58,7 +58,6 @@ func (s *FriendService) GetFriends(ctx context.Context, userID uuid.UUID) ([]mod
 			UserID:    friend.UserID,
 			FriendID:  friend.FriendID,
 			Username:  userInfo.Username,
-			Name:      userInfo.Name,
 			Status:    friend.Status,
 			CreatedAt: friend.CreatedAt,
 		})
@@ -75,7 +74,6 @@ func (s *FriendService) GetFriends(ctx context.Context, userID uuid.UUID) ([]mod
 			UserID:    friend.UserID,
 			FriendID:  friend.FriendID,
 			Username:  userInfo.Username,
-			Name:      userInfo.Name,
 			Status:    friend.Status,
 			CreatedAt: friend.CreatedAt,
 		})
@@ -106,7 +104,6 @@ func (s *FriendService) GetPendingRequests(ctx context.Context, userID uuid.UUID
 			UserID:    req.UserID,
 			FriendID:  req.FriendID,
 			Username:  userInfo.Username,
-			Name:      userInfo.Name,
 			Status:    req.Status,
 			CreatedAt: req.CreatedAt,
 		})
@@ -137,7 +134,6 @@ func (s *FriendService) GetSentRequests(ctx context.Context, userID uuid.UUID) (
 			UserID:    req.UserID,
 			FriendID:  req.FriendID,
 			Username:  userInfo.Username,
-			Name:      userInfo.Name,
 			Status:    req.Status,
 			CreatedAt: req.CreatedAt,
 		})

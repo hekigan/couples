@@ -65,11 +65,11 @@
                             </div>
                         </div>
 
-                        <a href="/friends" class="nav-link">Friends</a>
-                        <a href="/game/rooms" class="nav-link">Rooms</a>
-                        <a href="/profile" class="nav-link">Profile</a>
+                        <a href="/friends" role="button" class="nav-link">Friends</a>
+                        <a href="/game/rooms" role="button" class="nav-link">Rooms</a>
+                        <a href="/profile" role="button" class="nav-link">Profile</a>
                         
-                        <a href="#" hx-post="/auth/logout" hx-confirm="Are you sure you want to logout?" class="nav-link">Logout</a>
+                        <a href="#" role="button" hx-post="/auth/logout" hx-confirm="Are you sure you want to logout?" class="nav-link">Logout</a>
                     {{else}}
                         <a href="/auth/login" role="button">Login</a>
                         <a href="/auth/signup" role="button">Signup</a>

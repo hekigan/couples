@@ -10,7 +10,7 @@
                 {{end}}
             </div>
             <div class="profile-info">
-                <h1>{{if .Data.Username}}{{.Data.Username}}{{else if .Data.Name}}{{.Data.Name}}{{else}}Guest User{{end}}</h1>
+                <h1>{{if .Data.Username}}{{.Data.Username}}{{else if .Data.Email}}{{.Data.Email}}{{else}}Guest User{{end}}</h1>
                 {{if .Data.Email}}
                     <p class="profile-email">{{.Data.Email}}</p>
                 {{end}}

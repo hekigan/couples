@@ -76,7 +76,6 @@ func CreateTestUser(t *testing.T, client *supabase.Client, username, name string
 		user = &UserTestData{
 			ID:          createdUser.ID,
 			Username:    createdUser.Username,
-			Name:        createdUser.Name,
 			IsAnonymous: true,
 		}
 	} else {
@@ -92,7 +91,6 @@ func CreateTestUser(t *testing.T, client *supabase.Client, username, name string
 type UserTestData struct {
 	ID          uuid.UUID
 	Username    string
-	Name        string
 	IsAnonymous bool
 }
 

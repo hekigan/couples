@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,15 +25,22 @@ type AuthService struct {
 // NewAuthService creates a new authentication service
 func NewAuthService(client *supabase.Client) (*AuthService, error) {
 	supabaseURL := os.Getenv("SUPABASE_URL")
-	supabaseKey := os.Getenv("SUPABASE_KEY")
+	// Use SUPABASE_ANON_KEY for auth operations (signup, login)
+	supabaseKey := os.Getenv("SUPABASE_ANON_KEY")
 	redirectURL := os.Getenv("OAUTH_REDIRECT_URL")
 
 	if redirectURL == "" {
 		redirectURL = "http://localhost:8080/auth/oauth/callback"
 	}
 
+	// Extract project reference from URL (e.g., "fsymkxnnmwyhafcdnpzx" from "https://fsymkxnnmwyhafcdnpzx.supabase.co")
+	projectRef := strings.TrimPrefix(supabaseURL, "https://")
+	projectRef = strings.TrimPrefix(projectRef, "http://")
+	projectRef = strings.Split(projectRef, ".")[0]
+
 	// Create GoTrue client for auth operations
-	authClient := gotrue.New(supabaseURL, supabaseKey)
+	// gotrue.New expects just the project reference, not the full URL
+	authClient := gotrue.New(projectRef, supabaseKey)
 
 	return &AuthService{
 		supabase:    client,
@@ -52,10 +60,10 @@ const (
 
 // OAuthUser represents a user obtained from an OAuth provider
 type OAuthUser struct {
-	ID     string
-	Email  string
-	Name   string
-	Avatar string
+	ID       string
+	Email    string
+	Username string
+	Avatar   string
 }
 
 // OAuthSession represents an OAuth session
@@ -89,10 +97,15 @@ func (s *AuthService) GetUserFromAccessToken(ctx context.Context, accessToken st
 	}
 
 	if resp.UserMetadata != nil {
-		if name, ok := resp.UserMetadata["full_name"].(string); ok {
-			oauthUser.Name = name
+		// Map Supabase display_name/username to Username field
+		if username, ok := resp.UserMetadata["username"].(string); ok {
+			oauthUser.Username = username
+		} else if displayName, ok := resp.UserMetadata["display_name"].(string); ok {
+			oauthUser.Username = displayName
+		} else if name, ok := resp.UserMetadata["full_name"].(string); ok {
+			oauthUser.Username = name
 		} else if name, ok := resp.UserMetadata["name"].(string); ok {
-			oauthUser.Name = name
+			oauthUser.Username = name
 		}
 
 		if avatar, ok := resp.UserMetadata["avatar_url"].(string); ok {
@@ -100,8 +113,9 @@ func (s *AuthService) GetUserFromAccessToken(ctx context.Context, accessToken st
 		}
 	}
 
-	if oauthUser.Name == "" {
-		oauthUser.Name = resp.Email
+	// Fallback to email prefix if no username found
+	if oauthUser.Username == "" {
+		oauthUser.Username = strings.Split(resp.Email, "@")[0]
 	}
 
 	return oauthUser, nil
@@ -130,10 +144,10 @@ func (s *AuthService) CreateOrUpdateUserFromOAuth(ctx context.Context, oauthUser
 
 	if len(existingUsers) > 0 {
 		user := &existingUsers[0]
-		// Update user if necessary (e.g., display name, avatar)
+		// Update user if necessary (e.g., username, avatar)
 		updateData := map[string]interface{}{}
-		if user.DisplayName == nil || *user.DisplayName != oauthUser.Name {
-			updateData["display_name"] = oauthUser.Name
+		if user.Username != oauthUser.Username {
+			updateData["username"] = oauthUser.Username
 		}
 		if user.Email == nil || *user.Email != oauthUser.Email {
 			updateData["email"] = oauthUser.Email
@@ -165,7 +179,7 @@ func (s *AuthService) CreateOrUpdateUserFromOAuth(ctx context.Context, oauthUser
 	newUser := &models.User{
 		ID:          userID,
 		Email:       &oauthUser.Email,
-		DisplayName: &oauthUser.Name,
+		Username:    oauthUser.Username, // Username from Supabase metadata
 		IsAnonymous: false,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -252,6 +266,8 @@ func (s *AuthService) SignupWithPassword(ctx context.Context, email, password, u
 		},
 	})
 	if err != nil {
+		fmt.Printf("🔴 Supabase Auth signup error: %v\n", err)
+		fmt.Printf("🔴 Error type: %T\n", err)
 		return nil, fmt.Errorf("signup failed: %w", err)
 	}
 

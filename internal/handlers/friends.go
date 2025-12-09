@@ -268,7 +268,7 @@ func (h *Handler) GetFriendsAPIHandler(w http.ResponseWriter, r *http.Request) {
 		if friend.FriendID == userID {
 			friendIDStr = friend.UserID.String()
 		}
-		jsonStr += `{"id":"` + friendIDStr + `","username":"` + friend.Username + `","name":"` + friend.Name + `"}`
+		jsonStr += `{"id":"` + friendIDStr + `","username":"` + friend.Username + `"}`
 	}
 	jsonStr += `]`
 

@@ -21,7 +21,6 @@ type FriendWithUserInfo struct {
 	UserID    uuid.UUID `json:"user_id"`
 	FriendID  uuid.UUID `json:"friend_id"`
 	Username  string    `json:"username"`
-	Name      string    `json:"name"`
 	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
 }

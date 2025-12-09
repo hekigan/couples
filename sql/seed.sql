@@ -34,8 +34,8 @@
 -- ============================================================================
 
 -- Insert admin user profile (authentication credentials stored in Supabase Auth)
-INSERT INTO users (id, email, name, username, is_admin, is_anonymous) VALUES
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'admin@example.com', 'Admin', 'admin', TRUE, FALSE)
+INSERT INTO users (id, email, username, is_admin, is_anonymous) VALUES
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'admin@example.com', 'admin', TRUE, FALSE)
 ON CONFLICT (id) DO NOTHING;
 
 -- Insert categories (with human-readable labels)

@@ -35,14 +35,12 @@ func (s *UserService) CreateAnonymousUser(ctx context.Context) (*models.User, er
 	user := models.User{
 		ID:          userID,
 		IsAnonymous: true,
-		Name:        "Guest User",
 		Username:    fmt.Sprintf("guest_%s", userID.String()[:8]), // Temporary username
 	}
 
 	userMap := map[string]interface{}{
 		"id":           user.ID.String(),
 		"is_anonymous": true,
-		"name":         user.Name,
 		"username":     user.Username, // Temporary, user will be prompted to change
 	}
 
@@ -76,7 +74,6 @@ func (s *UserService) UpdateUsername(ctx context.Context, userID uuid.UUID, user
 func (s *UserService) UpdateUser(ctx context.Context, user *models.User) error {
 	updateData := map[string]interface{}{
 		"username": user.Username,
-		"name":     user.Name,
 	}
 
 	// Only update is_admin if it's set
