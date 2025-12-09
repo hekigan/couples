@@ -32,10 +32,9 @@ main {
         max-width: $breakpoint-md;
         margin: 0 auto;
         overflow-y: initial;
-        justify-content: center;
 
         > :first-child {
-            width: $breakpoint-md;
+            width: inherit;
         }
     }
 }
