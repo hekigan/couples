@@ -7,7 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a **Couple Card Game** - a Go-based web application built with HTMX and Supabase. The game helps couples strengthen their relationship through question-based conversations. It features real-time multiplayer gameplay using Server-Sent Events (SSE), OAuth authentication, a friend system, multi-language support (EN, FR, JA), and an admin panel.
 
 **Tech Stack:**
-- Backend: Go 1.22+ with gorilla/mux router
+- Backend: Go 1.22+ with Echo framework
+- Templates: templ (type-safe Go templates)
 - Database: PostgreSQL via Supabase (supabase-community/supabase-go)
 - Frontend: HTMX + SASS + JavaScript (bundled with esbuild)
 - Bundler: esbuild (via Go API) for JavaScript concatenation and minification
@@ -35,10 +36,11 @@ make test-db-setup    # Setup local Supabase test database (one-time)
 make deps             # Install Go and Node dependencies
 make build            # Build the Go binary (includes SASS + JS bundling)
 
-# Development workflow (requires 3 terminals for full hot-reload)
+# Development workflow (requires 4 terminals for full hot-reload)
 make dev              # Terminal 1: Run server with Air hot-reload
 make sass-watch       # Terminal 2: Watch and auto-compile SASS
 make js-watch         # Terminal 3: Watch and auto-bundle JavaScript
+make templ-watch      # Terminal 4: Watch and auto-generate templ components (optional, Air also runs templ generate)
 
 # Alternative: One-time build and run
 make run              # Build everything and run server (production mode)
@@ -48,6 +50,12 @@ make js-build         # Build JS bundles (production: minified + source maps)
 make js-build-dev     # Build JS bundles (development: unminified)
 make js-watch         # Watch and rebuild JS bundles on changes
 make js-clean         # Remove generated bundles
+
+# Templ component generation
+make templ-install    # Install templ CLI (one-time setup)
+make templ-generate   # Generate Go code from .templ files
+make templ-watch      # Watch and regenerate templ components
+make templ-clean      # Remove generated *_templ.go files
 
 # Testing
 make test             # Run unit tests (no database required)
@@ -80,7 +88,7 @@ The application uses a **service-oriented architecture** with dependency injecti
 - `BaseService` - Shared database query patterns (GetSingleRecord, GetRecords, InsertRecord, UpdateRecord, DeleteRecord, CountRecords)
 - `UserService` - User management, authentication, cascade delete operations
 - `RoomService` - Game room CRUD and state management
-- `GameService` - Game logic coordination, turn management (delegates to other services)
+- `GameService` - Game logic coordination, turn management (delegates to other services, uses rendering.TemplService for SSE fragments)
 - `QuestionService` - Question CRUD, translations, random selection, history tracking
 - `CategoryService` - Category CRUD and management (split from QuestionService)
 - `AnswerService` - Answer recording and retrieval
@@ -89,19 +97,23 @@ The application uses a **service-oriented architecture** with dependency injecti
 - `AdminService` - Admin operations (dashboard stats, bulk operations)
 - `I18nService` - Multi-language translation system
 - `RealtimeService` - SSE connection management and broadcasting
-- `TemplateService` - HTML fragment rendering for HTMX/SSE
+- `rendering.TemplService` - Minimal adapter for rendering templ components in service layer (used by GameService for SSE)
 
 **Service initialization in `cmd/server/main.go`:**
 ```go
+renderService := rendering.NewTemplService()  // For GameService SSE fragments
 realtimeService := services.NewRealtimeService()
 userService := services.NewUserService(supabaseClient)
 roomService := services.NewRoomService(supabaseClient, realtimeService)
 questionService := services.NewQuestionService(supabaseClient)
 categoryService := services.NewCategoryService(supabaseClient)
 answerService := services.NewAnswerService(supabaseClient)
-gameService := services.NewGameService(supabaseClient, roomService, questionService, categoryService, answerService, realtimeService, templateService)
-// ... more services
-handler := handlers.NewHandler(userService, roomService, gameService, questionService, categoryService, answerService, friendService, i18nService, notificationService, templateService, adminService)
+gameService := services.NewGameService(supabaseClient, roomService, questionService, categoryService, answerService, realtimeService, renderService)
+friendService := services.NewFriendService(supabaseClient)
+i18nService := services.NewI18nService(supabaseClient, "./static/i18n")
+notificationService := services.NewNotificationService(supabaseClient)
+adminService := services.NewAdminService(supabaseClient)
+handler := handlers.NewHandler(userService, roomService, gameService, questionService, categoryService, answerService, friendService, i18nService, notificationService, adminService)
 ```
 
 ### BaseService Pattern (NEW)
@@ -287,9 +299,15 @@ The application uses **Server-Sent Events** for real-time updates, not WebSocket
 
 **Do not use JSON, only HTMX**
 
-**New HTML SSE (for HTMX):**
+**HTML SSE with templ components:**
 ```go
-html, _ := h.TemplateService.RenderFragment("player_joined.html", data)
+// In handlers - render templ component to HTML string
+html, err := h.RenderTemplFragment(c, roomFragments.PlayerJoined(&data))
+if err != nil {
+    return err
+}
+
+// Broadcast via SSE
 h.RoomService.GetRealtimeService().BroadcastHTMLFragment(roomID, services.HTMLFragmentEvent{
     Type:       "player_joined",
     Target:     "#guest-info",
@@ -300,20 +318,25 @@ h.RoomService.GetRealtimeService().BroadcastHTMLFragment(roomID, services.HTMLFr
 //        data: {"target":"#guest-info","swap":"innerHTML","html":"<div>...</div>"}
 ```
 
-**HTML Templates for SSE:** Located in `templates/partials/` with corresponding data structs in `internal/services/template_service.go`.
+**Templ components for SSE:** Located in `internal/views/fragments/` with type-safe Go parameters (uses `*services.DataType` or `*viewmodels.DataType`).
 
-### HTMX + Supabase Refactoring (IN PROGRESS)
+### Templ Migration (COMPLETED December 2024)
 
-**The codebase is undergoing a refactoring from vanilla JavaScript to HTMX.** This is a multi-phase project:
+**The codebase has completed migration from Go's `html/template` to the templ framework.** All 60+ templates are now type-safe templ components.
 
-- ✅ **Phase 1:** Database optimization with views/indexes (COMPLETE)
-- ✅ **Phase 2:** SSE HTML fragment infrastructure (COMPLETE)
-- ✅ **Phase 3:** Handler integration with TemplateService (COMPLETE)
-- ⏸️ **Phase 4:** Convert handlers to render HTML fragments (PENDING)
-- ⏸️ **Phase 5:** HTMX integration in templates (PENDING)
-- ⏸️ **Phase 6:** E2E testing (PENDING)
+**Migration highlights:**
+- ✅ All HTML templates converted to `.templ` files
+- ✅ Type-safe component parameters (compile-time checks)
+- ✅ Full HTMX/SSE integration with templ fragments
+- ✅ Handlers use `RenderTemplComponent()` for pages, `RenderTemplFragment()` for SSE
+- ✅ Data structures in `viewmodels` package (GameStartedData, QuestionDrawnData, etc.)
+- ✅ Hot-reload with Air + templ watch
+- ✅ Old `html/template` system completely removed
 
-**When working on handlers, prefer the new HTML fragment pattern over legacy JSON SSE.**
+**Template patterns:**
+- Full pages: `h.RenderTemplComponent(c, pages.HomePage(data))`
+- SSE fragments: `html, _ := h.RenderTemplFragment(c, fragments.PlayerJoined(&data))`
+- GameService SSE: Uses `rendering.TemplService` adapter (breaks import cycle)
 
 ### Middleware Chain
 
@@ -353,18 +376,45 @@ Middleware is applied in `cmd/server/main.go` in this order:
 
 **Anonymous users:** Can play games but with limited features. Username is set during `/setup-username` flow.
 
-### Template System
+### Template System (Templ Framework)
 
-**Two template systems coexist:**
+**All templates are type-safe templ components** organized in `internal/views/`:
 
-1. **Full page templates** (`templates/*.html`): Use `layout.html` wrapper, rendered via `Handler.RenderTemplate()`
-2. **HTML fragments** (`templates/partials/**/*.html`): Rendered via `TemplateService.RenderFragment()` for SSE/HTMX
+**Directory structure:**
+- `layouts/` - Layout wrappers (base.templ, admin.templ, header.templ, footer.templ)
+- `pages/` - Full page components (home.templ, profile.templ, game/*.templ, admin/*.templ, auth/*.templ, friends/*.templ)
+- `fragments/` - HTMX/SSE partial components (game/*.templ, room/*.templ, play/*.templ, admin/*.templ, etc.)
 
-**Template data structures:**
-- `TemplateData` (in `handlers/base.go`) - For full pages (common fields like Title, User, Error)
-- Service-specific structs (in `services/template_models.go`) - For fragments (e.g., `QuestionDrawnData`, `JoinRequestData`)
-  - Contains 30+ type-safe data structures for all HTML fragments
-  - Organized by feature: Game/Room, Admin, Notifications, etc.
+**Component patterns:**
+```templ
+// Page component with layout wrapper
+templ HomePage(data *viewmodels.TemplateData) {
+    @layouts.Base(data, HomeContent(data))
+}
+
+templ HomeContent(data *viewmodels.TemplateData) {
+    <section class="home">
+        <h1>Play together, learn together</h1>
+        // ... content
+    </section>
+}
+
+// Fragment component for HTMX/SSE
+templ PlayerJoined(data *services.PlayerJoinedData) {
+    <div id="guest-info">
+        <p>{ data.Username } joined!</p>
+    </div>
+}
+```
+
+**Data structures:**
+- `viewmodels.TemplateData` - For full pages (common fields: Title, User, Error, Success, Env)
+- `viewmodels.*Data` - For SSE fragments used by both handlers and services (GameStartedData, QuestionDrawnData, AnswerSubmittedData)
+- `services.*Data` - For most other fragments and complex data structures (30+ types organized by feature)
+
+**Rendering methods:**
+- `h.RenderTemplComponent(c, component)` - Renders full page directly to response
+- `h.RenderTemplFragment(c, component)` - Renders fragment to HTML string (for SSE broadcasting)
 
 ### I18n System
 
@@ -400,10 +450,10 @@ esbuild/admin-entry.js → esbuild → static/dist/admin.bundle.js (404B minifie
 - **Format:** IIFE (preserves window.* exports)
 - **Target:** ES2020
 
-**Template loading (conditional):**
-- Production: `<script src="/static/dist/app.bundle.js">` (templates/partials/layout/head-common.html)
+**JavaScript loading (conditional):**
+- Production: `<script src="/static/dist/app.bundle.js">` (internal/views/layouts/head_common.templ)
 - Development: Individual files `<script src="/static/js/htmx.min.js">`, etc.
-- Controlled by `Env` field in TemplateData (set from ENV environment variable)
+- Controlled by `Env` field in viewmodels.TemplateData (set from ENV environment variable)
 
 **Source maps:**
 - Production: External .map files (e.g., app.bundle.js.map) downloaded only when DevTools open
@@ -434,7 +484,7 @@ func TestSomething(t *testing.T) {
 ## Common Gotchas
 
 ### 1. Always Build Before Running
-`make run` depends on `make build`, `make sass`, and `make js-build`. If you modify Go files or JavaScript files, you must rebuild. In development, use `make dev` + `make sass-watch` + `make js-watch` for hot-reload.
+`make run` depends on `make build`, `make sass`, `make js-build`, and `make templ-generate`. If you modify Go files, templ files, or JavaScript files, you must rebuild. In development, use `make dev` + `make sass-watch` + `make js-watch` + `make templ-watch` for full hot-reload (4 terminals).
 
 ### 2. Use Database Views for Queries
 Never manually fetch related user data. Use `rooms_with_players`, `join_requests_with_users`, or `active_games` views to avoid N+1 queries.
@@ -445,8 +495,8 @@ Backend uses `SUPABASE_SERVICE_ROLE_KEY` to bypass RLS. This means **all authori
 ### 4. SSE Connection Management
 SSE connections are stateful. When a room is deleted, gracefully close connections. See `internal/handlers/realtime.go` for error handling pattern.
 
-### 5. HTMX Refactoring in Progress
-When modifying game/room handlers, prefer the new HTML fragment pattern (Phase 4+ work). See `docs/PHASE4_HANDLER_CONVERSION_COMPLETE.md` for usage examples.
+### 5. Templ Components Are Type-Safe
+When creating or modifying templates, remember templ components are compiled Go code. Type mismatches will fail at compile time. Use `*services.DataType` or `*viewmodels.DataType` for parameters. Run `make templ-generate` after editing `.templ` files.
 
 ### 6. UUID Parsing
 Always validate UUIDs from URL params:
@@ -462,7 +512,7 @@ if err != nil {
 Handlers receive `*http.Request` with context. Pass `r.Context()` to service methods for proper request lifecycle management.
 
 ### 8. JavaScript Bundling and ENV Variable
-Templates use the `Env` field from TemplateData to conditionally load bundled vs individual JavaScript files. Set `ENV=production` to load minified bundles, or `ENV=development` (or unset) to load individual files. Entry point files in `esbuild/` are build-time only - never modify files there without understanding the bundling architecture.
+Templ components use the `Env` field from viewmodels.TemplateData to conditionally load bundled vs individual JavaScript files. Set `ENV=production` to load minified bundles, or `ENV=development` (or unset) to load individual files. Entry point files in `esbuild/` are build-time only - never modify files there without understanding the bundling architecture.
 
 ## Environment Setup
 
@@ -496,22 +546,34 @@ couple-game/
 │   │   └── game.go.old       # Deprecated monolithic handler
 │   ├── middleware/            # HTTP middleware
 │   ├── models/                # Data models (Room, User, Question, etc.)
-│   └── services/              # Business logic (thick layer)
-│       ├── base_service.go   # Common database query patterns
-│       ├── logging.go        # Service logging utilities
-│       ├── query_helpers.go  # Complex query builders
-│       ├── template_models.go # Template data structures
-│       ├── template_service.go # HTML fragment rendering
-│       └── *_service.go      # Domain-specific services
+│   ├── rendering/             # Templ rendering adapters
+│   │   └── templ_service.go  # Minimal adapter for service layer SSE rendering
+│   ├── services/              # Business logic (thick layer)
+│   │   ├── base_service.go   # Common database query patterns
+│   │   ├── logging.go        # Service logging utilities
+│   │   ├── query_helpers.go  # Complex query builders
+│   │   ├── template_models.go # Template data structures (30+ types)
+│   │   └── *_service.go      # Domain-specific services
+│   ├── viewmodels/            # View data structures
+│   │   └── template_data.go  # TemplateData, GameStartedData, QuestionDrawnData, etc.
+│   └── views/                 # Templ components
+│       ├── layouts/          # Layout wrappers (base.templ, admin.templ, header.templ, footer.templ)
+│       ├── pages/            # Full page components (home.templ, profile.templ, game/*.templ, admin/*.templ, etc.)
+│       │   ├── auth/        # Authentication pages
+│       │   ├── game/        # Game pages
+│       │   ├── admin/       # Admin pages
+│       │   └── friends/     # Friends pages
+│       └── fragments/        # HTMX/SSE partial components
+│           ├── game/        # Game fragments
+│           ├── room/        # Room fragments
+│           ├── play/        # Play fragments
+│           ├── admin/       # Admin fragments
+│           ├── joinroom/    # Join room fragments
+│           ├── friends/     # Friends fragments
+│           └── notifications/ # Notification fragments
 ├── esbuild/                   # JavaScript bundle entry points (build-time only)
 │   ├── app-entry.js          # Main app bundle entry point
 │   └── admin-entry.js        # Admin bundle entry point
-├── templates/                 # Full page HTML templates
-│   ├── partials/             # HTML fragments for HTMX/SSE
-│   │   ├── admin/           # Admin panel fragments
-│   │   ├── game/            # Game-related fragments
-│   │   └── notifications/   # Notification fragments
-│   └── layout.html           # Base layout wrapper
 ├── static/
 │   ├── css/                  # Compiled CSS (from SASS, gitignored)
 │   ├── dist/                 # Bundled JavaScript (gitignored)
@@ -531,6 +593,9 @@ couple-game/
 ├── sql/                      # Database schema, views, indexes, seeds
 ├── scripts/                  # Shell scripts (test DB setup, etc.)
 └── docs/                     # Comprehensive documentation (put all *.md files here, not at the project root)
+
+# Generated/committed:
+├── internal/views/**/*_templ.go  # Generated Go code from .templ files (COMMITTED to git)
 
 # Generated/ignored:
 ├── server                    # Compiled binary (gitignored)

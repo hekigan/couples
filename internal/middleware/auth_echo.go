@@ -35,7 +35,7 @@ func EchoAuth() echo.MiddlewareFunc {
 }
 
 // EchoRequireAuth enforces that a user must be authenticated
-// If not authenticated, redirects to /auth/login
+// If not authenticated, redirects to /login
 func EchoRequireAuth() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -43,12 +43,12 @@ func EchoRequireAuth() echo.MiddlewareFunc {
 			if !ok {
 				// Check if this is an HTMX request
 				if c.Request().Header.Get("HX-Request") == "true" {
-					c.Response().Header().Set("HX-Redirect", "/auth/login")
+					c.Response().Header().Set("HX-Redirect", "/login")
 					return c.NoContent(http.StatusOK)
 				}
 
 				// Regular redirect
-				return c.Redirect(http.StatusSeeOther, "/auth/login")
+				return c.Redirect(http.StatusSeeOther, "/login")
 			}
 
 			return next(c)

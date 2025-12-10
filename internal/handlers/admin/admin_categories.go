@@ -8,6 +8,7 @@ import (
 	"github.com/hekigan/couples/internal/handlers"
 	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/services"
+	adminFragments "github.com/hekigan/couples/internal/views/fragments/admin"
 	"github.com/labstack/echo/v4"
 )
 
@@ -67,7 +68,7 @@ func (ah *AdminAPIHandler) ListCategoriesHandler(c echo.Context) error {
 		ItemName:        "categories",
 	}
 
-	html, err := ah.handler.TemplateService.RenderFragment("categories_list", data)
+	html, err := ah.handler.RenderTemplFragment(c, adminFragments.CategoriesList(&data))
 	if err != nil {
 		log.Printf("Error rendering categories list: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
@@ -85,7 +86,7 @@ func (ah *AdminAPIHandler) GetCategoryCreateFormHandler(c echo.Context) error {
 		Label: "",
 	}
 
-	html, err := ah.handler.TemplateService.RenderFragment("category_form.html", data)
+	html, err := ah.handler.RenderTemplFragment(c, adminFragments.CategoryForm(&data))
 	if err != nil {
 		log.Printf("Error rendering category create form: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
@@ -115,7 +116,7 @@ func (ah *AdminAPIHandler) GetCategoryEditFormHandler(c echo.Context) error {
 		Label: category.Label,
 	}
 
-	html, err := ah.handler.TemplateService.RenderFragment("category_form.html", data)
+	html, err := ah.handler.RenderTemplFragment(c, adminFragments.CategoryForm(&data))
 	if err != nil {
 		log.Printf("Error rendering category edit form: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())

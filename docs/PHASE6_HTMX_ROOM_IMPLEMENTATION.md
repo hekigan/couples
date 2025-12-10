@@ -1,15 +1,15 @@
 # Phase 6: HTMX Room Implementation - COMPLETE
 
 **Date:** November 10, 2025
-**Status:** ✅ **ROOM LOBBY HTMX CONVERSION COMPLETE**
+**Status:** ✅ **COMPLETE** (Updated December 2024: Migrated to templ components alongside HTMX)
 
 ---
 
 ## 📋 Overview
 
-Phase 6 implements HTMX SSE integration for the room lobby page (`room.html`). This phase converts ~800 lines of vanilla JavaScript EventSource handling to declarative HTMX attributes, resulting in **~80% code reduction**.
+**UPDATE December 2024:** Phase 6 has been completed with full templ migration. All room templates are now type-safe templ components with HTMX integration.
 
-**Key Achievement:** Created `room_htmx.html` - a production-ready HTMX version that's dramatically simpler and more maintainable.
+**Key Achievement:** All room pages migrated to templ components (`internal/views/pages/game/room.templ` and fragments) with full HTMX SSE integration, resulting in **~80% code reduction**.
 
 ---
 
@@ -33,31 +33,29 @@ Phase 6 implements HTMX SSE integration for the room lobby page (`room.html`). T
 - `static/js/htmx.min.js` (47KB) - HTMX core library v1.9.10
 - `static/js/sse.js` (9.3KB) - HTMX SSE extension
 
-### 2. Create HTMX Room Template ✅
-**File Created:** `templates/game/room_htmx.html`
+### 2. Templ Room Components ✅
+**Files Created:**
+- `internal/views/pages/game/room.templ` - Main room page component
+- `internal/views/fragments/room/*.templ` - Room fragment components
 
 **Key Features:**
+- ✅ Type-safe templ components with compile-time checks
 - ✅ HTMX SSE connection via `hx-ext="sse"` and `sse-connect`
 - ✅ Declarative SSE event handling with `sse-swap` attributes
 - ✅ ~200 lines of JavaScript (down from ~800 lines)
 - ✅ All SSE events handled by HTMX
 - ✅ Maintains all original functionality
 
-### 3. Add Handler Support ✅
-**File Modified:** `internal/handlers/game.go` (RoomHandler function)
+### 3. Handler Updates ✅
+**File Modified:** `internal/handlers/room_display.go` (Room handlers)
 
-**Implementation:**
+**UPDATE December 2024:** Handlers now use templ components:
 ```go
-// Phase 6: HTMX mode - use HTMX version for testing
-// Add ?htmx=true to URL to test HTMX version
-useHTMX := r.URL.Query().Get("htmx") == "true"
-if useHTMX {
-    log.Printf("✨ Using HTMX version of room template")
-    h.RenderTemplate(w, "game/room_htmx.html", data)
-} else {
-    h.RenderTemplate(w, "game/room.html", data)
-}
+// Render templ component directly
+return h.RenderTemplComponent(c, gamePages.Room(data))
 ```
+
+**No more query parameter needed** - templ components are now the default rendering method.
 
 ---
 
@@ -95,12 +93,12 @@ function connectJoinRequestsStream(roomId) {
 }
 ```
 
-### After: room_htmx.html (HTMX Version)
-```html
-<!-- SSE connection established on container -->
+### After: room.templ (Templ Component with HTMX)
+```templ
+// SSE connection established on container
 <div class="room-container"
      hx-ext="sse"
-     sse-connect="/api/rooms/{{.Data.ID}}/events">
+     sse-connect={ "/api/rooms/" + data.Room.ID.String() + "/events" }>
 
     <!-- Guest info updated via SSE -->
     <div id="guest-info" sse-swap="request_accepted">
@@ -151,12 +149,12 @@ function connectJoinRequestsStream(roomId) {
 
 The backend (Phase 4) broadcasts HTML fragments via SSE. HTMX automatically handles these events:
 
-| SSE Event | HTMX Target | Swap Method | Backend Template |
+| SSE Event | HTMX Target | Swap Method | Templ Component |
 |-----------|-------------|-------------|------------------|
-| `join_request` | `#join-requests` | `beforeend` | `join_request.html` |
-| `request_accepted` | `#guest-info` | `innerHTML` | `request_accepted.html` |
-| `categories_updated` | `#categories-section` | `innerHTML` | *(handled by backend)* |
-| `game_started` | `#game-start-redirect` | `innerHTML` | `game_started.html` |
+| `join_request` | `#join-requests` | `beforeend` | `roomFragments.JoinRequest()` |
+| `request_accepted` | `#guest-info` | `innerHTML` | `roomFragments.RequestAccepted()` |
+| `categories_updated` | `#categories-section` | `innerHTML` | `roomFragments.CategoriesGrid()` |
+| `game_started` | `#game-start-redirect` | `innerHTML` | `gameFragments.GameStarted()` |
 | `room_update` | *(backend handles)* | - | *(auto-update)* |
 
 ### HTMX Attributes Explained
@@ -317,19 +315,22 @@ h.RoomService.GetRealtimeService().BroadcastHTMLFragment(...)
 
 ## 📝 Files Modified/Created
 
-### New Files
-- ✅ `templates/game/room_htmx.html` (NEW) - HTMX version of room lobby
-- ✅ `static/js/htmx.min.js` (NEW) - HTMX core library
-- ✅ `static/js/sse.js` (NEW) - HTMX SSE extension
-- ✅ `PHASE6_HTMX_ROOM_IMPLEMENTATION.md` (NEW) - This documentation
+### Templ Components Created
+- ✅ `internal/views/pages/game/room.templ` - Main room page
+- ✅ `internal/views/fragments/room/*.templ` - All room fragments
+- ✅ `internal/views/layouts/base.templ` - Updated with HTMX scripts
+- ✅ `static/js/htmx.min.js` - HTMX core library
+- ✅ `static/js/sse.js` - HTMX SSE extension
+- ✅ `docs/PHASE6_HTMX_ROOM_IMPLEMENTATION.md` - This documentation
 
 ### Modified Files
-- ✅ `templates/layout.html` - Added HTMX script tags
-- ✅ `internal/handlers/game.go` - Added HTMX version toggle
+- ✅ `internal/handlers/room_display.go` - Uses RenderTemplComponent()
+- ✅ `internal/viewmodels/template_data.go` - Room data structures
 
-### Original Files (Unchanged)
-- ⏸️ `templates/game/room.html` - Original version (still active by default)
-- ⏸️ `static/js/realtime.js` - Legacy SSE client (still loaded)
+### Removed Files (Deprecated)
+- ❌ `templates/` directory - Replaced by `internal/views/`
+- ❌ Legacy HTML templates - All converted to templ
+- ❌ `internal/services/template_service.go` - Replaced by templ rendering
 
 ---
 

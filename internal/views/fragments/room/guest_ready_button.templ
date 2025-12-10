@@ -1,0 +1,58 @@
+package room
+
+import (
+	"fmt"
+	"github.com/hekigan/couples/internal/services"
+)
+
+// GuestReadyButton renders the guest ready button with validation
+templ GuestReadyButton(data *services.GuestReadyButtonData) {
+	if !data.GuestReady {
+		<button
+			hx-post={ fmt.Sprintf("/api/v1/rooms/%s/guest-ready", data.RoomID) }
+			hx-target="#guest-ready-section"
+			hx-swap="innerHTML"
+			hx-disabled-elt="this"
+			hx-indicator="#ready-loading"
+			hx-on::before-request="
+				const checked = document.querySelectorAll('#categories-grid input[type=checkbox]:checked').length;
+				if(checked === 0) {
+					const errorDiv = document.createElement('div');
+					errorDiv.className = 'error-message';
+					errorDiv.textContent = '⚠️ Please select at least one category';
+					errorDiv.style.cssText = 'color: #ef4444; margin-top: 0.5rem; font-size: 0.875rem;';
+					this.parentElement.appendChild(errorDiv);
+					setTimeout(() => errorDiv.remove(), 3000);
+					return false;
+				}
+			"
+			hx-on::after-request="
+				if(!event.detail.successful) {
+					const errorDiv = document.createElement('div');
+					errorDiv.className = 'error-message';
+					errorDiv.textContent = '❌ Failed to mark ready. Please try again.';
+					errorDiv.style.cssText = 'color: #ef4444; margin-top: 0.5rem; font-size: 0.875rem;';
+					this.parentElement.appendChild(errorDiv);
+					setTimeout(() => errorDiv.remove(), 5000);
+				}
+			"
+			aria-label="Mark yourself as ready to start the game"
+			class="btn btn-primary btn-lg"
+		>
+			<span>✅ I'm Ready</span>
+			<span id="ready-loading" class="htmx-indicator" style="margin-left: 0.5rem;">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+					<circle cx="12" cy="12" r="10" stroke-width="3" stroke-opacity="0.25"></circle>
+					<path d="M12 2a10 10 0 0 1 10 10" stroke-width="3" stroke-linecap="round">
+						<animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"></animateTransform>
+					</path>
+				</svg>
+			</span>
+		</button>
+		<p class="ready-hint" style="margin-top: 0.5rem; color: #6b7280; font-size: 0.875rem;">Click when you're done selecting categories</p>
+	} else {
+		<div class="ready-confirmed-message" role="status" aria-live="polite">
+			✅ You're ready! Waiting for owner to start the game...
+		</div>
+	}
+}

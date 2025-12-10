@@ -36,7 +36,16 @@
       "Bash(ls:*)",
       "Bash(ENV=development go run:*)",
       "Bash(ENV=production go run:*)",
-      "Bash(go get:*)"
+      "Bash(go get:*)",
+      "Bash(templ generate:*)",
+      "Bash(make templ-install:*)",
+      "Bash(go run:*)",
+      "Bash(go list:*)",
+      "Bash(make templ-generate:*)",
+      "Bash(go env:*)",
+      "Bash(/Users/blanes.laurent/go/bin/templ generate:*)",
+      "Bash(make clean:*)",
+      "Bash(make js-build:*)"
     ],
     "deny": [],
     "ask": []

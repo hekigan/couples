@@ -9,7 +9,8 @@ import (
 )
 
 // EchoCSRF returns a CSRF protection middleware
-// Skips GET requests automatically
+// Echo's CSRF middleware automatically validates only on POST/PUT/DELETE/PATCH
+// and generates tokens on all requests (including GET)
 func EchoCSRF() echo.MiddlewareFunc {
 	config := middleware.CSRFConfig{
 		TokenLookup:    "form:csrf,header:X-CSRF-Token",
@@ -19,11 +20,8 @@ func EchoCSRF() echo.MiddlewareFunc {
 		CookieSameSite: http.SameSiteLaxMode,
 		CookiePath:     "/",
 		CookieMaxAge:   86400, // 24 hours
-		Skipper: func(c echo.Context) bool {
-			// Skip CSRF check for GET, HEAD, OPTIONS requests
-			method := c.Request().Method
-			return method == "GET" || method == "HEAD" || method == "OPTIONS"
-		},
+		// No Skipper - let Echo's CSRF middleware handle all requests
+		// It will generate tokens on GET and validate on POST/DELETE/etc
 	}
 
 	return middleware.CSRFWithConfig(config)

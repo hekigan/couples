@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/supabase-community/supabase-go"
 	"github.com/hekigan/couples/internal/models"
+	"github.com/hekigan/couples/internal/rendering"
+	"github.com/hekigan/couples/internal/viewmodels"
+	"github.com/supabase-community/supabase-go"
 )
 
 // GameService handles game logic
@@ -19,7 +21,7 @@ type GameService struct {
 	categoryService *CategoryService
 	answerService   *AnswerService
 	realtimeService *RealtimeService
-	templateService *TemplateService
+	renderService   *rendering.TemplService
 }
 
 // NewGameService creates a new game service
@@ -30,7 +32,7 @@ func NewGameService(
 	categoryService *CategoryService,
 	answerService *AnswerService,
 	realtimeService *RealtimeService,
-	templateService *TemplateService,
+	renderService *rendering.TemplService,
 ) *GameService {
 	return &GameService{
 		client:          client,
@@ -39,7 +41,7 @@ func NewGameService(
 		categoryService: categoryService,
 		answerService:   answerService,
 		realtimeService: realtimeService,
-		templateService: templateService,
+		renderService:   renderService,
 	}
 }
 
@@ -87,7 +89,7 @@ func (s *GameService) StartGame(ctx context.Context, roomID uuid.UUID) error {
 
 	// Broadcast game started event with HTML fragment for redirect
 	// Render the game_started template which contains the redirect script
-	html, err := s.templateService.RenderFragment("game_started.html", GameStartedData{
+	html, err := s.renderService.RenderFragment("game_started.html", viewmodels.GameStartedData{
 		RoomID: roomID.String(),
 	})
 	if err != nil {
@@ -215,32 +217,27 @@ func (s *GameService) DrawQuestion(ctx context.Context, roomID uuid.UUID) (*mode
 	}
 
 	// Render HTML fragment for question drawn
-	if s.templateService != nil {
-		html, err := s.templateService.RenderFragment("question_drawn.html", QuestionDrawnData{
-			RoomID:                roomID.String(),
-			QuestionNumber:        room.CurrentQuestion,
-			MaxQuestions:          room.MaxQuestions,
-			Category:              categoryKey,
-			CategoryLabel:         categoryLabel,
-			QuestionText:          question.Text,
-			IsMyTurn:              false, // Will be determined client-side or per-user
-			CurrentPlayerUsername: currentPlayerUsername,
-		})
-		if err != nil {
-			fmt.Printf("⚠️ Failed to render question_drawn template: %v (falling back to JSON SSE)\n", err)
-			s.realtimeService.BroadcastQuestionDrawn(roomID, question)
-		} else {
-			// Broadcast HTML fragment via SSE
-			s.realtimeService.BroadcastHTMLFragment(roomID, HTMLFragmentEvent{
-				Type:       "question_drawn",
-				Target:     "#current-question",
-				SwapMethod: "outerHTML", // Replace entire question card
-				HTML:       html,
-			})
-		}
-	} else {
-		// No template service, fall back to JSON
+	html, err := s.renderService.RenderFragment("question_drawn.html", viewmodels.QuestionDrawnData{
+		RoomID:                roomID.String(),
+		QuestionNumber:        room.CurrentQuestion,
+		MaxQuestions:          room.MaxQuestions,
+		Category:              categoryKey,
+		CategoryLabel:         categoryLabel,
+		QuestionText:          question.Text,
+		IsMyTurn:              false, // Will be determined client-side or per-user
+		CurrentPlayerUsername: currentPlayerUsername,
+	})
+	if err != nil {
+		fmt.Printf("⚠️ Failed to render question_drawn template: %v (falling back to JSON SSE)\n", err)
 		s.realtimeService.BroadcastQuestionDrawn(roomID, question)
+	} else {
+		// Broadcast HTML fragment via SSE
+		s.realtimeService.BroadcastHTMLFragment(roomID, HTMLFragmentEvent{
+			Type:       "question_drawn",
+			Target:     "#current-question",
+			SwapMethod: "outerHTML", // Replace entire question card
+			HTML:       html,
+		})
 	}
 
 	return question, nil

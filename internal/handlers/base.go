@@ -1,15 +1,15 @@
 package handlers
 
 import (
-	"html/template"
-	"log"
+	"bytes"
+	"fmt"
 	"net/http"
 	"os"
-	"strings"
-	"sync"
 
+	"github.com/a-h/templ"
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/services"
+	"github.com/hekigan/couples/internal/viewmodels"
 	"github.com/labstack/echo/v4"
 )
 
@@ -24,33 +24,8 @@ type Handler struct {
 	FriendService       *services.FriendService
 	I18nService         *services.I18nService
 	NotificationService *services.NotificationService
-	TemplateService     *services.TemplateService // For SSE HTML fragments
-	AdminService        *services.AdminService    // For admin operations
-	Templates           *template.Template
+	AdminService        *services.AdminService // For admin operations
 }
-
-// Template function map for custom functions
-var TemplateFuncMap = template.FuncMap{
-	"add": func(a, b int) int { return a + b },
-	"sub": func(a, b int) int { return a - b },
-	"mul": func(a, b int) int { return a * b },
-	"gte": func(a, b int) bool { return a >= b },
-	"lte": func(a, b int) bool { return a <= b },
-	"until": func(count int) []int {
-		result := make([]int, count)
-		for i := range result {
-			result[i] = i
-		}
-		return result
-	},
-}
-
-// Template cache for development mode (lazy loading)
-var (
-	templateCache      = make(map[string]*template.Template)
-	templateCacheMutex sync.RWMutex
-	isProduction       = os.Getenv("ENV") == "production"
-)
 
 // NewHandler creates a new handler with all dependencies
 func NewHandler(
@@ -63,40 +38,8 @@ func NewHandler(
 	friendService *services.FriendService,
 	i18nService *services.I18nService,
 	notificationService *services.NotificationService,
-	templateService *services.TemplateService,
 	adminService *services.AdminService,
 ) *Handler {
-	var templates *template.Template
-
-	// Production mode: Parse all templates once at startup
-	if isProduction {
-		log.Println("📦 Production mode: Caching all templates at startup...")
-		tmpl := template.New("").Funcs(TemplateFuncMap)
-
-		// Parse both layouts (regular and admin)
-		tmpl = template.Must(tmpl.ParseFiles(
-			"templates/layout.html",
-			"templates/layout-admin.html",
-		))
-
-		// Parse all page templates
-		tmpl = template.Must(tmpl.ParseGlob("templates/*.html"))
-		tmpl = template.Must(tmpl.ParseGlob("templates/*/*.html"))
-
-		// Parse all components
-		tmpl = template.Must(tmpl.ParseGlob("templates/components/*.html"))
-
-		// Parse all partials
-		tmpl = template.Must(tmpl.ParseGlob("templates/partials/*/*.html"))
-		tmpl = template.Must(tmpl.ParseGlob("templates/partials/*/*/*.html"))
-
-		templates = tmpl
-		log.Println("✅ Templates cached successfully")
-	} else {
-		log.Println("🔧 Development mode: Using lazy template loading")
-		templates = nil // Lazy loading in dev mode
-	}
-
 	return &Handler{
 		UserService:         userService,
 		RoomService:         roomService,
@@ -107,9 +50,7 @@ func NewHandler(
 		FriendService:       friendService,
 		I18nService:         i18nService,
 		NotificationService: notificationService,
-		TemplateService:     templateService,
 		AdminService:        adminService,
-		Templates:           templates,
 	}
 }
 
@@ -127,25 +68,16 @@ type SessionUser struct {
 	IsAdmin     bool
 }
 
-// TemplateData represents common data passed to templates
-type TemplateData struct {
-	Title             string
-	User              interface{} // Can be *SessionUser or *models.User
-	Error             string
-	Success           string
-	Data              interface{}
-	OwnerUsername     string
-	GuestUsername     string
-	IsOwner           bool
-	IsAdmin           bool   // Whether current user is admin
-	JoinRequestsCount int    // Number of pending join requests (for badge)
-	Env               string // Environment (development/production) for conditional JS loading
-}
+// TemplateData is an alias for viewmodels.TemplateData to maintain backward compatibility
+type TemplateData = viewmodels.TemplateData
 
 // GetSessionUser extracts user data from session without DB call
 // Updated to work with echo.Context
 func GetSessionUser(c echo.Context) *SessionUser {
-	session, _ := middleware.GetSession(c)
+	session, err := middleware.GetSession(c)
+	if err != nil {
+		return nil
+	}
 
 	userID, _ := session.Values["user_id"].(string)
 	if userID == "" {
@@ -166,63 +98,62 @@ func GetSessionUser(c echo.Context) *SessionUser {
 	}
 }
 
-// RenderTemplate renders a template with the given data
-// Updated to work with echo.Context
-func (h *Handler) RenderTemplate(c echo.Context, tmpl string, data *TemplateData) error {
-	if data.Title == "" {
-		data.Title = "Couple Card Game"
+// GetTemplateUser returns the session user as interface{} for templates.
+// This handles Go's nil interface gotcha: a nil *SessionUser assigned to
+// interface{} is NOT nil. This function returns a true nil when there's no user.
+func GetTemplateUser(c echo.Context) interface{} {
+	user := GetSessionUser(c)
+	if user == nil {
+		return nil
+	}
+	return user
+}
+
+// GetCSRFToken extracts the CSRF token from Echo context
+func GetCSRFToken(c echo.Context) string {
+	// Echo CSRF middleware uses "csrf" as the default context key
+	token, ok := c.Get("csrf").(string)
+	if !ok {
+		return ""
+	}
+	return token
+}
+
+// NewTemplateData creates a base TemplateData with common fields populated.
+// This ensures User, IsAdmin, CSRFToken, and Env are always set correctly.
+// Handlers can then add their specific fields (Title, Data, Error, Success, etc.)
+func NewTemplateData(c echo.Context) *TemplateData {
+	sessionUser := GetSessionUser(c)
+
+	// Handle Go's nil interface gotcha
+	var user interface{}
+	if sessionUser != nil {
+		user = sessionUser
 	}
 
-	// Auto-detect layout based on template path
-	layout := "layout.html"
-	if strings.HasPrefix(tmpl, "admin/") {
-		layout = "layout-admin.html"
-		data.IsAdmin = true
+	return &TemplateData{
+		User:      user,
+		IsAdmin:   sessionUser != nil && sessionUser.IsAdmin,
+		CSRFToken: GetCSRFToken(c),
+		Env:       os.Getenv("ENV"),
 	}
+}
 
-	// Set environment for conditional JS loading (bundles vs individual files)
-	if data.Env == "" {
-		data.Env = os.Getenv("ENV")
-		if data.Env == "" {
-			data.Env = "development" // Default to development
-		}
-	}
-
-	var t *template.Template
-	var err error
-
-	// Production mode: Use pre-cached templates
-	if h.Templates != nil {
-		t = h.Templates
-	} else {
-		// Development mode: Lazy caching with hot-reload capability
-
-		// Parse and cache on first use
-		t, err = template.New("").Funcs(TemplateFuncMap).ParseFiles(
-			"templates/"+layout,
-			"templates/"+tmpl,
-		)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-		}
-
-		// Parse component templates
-		t.ParseGlob("templates/components/*.html")
-
-		// Parse partial templates (includes layout partials now)
-		t.ParseGlob("templates/partials/*/*.html")
-		t.ParseGlob("templates/partials/*/*/*.html")
-	}
-
-	// Execute the determined layout which will include the content template
-	// Use Echo's response writer
-	w := c.Response().Writer
-	err = t.ExecuteTemplate(w, layout, data)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-	}
-
+// RenderTemplComponent renders a templ component to the response
+// This is the new method for templ-based templates
+func (h *Handler) RenderTemplComponent(c echo.Context, component templ.Component) error {
 	c.Response().Header().Set("Content-Type", "text/html; charset=UTF-8")
 	c.Response().WriteHeader(http.StatusOK)
-	return nil
+	return component.Render(c.Request().Context(), c.Response().Writer)
+}
+
+// RenderTemplFragment renders a templ component and returns HTML string (for SSE)
+// This is used for SSE HTML fragment broadcasting
+func (h *Handler) RenderTemplFragment(c echo.Context, component templ.Component) (string, error) {
+	var buf bytes.Buffer
+	err := component.Render(c.Request().Context(), &buf)
+	if err != nil {
+		return "", fmt.Errorf("failed to render templ component: %w", err)
+	}
+	return buf.String(), nil
 }

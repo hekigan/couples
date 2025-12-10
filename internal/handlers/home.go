@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/middleware"
+	"github.com/hekigan/couples/internal/views/pages"
 	"github.com/labstack/echo/v4"
 )
 
@@ -21,8 +22,7 @@ func (h *Handler) HomeHandler(c echo.Context) error {
 		userObj, err := h.UserService.GetUserByID(ctx, userID)
 		if err == nil && userObj != nil {
 			// Check if username is temporary (starts with "guest_" or "user_")
-			isTemporary := len(userObj.Username) >= 6 && (
-				userObj.Username[:6] == "guest_" ||
+			isTemporary := len(userObj.Username) >= 6 && (userObj.Username[:6] == "guest_" ||
 				userObj.Username[:5] == "user_")
 
 			// If username is empty or temporary, redirect to setup
@@ -32,21 +32,16 @@ func (h *Handler) HomeHandler(c echo.Context) error {
 		}
 	}
 
-	data := &TemplateData{
-		Title:   "Home - Couple Card Game",
-		User:    sessionUser,
-		IsAdmin: sessionUser != nil && sessionUser.IsAdmin,
-	}
-
-	return h.RenderTemplate(c, "home.html", data)
+	data := NewTemplateData(c)
+	data.Title = "Home - Couple Card Game"
+	return h.RenderTemplComponent(c, pages.HomePage(data))
 }
 
 // SetupUsernameHandler shows the username setup page
 func (h *Handler) SetupUsernameHandler(c echo.Context) error {
-	data := &TemplateData{
-		Title: "Setup Username",
-	}
-	return h.RenderTemplate(c, "setup-username.html", data)
+	data := NewTemplateData(c)
+	data.Title = "Setup Username"
+	return h.RenderTemplComponent(c, pages.SetupUsernamePage(data))
 }
 
 // SetupUsernamePostHandler handles username setup submission

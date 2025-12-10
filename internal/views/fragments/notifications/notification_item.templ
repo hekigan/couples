@@ -1,0 +1,35 @@
+package notifications
+
+import "github.com/hekigan/couples/internal/services"
+
+// NotificationItem renders a single notification item for SSE
+templ NotificationItem(data *services.NotificationData) {
+	<div class={ "notification-item", data.Type } id={ "notification-" + data.ID } data-notification-id={ data.ID }>
+		<div class="notification-icon">
+			if data.Type == "room_invitation" {
+				🎮
+			}
+			if data.Type == "friend_request" {
+				👥
+			}
+			if data.Type == "game_start" {
+				🎯
+			}
+		</div>
+		<div class="notification-content">
+			<div class="notification-title">{ data.Title }</div>
+			if data.Message != "" {
+				<div class="notification-message">{ data.Message }</div>
+			}
+			if data.Link != "" {
+				<a href={ templ.URL(data.Link) } class="notification-link">View</a>
+			}
+		</div>
+		<button
+			hx-post={ "/api/v1/notifications/" + data.ID + "/mark-read" }
+			hx-swap="outerHTML"
+			hx-target={ "#notification-" + data.ID }
+			class="notification-close"
+		>×</button>
+	</div>
+}

@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/models"
+	gamePages "github.com/hekigan/couples/internal/views/pages/game"
 	"github.com/labstack/echo/v4"
 )
 
@@ -95,11 +96,10 @@ func (h *Handler) CreateRoomHandler(c echo.Context) error {
 	}
 
 	if c.Request().Method == "GET" {
-		data := &TemplateData{
-			Title: "Create Room",
-			User:  currentUser,
-		}
-		return h.RenderTemplate(c, "game/create-room.html", data)
+		data := NewTemplateData(c)
+		data.Title = "Create Room"
+		data.User = currentUser
+		return h.RenderTemplComponent(c, gamePages.CreateRoomPage(data))
 	}
 
 	// POST - Create room
@@ -134,11 +134,10 @@ func (h *Handler) JoinRoomHandler(c echo.Context) error {
 	}
 
 	if c.Request().Method == "GET" {
-		data := &TemplateData{
-			Title: "Join Room",
-			User:  currentUser,
-		}
-		return h.RenderTemplate(c, "game/join-room.html", data)
+		data := NewTemplateData(c)
+		data.Title = "Join Room"
+		data.User = currentUser
+		return h.RenderTemplComponent(c, gamePages.JoinRoomPage(data))
 	}
 
 	// POST - Join room logic

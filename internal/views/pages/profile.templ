@@ -1,0 +1,298 @@
+package pages
+
+import (
+	"github.com/hekigan/couples/internal/models"
+	"github.com/hekigan/couples/internal/viewmodels"
+	"github.com/hekigan/couples/internal/views/layouts"
+)
+
+// ProfilePage renders the profile page with layout
+templ ProfilePage(data *viewmodels.TemplateData) {
+	@layouts.Base(data, ProfileContent(data))
+}
+
+// ProfileContent renders the profile page content
+templ ProfileContent(data *viewmodels.TemplateData) {
+	// Cast data.Data to *models.User
+	<div class="container">
+		<div class="profile-container">
+			if user, ok := data.Data.(*models.User); ok {
+				<div class="profile-header">
+					<div class="profile-avatar">
+						if user.AvatarURL != nil && *user.AvatarURL != "" {
+							<img src={ *user.AvatarURL } alt="Profile Avatar"/>
+						} else {
+							<div class="avatar-placeholder">👤</div>
+						}
+					</div>
+					<div class="profile-info">
+						<h1>
+							if user.Username != "" {
+								{ user.Username }
+							} else if user.Email != nil && *user.Email != "" {
+								{ *user.Email }
+							} else {
+								Guest User
+							}
+						</h1>
+						if user.Email != nil && *user.Email != "" {
+							<p class="profile-email">{ *user.Email }</p>
+						}
+						if user.IsAnonymous {
+							<span class="badge badge-warning">Guest User</span>
+						} else {
+							<span class="badge badge-success">Registered User</span>
+						}
+					</div>
+				</div>
+				<div class="profile-content">
+					<div class="profile-section">
+						<h2>Account Information</h2>
+						<div class="info-grid">
+							<div class="info-item">
+								<span class="info-label">User ID:</span>
+								<span class="info-value">{ user.ID.String() }</span>
+							</div>
+							if user.Email != nil && *user.Email != "" {
+								<div class="info-item">
+									<span class="info-label">Email:</span>
+									<span class="info-value">{ *user.Email }</span>
+								</div>
+							}
+							<div class="info-item">
+								<span class="info-label">Member Since:</span>
+								<span class="info-value">{ user.CreatedAt.Format("January 2, 2006") }</span>
+							</div>
+							if user.LanguagePreference != "" {
+								<div class="info-item">
+									<span class="info-label">Language:</span>
+									<span class="info-value">{ user.LanguagePreference }</span>
+								</div>
+							}
+						</div>
+					</div>
+					if user.IsAnonymous {
+						<div class="profile-section">
+							<div class="alert alert-info">
+								<span class="alert-icon">ℹ️</span>
+								<div>
+									<h3>You're playing as a guest</h3>
+									<p>Create an account to save your progress, unlock more features, and connect with friends!</p>
+									<a href="/login" class="">Create Account</a>
+								</div>
+							</div>
+						</div>
+					}
+					<div class="profile-section">
+						<h2>Quick Actions</h2>
+						<div class="actions-grid">
+							<a href="/game/rooms" class="action-card">
+								<span class="action-icon">🎮</span>
+								<span class="action-label">Rooms</span>
+							</a>
+							<a href="/friends" class="action-card">
+								<span class="action-icon">👥</span>
+								<span class="action-label">Friends</span>
+							</a>
+							<a href="/game/create-room" class="action-card">
+								<span class="action-icon">➕</span>
+								<span class="action-label">New Room</span>
+							</a>
+							<a href="/game/join-room" class="action-card">
+								<span class="action-icon">🚪</span>
+								<span class="action-label">Join Room</span>
+							</a>
+						</div>
+					</div>
+				</div>
+			}
+		</div>
+	</div>
+	@ProfileStyles()
+}
+
+// ProfileStyles contains the CSS for the profile page
+templ ProfileStyles() {
+	<style>
+		.profile-container {
+			max-width: 800px;
+			margin: 2rem auto;
+			padding: 0 1rem;
+		}
+
+		.profile-header {
+			display: flex;
+			align-items: center;
+			gap: 2rem;
+			padding: 2rem;
+			background: white;
+			border-radius: 12px;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+			margin-bottom: 2rem;
+		}
+
+		.profile-avatar {
+			flex-shrink: 0;
+		}
+
+		.profile-avatar img,
+		.avatar-placeholder {
+			width: 100px;
+			height: 100px;
+			border-radius: 50%;
+			object-fit: cover;
+		}
+
+		.avatar-placeholder {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			color: white;
+			font-size: 3rem;
+		}
+
+		.profile-info h1 {
+			margin: 0 0 0.5rem 0;
+			font-size: 1.75rem;
+		}
+
+		.profile-email {
+			color: #666;
+			margin: 0 0 0.5rem 0;
+		}
+
+		.badge {
+			display: inline-block;
+			padding: 0.25rem 0.75rem;
+			border-radius: 12px;
+			font-size: 0.875rem;
+			font-weight: 500;
+		}
+
+		.badge-warning {
+			background: #fef3c7;
+			color: #92400e;
+		}
+
+		.profile-content {
+			display: flex;
+			flex-direction: column;
+			gap: 1.5rem;
+		}
+
+		.profile-section {
+			background: white;
+			border-radius: 12px;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+			padding: 2rem;
+		}
+
+		.profile-section h2 {
+			margin: 0 0 1.5rem 0;
+			font-size: 1.25rem;
+			color: #333;
+		}
+
+		.info-grid {
+			display: grid;
+			gap: 1rem;
+		}
+
+		.info-item {
+			display: flex;
+			justify-content: space-between;
+			padding: 0.75rem 0;
+			border-bottom: 1px solid #eee;
+		}
+
+		.info-item:last-child {
+			border-bottom: none;
+		}
+
+		.info-label {
+			font-weight: 500;
+			color: #666;
+		}
+
+		.info-value {
+			color: #333;
+			word-break: break-all;
+		}
+
+		.alert {
+			display: flex;
+			gap: 1rem;
+			padding: 1.5rem;
+			border-radius: 8px;
+			background: #dbeafe;
+			border: 1px solid #93c5fd;
+		}
+
+		.alert-icon {
+			font-size: 1.5rem;
+			flex-shrink: 0;
+		}
+
+		.alert h3 {
+			margin: 0 0 0.5rem 0;
+			font-size: 1.125rem;
+			color: #1e40af;
+		}
+
+		.alert p {
+			margin: 0 0 1rem 0;
+			color: #1e3a8a;
+		}
+
+		.actions-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+			gap: 1rem;
+		}
+
+		.action-card {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 0.5rem;
+			padding: 1.5rem;
+			background: #f9fafb;
+			border-radius: 8px;
+			text-decoration: none;
+			transition: all 0.2s;
+		}
+
+		.action-card:hover {
+			background: #f3f4f6;
+			transform: translateY(-2px);
+			box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+		}
+
+		.action-icon {
+			font-size: 2rem;
+		}
+
+		.action-label {
+			color: #333;
+			font-weight: 500;
+			text-align: center;
+		}
+
+		@media (max-width: 640px) {
+			.profile-header {
+				flex-direction: column;
+				text-align: center;
+			}
+
+			.info-item {
+				flex-direction: column;
+				gap: 0.25rem;
+			}
+
+			.actions-grid {
+				grid-template-columns: repeat(2, 1fr);
+			}
+		}
+	</style>
+}

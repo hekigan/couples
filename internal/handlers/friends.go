@@ -8,6 +8,8 @@ import (
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/services"
+	friendsFragments "github.com/hekigan/couples/internal/views/fragments/friends"
+	friendsPages "github.com/hekigan/couples/internal/views/pages/friends"
 	"github.com/labstack/echo/v4"
 )
 
@@ -22,7 +24,7 @@ func (h *Handler) FriendListHandler(c echo.Context) error {
 	session, _ := middleware.GetSession(c)
 	userID, ok := session.Values["user_id"].(string)
 	if !ok || userID == "" {
-		return c.Redirect(http.StatusSeeOther, "/auth/login")
+		return c.Redirect(http.StatusSeeOther, "/login")
 	}
 
 	parsedUserID, err := uuid.Parse(userID)
@@ -51,17 +53,16 @@ func (h *Handler) FriendListHandler(c echo.Context) error {
 		pendingRequests = []models.FriendWithUserInfo{} // Empty list
 	}
 
-	data := &TemplateData{
-		Title: "Friends",
-		User:  currentUser,
-		Data: map[string]interface{}{
-			"Friends":            friends,
-			"PendingInvitations": pendingRequests,
-			"CurrentUserID":      userID,
-		},
+	data := NewTemplateData(c)
+	data.Title = "Friends"
+	data.User = currentUser // Override with DB user for more complete data
+	data.Data = map[string]interface{}{
+		"Friends":            friends,
+		"PendingInvitations": pendingRequests,
+		"CurrentUserID":      userID,
 	}
 
-	return h.RenderTemplate(c, "friends/list.html", data)
+	return h.RenderTemplComponent(c, friendsPages.ListPage(data))
 }
 
 // AddFriendHandler handles sending friend invitations
@@ -70,7 +71,7 @@ func (h *Handler) AddFriendHandler(c echo.Context) error {
 	session, _ := middleware.GetSession(c)
 	userID, ok := session.Values["user_id"].(string)
 	if !ok || userID == "" {
-		return c.Redirect(http.StatusSeeOther, "/auth/login")
+		return c.Redirect(http.StatusSeeOther, "/login")
 	}
 
 	parsedUserID, err := uuid.Parse(userID)
@@ -86,25 +87,24 @@ func (h *Handler) AddFriendHandler(c echo.Context) error {
 	}
 
 	if c.Request().Method == "GET" {
-		data := &TemplateData{
-			Title: "Add Friend",
-			User:  currentUser,
-			Data: map[string]interface{}{
-				"CurrentUserID": userID,
-			},
+		data := NewTemplateData(c)
+		data.Title = "Add Friend"
+		data.User = currentUser
+		data.Data = map[string]interface{}{
+			"CurrentUserID": userID,
 		}
-		return h.RenderTemplate(c, "friends/add.html", data)
+		return h.RenderTemplComponent(c, friendsPages.AddPage(data))
 	}
 
 	// Handle POST request
 	friendIdentifier := c.FormValue("friend_identifier")
 	if friendIdentifier == "" {
-		return h.RenderTemplate(c, "friends/add.html", &TemplateData{
-			Title: "Add Friend",
-			User:  currentUser,
-			Error: "Friend identifier is required",
-			Data:  map[string]interface{}{"CurrentUserID": userID},
-		})
+		data := NewTemplateData(c)
+		data.Title = "Add Friend"
+		data.User = currentUser
+		data.Error = "Friend identifier is required"
+		data.Data = map[string]interface{}{"CurrentUserID": userID}
+		return h.RenderTemplComponent(c, friendsPages.AddPage(data))
 	}
 
 	// Parse user IDs
@@ -115,31 +115,31 @@ func (h *Handler) AddFriendHandler(c echo.Context) error {
 
 	friendID, err := uuid.Parse(friendIdentifier)
 	if err != nil {
-		return h.RenderTemplate(c, "friends/add.html", &TemplateData{
-			Title: "Add Friend",
-			User:  currentUser,
-			Error: "Invalid friend ID format. Please use UUID format.",
-			Data:  map[string]interface{}{"CurrentUserID": userID},
-		})
+		data := NewTemplateData(c)
+		data.Title = "Add Friend"
+		data.User = currentUser
+		data.Error = "Invalid friend ID format. Please use UUID format."
+		data.Data = map[string]interface{}{"CurrentUserID": userID}
+		return h.RenderTemplComponent(c, friendsPages.AddPage(data))
 	}
 
 	// Create friend request
 	err = h.FriendService.CreateFriendRequest(c.Request().Context(), currentUserID, friendID)
 	if err != nil {
-		return h.RenderTemplate(c, "friends/add.html", &TemplateData{
-			Title: "Add Friend",
-			User:  currentUser,
-			Error: "Failed to send friend request",
-			Data:  map[string]interface{}{"CurrentUserID": userID},
-		})
+		data := NewTemplateData(c)
+		data.Title = "Add Friend"
+		data.User = currentUser
+		data.Error = "Failed to send friend request"
+		data.Data = map[string]interface{}{"CurrentUserID": userID}
+		return h.RenderTemplComponent(c, friendsPages.AddPage(data))
 	}
 
-	return h.RenderTemplate(c, "friends/add.html", &TemplateData{
-		Title:   "Add Friend",
-		User:    currentUser,
-		Success: "Friend invitation sent!",
-		Data:    map[string]interface{}{"CurrentUserID": userID},
-	})
+	data := NewTemplateData(c)
+	data.Title = "Add Friend"
+	data.User = currentUser
+	data.Success = "Friend invitation sent!"
+	data.Data = map[string]interface{}{"CurrentUserID": userID}
+	return h.RenderTemplComponent(c, friendsPages.AddPage(data))
 }
 
 // AcceptFriendHandler accepts a friend invitation
@@ -281,11 +281,11 @@ func (h *Handler) GetFriendsHTMLHandler(c echo.Context) error {
 		})
 	}
 
-	// Render HTML fragment
-	html, err := h.TemplateService.RenderFragment("friends_list.html", services.FriendsListData{
+	// Render templ component
+	html, err := h.RenderTemplFragment(c, friendsFragments.FriendsList(&services.FriendsListData{
 		Friends: friends,
 		RoomID:  roomID,
-	})
+	}))
 	if err != nil {
 		log.Printf("Error rendering friends list template: %v", err)
 		return c.HTML(http.StatusOK, `<p style="color: #6b7280;">Failed to load friends</p>`)

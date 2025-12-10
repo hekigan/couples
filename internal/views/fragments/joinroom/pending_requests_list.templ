@@ -1,0 +1,60 @@
+package joinroom
+
+import "github.com/hekigan/couples/internal/services"
+
+// PendingRequestsList renders the list of pending join requests
+templ PendingRequestsList(requests []services.JoinRequestData) {
+	for _, req := range requests {
+		<div class="request-card" id={ "request-" + req.RoomID }>
+			<div class="request-info">
+				<strong>Room: { req.RoomID }</strong>
+				if req.Message != "" {
+					<p class="request-message">{ req.Message }</p>
+				}
+				if req.Status == "pending" {
+					<span class="request-status pending" role="status" aria-live="polite">⏳ Request sent, waiting for approval...</span>
+				} else if req.Status == "accepted" {
+					<span class="request-status accepted" role="status" aria-live="polite">✅ Request accepted!</span>
+					<a
+						href={ templ.URL("/game/room/" + req.RoomID) }
+						class="btn btn-success btn-sm"
+						style="margin-top: 1rem; display: inline-block; padding: 0.5rem 1rem; background: #10b981; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;"
+						aria-label={ "Go to room " + req.RoomID }
+					>
+						Go to Room →
+					</a>
+				} else if req.Status == "rejected" {
+					<span class="request-status rejected" role="status" aria-live="assertive">❌ Request rejected by owner</span>
+					<p style="color: #6b7280; font-size: 0.875rem; margin-top: 0.5rem;">
+						The room owner declined your request.
+					</p>
+				}
+			</div>
+			if req.Status == "pending" {
+				<button
+					hx-post={ "/api/v1/rooms/" + req.RoomID + "/cancel-my-request" }
+					hx-target={ "#request-" + req.RoomID }
+					hx-swap="outerHTML swap:300ms"
+					hx-confirm="⚠️ Cancel this join request?"
+					hx-disabled-elt="this"
+					hx-indicator={ "#cancel-loading-" + req.RoomID }
+					hx-on::after-request="
+						if(!event.detail.successful) {
+							const errorDiv = document.createElement('div');
+							errorDiv.className = 'error-message';
+							errorDiv.textContent = '❌ Failed to cancel request';
+							errorDiv.style.cssText = 'color: #ef4444; margin-top: 0.5rem; font-size: 0.875rem;';
+							this.parentElement.appendChild(errorDiv);
+							setTimeout(() => errorDiv.remove(), 3000);
+						}
+					"
+					aria-label={ "Cancel join request for room " + req.RoomID }
+					class="btn-cancel"
+				>
+					<span>Cancel Request</span>
+					<span id={ "cancel-loading-" + req.RoomID } class="htmx-indicator" style="margin-left: 0.25rem;">⏳</span>
+				</button>
+			}
+		</div>
+	}
+}

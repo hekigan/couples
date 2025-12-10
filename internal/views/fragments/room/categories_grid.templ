@@ -1,0 +1,61 @@
+package room
+
+import (
+	"fmt"
+	"github.com/hekigan/couples/internal/services"
+)
+
+// CategoriesGrid renders the category selection checkboxes
+templ CategoriesGrid(data *services.CategoriesGridData) {
+	if len(data.Categories) > 0 {
+		<fieldset style="border: none; padding: 0; margin: 0;">
+			<div class="categories-grid">
+				<span class="category-saving htmx-indicator">
+					<span>updating...</span>
+				</span>
+				for _, cat := range data.Categories {
+					<label class="category-checkbox" for={ fmt.Sprintf("category-%s", cat.ID) }>
+						<input
+							type="checkbox"
+							id={ fmt.Sprintf("category-%s", cat.ID) }
+							name="category_id"
+							value={ cat.ID }
+							if cat.IsSelected {
+								checked
+							}
+							if data.GuestReady {
+								disabled
+								aria-disabled="true"
+								title="Categories locked - guest is ready"
+							}
+							hx-post={ fmt.Sprintf("/api/v1/rooms/%s/categories/toggle", data.RoomID) }
+							hx-vals={ fmt.Sprintf("{\"category_id\": \"%s\"}", cat.ID) }
+							hx-trigger="change"
+							hx-swap="none"
+							hx-disabled-elt="this"
+							hx-indicator=".category-saving"
+							hx-on::after-request="
+								if(!event.detail.successful) {
+									this.checked = !this.checked;
+									this.parentElement.classList.add('error');
+									this.setAttribute('aria-invalid', 'true');
+									setTimeout(() => {
+										this.parentElement.classList.remove('error');
+										this.removeAttribute('aria-invalid');
+									}, 2000);
+								} else {
+									this.parentElement.classList.add('saved');
+									setTimeout(() => this.parentElement.classList.remove('saved'), 300);
+								}
+							"
+							aria-label={ fmt.Sprintf("%s category", cat.Label) }
+						/>
+						<span class="category-label">{ cat.Label } ({ fmt.Sprintf("%d", cat.QuestionCount) })</span>
+					</label>
+				}
+			</div>
+		</fieldset>
+	} else {
+		<p role="status" class="loading-text">No categories available</p>
+	}
+}

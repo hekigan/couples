@@ -4,10 +4,12 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/services"
+	adminPages "github.com/hekigan/couples/internal/views/pages/admin"
 	"github.com/labstack/echo/v4"
 )
 
@@ -29,14 +31,32 @@ func (h *Handler) AdminDashboardHandler(c echo.Context) error {
 		stats = nil
 	}
 
-	data := &TemplateData{
-		Title:   "Admin Dashboard",
-		User:    GetSessionUser(c), // Get user from session (no DB call)
-		Data:    stats,
-		IsAdmin: true, // Admin pages are protected by middleware
+	// Convert to DashboardStatsData for template
+	var statsData *services.DashboardStatsData
+	if stats != nil {
+		statsData = &services.DashboardStatsData{
+			TotalUsers:      stats.TotalUsers,
+			AnonymousUsers:  stats.AnonymousUsers,
+			RegisteredUsers: stats.RegisteredUsers,
+			AdminUsers:      stats.AdminUsers,
+			TotalRooms:      stats.TotalRooms,
+			ActiveRooms:     stats.ActiveRooms,
+			CompletedRooms:  stats.CompletedRooms,
+			TotalQuestions:  stats.TotalQuestions,
+			TotalCategories: stats.TotalCategories,
+		}
 	}
 
-	return h.RenderTemplate(c, "admin/dashboard.html", data)
+	data := &TemplateData{
+		Title:     "Admin Dashboard",
+		User:      GetTemplateUser(c), // Use helper to avoid nil interface gotcha
+		Data:      statsData,
+		IsAdmin:   true, // Admin pages are protected by middleware
+		Env:       os.Getenv("ENV"),
+		CSRFToken: GetCSRFToken(c),
+	}
+
+	return h.RenderTemplComponent(c, adminPages.DashboardPage(data))
 }
 
 // AdminUsersHandler displays user management
@@ -118,12 +138,14 @@ func (h *Handler) AdminUsersHandler(c echo.Context) error {
 	}
 
 	data := &TemplateData{
-		Title:   "User Management",
-		User:    GetSessionUser(c), // Get user from session (no DB call)
-		IsAdmin: true,
-		Data:    usersData,
+		Title:     "User Management",
+		User:      GetTemplateUser(c), // Use helper to avoid nil interface gotcha
+		IsAdmin:   true,
+		Data:      usersData,
+		Env:       os.Getenv("ENV"),
+		CSRFToken: GetCSRFToken(c),
 	}
-	return h.RenderTemplate(c, "admin/users.html", data)
+	return h.RenderTemplComponent(c, adminPages.UsersPage(data))
 }
 
 // AdminQuestionsHandler displays question management
@@ -291,12 +313,14 @@ func (h *Handler) AdminQuestionsHandler(c echo.Context) error {
 	}
 
 	data := &TemplateData{
-		Title:   "Question Management",
-		User:    GetSessionUser(c), // Get user from session (no DB call)
-		IsAdmin: true,
-		Data:    questionsData,
+		Title:     "Question Management",
+		User:      GetTemplateUser(c), // Use helper to avoid nil interface gotcha
+		IsAdmin:   true,
+		Data:      questionsData,
+		Env:       os.Getenv("ENV"),
+		CSRFToken: GetCSRFToken(c),
 	}
-	return h.RenderTemplate(c, "admin/questions.html", data)
+	return h.RenderTemplComponent(c, adminPages.QuestionsPage(data))
 }
 
 // AdminCategoriesHandler displays category management
@@ -361,12 +385,14 @@ func (h *Handler) AdminCategoriesHandler(c echo.Context) error {
 	}
 
 	data := &TemplateData{
-		Title:   "Category Management",
-		User:    GetSessionUser(c), // Get user from session (no DB call)
-		IsAdmin: true,
-		Data:    categoriesData,
+		Title:     "Category Management",
+		User:      GetTemplateUser(c), // Use helper to avoid nil interface gotcha
+		IsAdmin:   true,
+		Data:      categoriesData,
+		Env:       os.Getenv("ENV"),
+		CSRFToken: GetCSRFToken(c),
 	}
-	return h.RenderTemplate(c, "admin/categories.html", data)
+	return h.RenderTemplComponent(c, adminPages.CategoriesPage(data))
 }
 
 // AdminRoomsHandler displays room monitoring
@@ -436,20 +462,24 @@ func (h *Handler) AdminRoomsHandler(c echo.Context) error {
 	}
 
 	data := &TemplateData{
-		Title:   "Room Monitoring",
-		User:    GetSessionUser(c), // Get user from session (no DB call)
-		IsAdmin: true,
-		Data:    roomsData,
+		Title:     "Room Monitoring",
+		User:      GetTemplateUser(c), // Use helper to avoid nil interface gotcha
+		IsAdmin:   true,
+		Data:      roomsData,
+		Env:       os.Getenv("ENV"),
+		CSRFToken: GetCSRFToken(c),
 	}
-	return h.RenderTemplate(c, "admin/rooms.html", data)
+	return h.RenderTemplComponent(c, adminPages.RoomsPage(data))
 }
 
 // AdminTranslationsHandler displays translation management
 func (h *Handler) AdminTranslationsHandler(c echo.Context) error {
 	data := &TemplateData{
-		Title:   "Translation Management",
-		User:    GetSessionUser(c), // Get user from session (no DB call)
-		IsAdmin: true,
+		Title:     "Translation Management",
+		User:      GetTemplateUser(c), // Use helper to avoid nil interface gotcha
+		IsAdmin:   true,
+		Env:       os.Getenv("ENV"),
+		CSRFToken: GetCSRFToken(c),
 	}
-	return h.RenderTemplate(c, "admin/translations.html", data)
+	return h.RenderTemplComponent(c, adminPages.TranslationsPage(data))
 }

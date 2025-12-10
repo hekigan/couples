@@ -1,0 +1,21 @@
+package game
+
+import (
+	"github.com/hekigan/couples/internal/viewmodels"
+	"github.com/hekigan/couples/internal/views/layouts"
+)
+
+// JoinRequestsPage renders the join requests page with layout
+templ JoinRequestsPage(data *viewmodels.TemplateData) {
+	@layouts.Base(data, JoinRequestsContent())
+}
+
+// JoinRequestsContent renders the join requests content
+templ JoinRequestsContent() {
+	<div class="container">
+		<h1>Join Requests</h1>
+		<div class="requests-list">
+			<p>No pending requests</p>
+		</div>
+	</div>
+}

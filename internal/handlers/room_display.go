@@ -3,28 +3,21 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/models"
+	"github.com/hekigan/couples/internal/services"
+	gameFragments "github.com/hekigan/couples/internal/views/fragments/game"
+	gamePages "github.com/hekigan/couples/internal/views/pages/game"
 	"github.com/labstack/echo/v4"
 )
 
 // EmptyRoomsStateHandler serves the empty rooms state partial
 func (h *Handler) EmptyRoomsStateHandler(c echo.Context) error {
-	// Parse the partial template
-	partialPath := "templates/partials/game/empty-rooms-state.html"
-	tmpl, err := template.ParseFiles(partialPath)
-	if err != nil {
-		log.Printf("Error parsing empty rooms state partial: %v", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load empty state")
-	}
-
-	// Execute the defined template by name
-	return tmpl.ExecuteTemplate(c.Response().Writer, "partials/game/empty-rooms-state.html", nil)
+	return h.RenderTemplComponent(c, gameFragments.EmptyRoomsState())
 }
 
 // ListRoomsHandler lists all rooms for the current user
@@ -53,13 +46,13 @@ func (h *Handler) ListRoomsHandler(c echo.Context) error {
 	log.Printf("DEBUG ListRooms: Found %d rooms (via view)", len(roomsWithPlayers))
 
 	// Convert to RoomWithUsername format for template
-	enrichedRooms := make([]RoomWithUsername, 0, len(roomsWithPlayers))
+	enrichedRooms := make([]services.RoomWithUsername, 0, len(roomsWithPlayers))
 	for _, roomWithPlayers := range roomsWithPlayers {
 		log.Printf("DEBUG ListRooms: Room %s - OwnerID: %s, GuestID: %v, Status: %s",
 			roomWithPlayers.ID, roomWithPlayers.OwnerID, roomWithPlayers.GuestID, roomWithPlayers.Status)
 
 		isOwner := roomWithPlayers.OwnerID == userID
-		enrichedRoom := RoomWithUsername{
+		enrichedRoom := services.RoomWithUsername{
 			Room:    &roomWithPlayers.Room,
 			IsOwner: isOwner,
 		}
@@ -80,12 +73,11 @@ func (h *Handler) ListRoomsHandler(c echo.Context) error {
 		enrichedRooms = append(enrichedRooms, enrichedRoom)
 	}
 
-	data := &TemplateData{
-		Title: "My Rooms",
-		User:  currentUser,
-		Data:  enrichedRooms,
-	}
-	return h.RenderTemplate(c, "game/rooms.html", data)
+	data := NewTemplateData(c)
+	data.Title = "My Rooms"
+	data.User = currentUser
+	data.Data = enrichedRooms
+	return h.RenderTemplComponent(c, gamePages.RoomsPage(data))
 }
 
 // RoomHandler displays the room lobby
@@ -147,18 +139,17 @@ func (h *Handler) RoomHandler(c echo.Context) error {
 		}
 	}
 
-	data := &TemplateData{
-		Title:             "Room - " + roomWithPlayers.Name,
-		User:              currentUser,
-		Data:              &roomWithPlayers.Room, // Pass the embedded Room struct
-		OwnerUsername:     ownerUsername,
-		GuestUsername:     guestUsername,
-		IsOwner:           isOwner,
-		JoinRequestsCount: joinRequestsCount,
-	}
+	data := NewTemplateData(c)
+	data.Title = "Room - " + roomWithPlayers.Name
+	data.User = currentUser
+	data.Data = &roomWithPlayers.Room // Pass the embedded Room struct
+	data.OwnerUsername = ownerUsername
+	data.GuestUsername = guestUsername
+	data.IsOwner = isOwner
+	data.JoinRequestsCount = joinRequestsCount
 
 	// HTMX refactoring complete - using HTMX version as default
-	return h.RenderTemplate(c, "game/room.html", data)
+	return h.RenderTemplComponent(c, gamePages.RoomPage(data))
 }
 
 // PlayHandler handles the game play screen
@@ -246,33 +237,32 @@ func (h *Handler) PlayHandler(c echo.Context) error {
 		}
 	}
 
-	// Create a map to pass all play data for server-side rendering
-	playData := map[string]interface{}{
-		"Room":                 room,
-		"CurrentUserID":        userID.String(),
-		"IsMyTurn":             isMyTurn,
-		"OtherPlayerName":      otherPlayerName,
-		"QuestionText":         questionText,
-		"QuestionID":           questionID,
-		"HasAnswer":            hasAnswer,
-		"AnswerText":           "",
-		"ActionType":           "",
-		"AnsweredByPlayerName": "",
+	// Create PlayPageData for type-safe rendering
+	playData := &services.PlayPageData{
+		Room:                 room,
+		CurrentUserID:        userID.String(),
+		IsMyTurn:             isMyTurn,
+		OtherPlayerName:      otherPlayerName,
+		QuestionText:         questionText,
+		QuestionID:           questionID,
+		HasAnswer:            hasAnswer,
+		AnswerText:           "",
+		ActionType:           "",
+		AnsweredByPlayerName: "",
 	}
 
 	// If there's an answer, include its details
 	if lastAnswer != nil {
-		playData["AnswerText"] = lastAnswer.Answer.AnswerText
-		playData["ActionType"] = lastAnswer.ActionType
-		playData["AnsweredByPlayerName"] = lastAnswer.Username
+		playData.AnswerText = lastAnswer.Answer.AnswerText
+		playData.ActionType = lastAnswer.ActionType
+		playData.AnsweredByPlayerName = lastAnswer.Username
 	}
 
-	data := &TemplateData{
-		Title: "Play - " + room.Name,
-		User:  currentUser,
-		Data:  playData,
-	}
-	return h.RenderTemplate(c, "game/play.html", data)
+	data := NewTemplateData(c)
+	data.Title = "Play - " + room.Name
+	data.User = currentUser
+	data.Data = playData
+	return h.RenderTemplComponent(c, gamePages.PlayPage(data))
 }
 
 // GameFinishedHandler shows game results with full history
@@ -310,7 +300,7 @@ func (h *Handler) GameFinishedHandler(c echo.Context) error {
 	}
 
 	// Enrich answers with question and user details
-	answerDetails := make([]AnswerWithDetails, 0, len(answers))
+	answerDetails := make([]services.AnswerWithDetails, 0, len(answers))
 	for _, answer := range answers {
 		// Get question
 		question, err := h.QuestionService.GetQuestionByID(ctx, answer.QuestionID)
@@ -326,7 +316,7 @@ func (h *Handler) GameFinishedHandler(c echo.Context) error {
 			username = guest.Username
 		}
 
-		answerDetails = append(answerDetails, AnswerWithDetails{
+		answerDetails = append(answerDetails, services.AnswerWithDetails{
 			Answer:     &answer,
 			Question:   question,
 			Username:   username,
@@ -346,23 +336,17 @@ func (h *Handler) GameFinishedHandler(c echo.Context) error {
 		}
 	}
 
-	data := &TemplateData{
-		Title: "Game Finished",
-		User:  currentUser,
-		Data: map[string]interface{}{
-			"Room":           room,
-			"Answers":        answerDetails,
-			"TotalQuestions": totalQuestions,
-			"PassedCount":    passedCount,
-			"AnsweredCount":  answeredCount,
-			"OwnerUsername":  owner.Username,
-			"GuestUsername":  "",
-		},
+	finishedData := &services.GameFinishedData{
+		Room:           room,
+		Answers:        answerDetails,
+		TotalQuestions: totalQuestions,
+		PassedCount:    passedCount,
+		AnsweredCount:  answeredCount,
 	}
 
-	if guest != nil {
-		data.Data.(map[string]interface{})["GuestUsername"] = guest.Username
-	}
-
-	return h.RenderTemplate(c, "game/finished.html", data)
+	data := NewTemplateData(c)
+	data.Title = "Game Finished"
+	data.User = currentUser
+	data.Data = finishedData
+	return h.RenderTemplComponent(c, gamePages.FinishedPage(data))
 }

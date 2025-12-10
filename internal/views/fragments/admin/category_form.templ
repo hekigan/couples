@@ -1,0 +1,36 @@
+package admin
+
+import "github.com/hekigan/couples/internal/services"
+
+// CategoryForm renders the category create/edit form
+templ CategoryForm(data *services.CategoryFormData) {
+	if data.ID != "" {
+		<!-- Edit Mode - Category exists -->
+		<form
+			id="category-edit-form"
+			hx-put={ "/admin/api/v1/categories/" + data.ID }
+			hx-swap="none"
+			hx-on::after-request="handleDataUpdateResponse(event, '/admin/api/categories/list', '#categories-list')"
+		>
+			<p>Key: <span class="text-muted">{ data.Key }</span></p>
+			<input type="hidden" name="key" value={ data.Key }/>
+			<label>Label:</label>
+			<input type="text" name="label" value={ data.Label } required/>
+		</form>
+	} else {
+		<!-- Create Mode - New category -->
+		<form
+			id="category-create-form"
+			hx-post="/admin/api/v1/categories"
+			hx-swap="none"
+			hx-on::after-request="handleDataUpdateResponse(event, '/admin/api/categories/list', '#categories-list')"
+		>
+			<label>Key:</label>
+			<input type="text" name="key" placeholder="e.g., love_relationship" required/>
+			<small>Unique identifier for the category (lowercase, underscores only)</small>
+			<label>Label:</label>
+			<input type="text" name="label" placeholder="e.g., Love & Relationship" required/>
+			<small>Display name shown to users</small>
+		</form>
+	}
+}

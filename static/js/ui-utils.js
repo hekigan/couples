@@ -2,6 +2,30 @@
  * UI Utilities - Toast Notifications, Loading States, and Animations
  */
 
+// Configure HTMX to send CSRF token with all requests
+// This runs immediately when the script loads (before DOMContentLoaded)
+// to ensure the event listener is registered before any HTMX requests
+(function() {
+    // Wait for htmx to be available
+    if (typeof htmx !== 'undefined') {
+        setupCSRF();
+    } else {
+        // If htmx isn't loaded yet, wait for it
+        document.addEventListener('DOMContentLoaded', setupCSRF);
+    }
+
+    function setupCSRF() {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        if (csrfToken) {
+            // Use HTMX's event system to add CSRF token to all requests
+            document.addEventListener('htmx:configRequest', (event) => {
+                event.detail.headers['X-CSRF-Token'] = csrfToken;
+            });
+        }
+    }
+})();
+
 // Toast Notification System
 const Toast = {
     container: null,

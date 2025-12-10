@@ -4,7 +4,44 @@ All notable changes and milestones for this project.
 
 ---
 
-## [1.0.0] - November 2025 - PRODUCTION RELEASE ✅
+## [1.1.0] - December 2024 - TEMPL MIGRATION ✅
+
+### Major Changes
+
+**Complete Templ Framework Migration**
+- ✅ All 60+ HTML templates converted to type-safe `.templ` components
+- ✅ Templates moved from `templates/` to `internal/views/` (layouts/, pages/, fragments/)
+- ✅ Compile-time type checking for all template parameters
+- ✅ Generated `*_templ.go` files committed to git
+- ✅ Handlers use `RenderTemplComponent()` and `RenderTemplFragment()` methods
+- ✅ Data structures organized in `viewmodels` and `services` packages
+- ✅ Old `html/template` system completely removed
+
+**Development Workflow Updates**
+- ✅ New make commands: `templ-install`, `templ-generate`, `templ-watch`, `templ-clean`
+- ✅ 4-terminal development workflow (added templ-watch)
+- ✅ Air configuration updated to auto-generate templ on changes
+- ✅ Full hot-reload support for templ components
+
+**Technical Benefits**
+- ✅ No runtime template parsing errors (compile-time safety)
+- ✅ Better IDE support and autocomplete
+- ✅ Type-safe component parameters
+- ✅ Improved maintainability and refactoring
+- ✅ Seamless HTMX/SSE integration with type safety
+
+**Documentation Updates**
+- ✅ All docs updated to reflect templ migration
+- ✅ CLAUDE.md comprehensive templ documentation
+- ✅ README.md updated with 4-terminal workflow
+- ✅ SETUP.md includes templ setup instructions
+- ✅ Phase docs updated (PHASE2, PHASE5, PHASE6)
+- ✅ STATUS.md reflects templ completion
+- ✅ JAVASCRIPT_BUNDLING.md updated for templ components
+
+---
+
+## [1.0.0] - November 2024 - PRODUCTION RELEASE ✅
 
 ### Major Milestones
 
@@ -79,7 +116,14 @@ All notable changes and milestones for this project.
 
 ## Key Features by Release
 
-### v1.0.0 (Current)
+### v1.1.0 (Current - December 2024)
+- **Templates**: Type-safe templ components (60+ pages, 50+ fragments)
+- **Type Safety**: Compile-time checking for all templates
+- **Development**: 4-terminal hot-reload workflow
+- **Architecture**: Clean separation with viewmodels package
+- **HTMX/SSE**: Full integration with type-safe fragments
+
+### v1.0.0 (November 2024)
 - **Gameplay**: Turn-based multiplayer with real-time updates
 - **Social**: Complete friend system with invitations
 - **Admin**: Full content management panel
@@ -126,7 +170,14 @@ All notable changes and milestones for this project.
 
 ## Breaking Changes
 
-### v1.0.0
+### v1.1.0 (December 2024)
+- **BREAKING**: All `templates/` directory removed, replaced by `internal/views/`
+- **BREAKING**: Handlers must use `RenderTemplComponent()` instead of `RenderTemplate()`
+- **BREAKING**: `TemplateService` removed, replaced by templ rendering
+- **MIGRATION**: Generated `*_templ.go` files must be committed to git
+- **MIGRATION**: Data structures moved to `viewmodels` and `services` packages
+
+### v1.0.0 (November 2024)
 - Room model extended with `paused_at` and `disconnected_user` fields
 - Friend model now includes `status` field (migration required)
 - Answer model requires `action_type` field (answered/passed)
@@ -238,6 +289,6 @@ This project was built through intensive development sessions focusing on:
 
 ---
 
-**Last Updated**: November 2025
-**Current Version**: 1.0.0
-**Status**: ✅ Production Ready
+**Last Updated**: December 2024
+**Current Version**: 1.1.0
+**Status**: ✅ Production Ready (Templ Migration Complete)

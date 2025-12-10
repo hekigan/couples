@@ -7,6 +7,7 @@ import (
 
 	"github.com/hekigan/couples/internal/handlers"
 	"github.com/hekigan/couples/internal/services"
+	adminFragments "github.com/hekigan/couples/internal/views/fragments/admin"
 	"github.com/labstack/echo/v4"
 )
 
@@ -82,7 +83,7 @@ func (ah *AdminAPIHandler) ListUsersHandler(c echo.Context) error {
 		ItemName:        "users",
 	}
 
-	html, err := ah.handler.TemplateService.RenderFragment("users_list", data)
+	html, err := ah.handler.RenderTemplFragment(c, adminFragments.UsersList(&data))
 	if err != nil {
 		log.Printf("Error rendering users list: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
@@ -140,7 +141,7 @@ func (ah *AdminAPIHandler) GetUserCreateFormHandler(c echo.Context) error {
 		IsAnonymous: false,
 	}
 
-	html, err := ah.handler.TemplateService.RenderFragment("user_form.html", data)
+	html, err := ah.handler.RenderTemplFragment(c, adminFragments.UserForm(&data))
 	if err != nil {
 		log.Printf("Error rendering user create form: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
@@ -177,7 +178,7 @@ func (ah *AdminAPIHandler) GetUserEditFormHandler(c echo.Context) error {
 		IsAnonymous: user.IsAnonymous,
 	}
 
-	html, err := ah.handler.TemplateService.RenderFragment("user_form.html", data)
+	html, err := ah.handler.RenderTemplFragment(c, adminFragments.UserForm(&data))
 	if err != nil {
 		log.Printf("Error rendering user edit form: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())

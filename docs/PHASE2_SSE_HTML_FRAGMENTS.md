@@ -1,7 +1,7 @@
 # Phase 2: SSE HTML Fragments - Infrastructure Complete
 
 **Date:** November 10, 2025
-**Status:** ✅ **INFRASTRUCTURE READY**
+**Status:** ✅ **INFRASTRUCTURE READY** (Updated December 2024: Migrated to templ framework)
 
 ---
 
@@ -13,75 +13,84 @@ Phase 2 establishes the foundation for sending HTML fragments via Server-Sent Ev
 
 ## 🎯 Objectives Completed
 
-### 1. Directory Structure: ✅ CREATED
+### 1. Directory Structure: ✅ MIGRATED TO TEMPL
+
+**UPDATE December 2024:** All HTML templates have been migrated to type-safe templ components.
 
 ```
-templates/partials/
+internal/views/fragments/
 ├── room/
-│   ├── join_request.html           # Join request card
-│   ├── player_joined.html          # Player joined notification
-│   └── request_accepted.html       # Request accepted UI update
+│   ├── join_request.templ           # Join request card
+│   ├── player_joined.templ          # Player joined notification
+│   └── request_accepted.templ       # Request accepted UI update
 ├── game/
-│   ├── game_started.html           # Game start redirect
-│   ├── question_drawn.html         # Question display with HTMX
-│   └── answer_submitted.html       # Answer display with next action
+│   ├── game_started.templ           # Game start redirect
+│   ├── question_drawn.templ         # Question display with HTMX
+│   └── answer_submitted.templ       # Answer display with next action
 └── notifications/
-    └── notification_item.html      # Notification item
+    └── notification_item.templ      # Notification item
 ```
 
-### 2. HTML Fragment Templates: ✅ CREATED
+### 2. Templ Fragment Components: ✅ MIGRATED
 
-All templates are HTMX-ready with:
+**UPDATE December 2024:** All templates are now type-safe templ components with:
+- Compile-time type checking for parameters
 - Proper `hx-*` attributes for interactivity
 - Target selectors for SSE updates
 - Conditional rendering based on user state
 - Clean, semantic HTML structure
 
-**Example: Question Drawn Template**
-```html
-<div class="question-card" id="current-question">
-    <div class="question-header">
-        <span class="question-number">Question {{.QuestionNumber}} of {{.MaxQuestions}}</span>
-        <span class="category-badge">{{.CategoryLabel}}</span>
+**Example: Question Drawn Templ Component**
+```templ
+package gameFragments
+
+templ QuestionDrawn(data *services.QuestionDrawnData) {
+    <div class="question-card" id="current-question">
+        <div class="question-header">
+            <span class="question-number">Question { strconv.Itoa(data.QuestionNumber) } of { strconv.Itoa(data.MaxQuestions) }</span>
+            <span class="category-badge">{ data.CategoryLabel }</span>
+        </div>
+        <div class="question-text">{ data.QuestionText }</div>
+        <div class="question-actions">
+            if data.IsMyTurn {
+                <form hx-post={ "/api/game/" + data.RoomID + "/answer" } hx-swap="outerHTML">
+                    <textarea name="answer" required></textarea>
+                    <button type="submit">Submit Answer</button>
+                </form>
+            } else {
+                <div class="waiting-message">Waiting for { data.CurrentPlayerUsername }...</div>
+            }
+        </div>
     </div>
-    <div class="question-text">{{.QuestionText}}</div>
-    <div class="question-actions">
-        {{if .IsMyTurn}}
-        <form hx-post="/api/game/{{.RoomID}}/answer" hx-swap="outerHTML">
-            <textarea name="answer" required></textarea>
-            <button type="submit">Submit Answer</button>
-        </form>
-        {{else}}
-        <div class="waiting-message">Waiting for {{.CurrentPlayerUsername}}...</div>
-        {{end}}
-    </div>
-</div>
+}
 ```
 
-### 3. Template Service: ✅ CREATED
+### 3. Rendering System: ✅ MIGRATED TO TEMPL
 
-**File:** `internal/services/template_service.go`
+**UPDATE December 2024:** The old TemplateService has been replaced with templ component rendering.
 
-**Features:**
-- Centralized template rendering
-- Type-safe data structures for each template
-- Concurrent rendering with sync.RWMutex
-- Hot-reload capability for development
-- Clean error handling
+**Key Files:**
+- `internal/handlers/base.go` - `RenderTemplFragment()` method for SSE
+- `internal/rendering/templ_service.go` - Minimal adapter for service layer SSE (breaks import cycle)
+- `internal/viewmodels/template_data.go` - TemplateData and common SSE data structures
+- `internal/services/template_models.go` - Service-specific data structures (30+ types)
 
-**Key Methods:**
+**Handler Rendering Methods:**
 ```go
-func (s *TemplateService) RenderFragment(templateName string, data interface{}) (string, error)
-func (s *TemplateService) ReloadTemplates(templatesDir string) error
+// Full page rendering
+func (h *Handler) RenderTemplComponent(c echo.Context, component templ.Component) error
+
+// Fragment rendering for SSE
+func (h *Handler) RenderTemplFragment(c echo.Context, component templ.Component) (string, error)
 ```
 
-**Data Structures:**
-- `JoinRequestData`
-- `PlayerJoinedData`
-- `QuestionDrawnData`
-- `AnswerSubmittedData`
-- `GameStartedData`
-- `NotificationData`
+**Data Structures (now type-safe Go structs):**
+- `services.JoinRequestData`
+- `services.PlayerJoinedData`
+- `viewmodels.QuestionDrawnData`
+- `viewmodels.AnswerSubmittedData`
+- `viewmodels.GameStartedData`
+- `services.NotificationData`
 
 ### 4. RealtimeService Enhancement: ✅ UPDATED
 
@@ -116,17 +125,19 @@ data: {"target": "#join-requests", "swap": "beforeend", "html": "<div>...</div>"
 
 ---
 
-## 📊 Templates Created
+## 📊 Templ Components Created
 
-| Template | Path | Purpose | HTMX Attrs |
+**UPDATE December 2024:** All components migrated to templ framework.
+
+| Component | Path | Purpose | HTMX Attrs |
 |----------|------|---------|------------|
-| Join Request | `partials/room/join_request.html` | Display join request card | `hx-post`, `hx-swap`, `hx-target` |
-| Player Joined | `partials/room/player_joined.html` | Show guest joined | None (display only) |
-| Request Accepted | `partials/room/request_accepted.html` | Update after acceptance | None (display only) |
-| Game Started | `partials/game/game_started.html` | Redirect to game | JavaScript redirect |
-| Question Drawn | `partials/game/question_drawn.html` | Display question with form | `hx-post`, `hx-swap` |
-| Answer Submitted | `partials/game/answer_submitted.html` | Show answer + next action | `hx-post`, `hx-swap` |
-| Notification | `partials/notifications/notification_item.html` | Notification item | `hx-post` |
+| Join Request | `internal/views/fragments/room/join_request.templ` | Display join request card | `hx-post`, `hx-swap`, `hx-target` |
+| Player Joined | `internal/views/fragments/room/player_joined.templ` | Show guest joined | None (display only) |
+| Request Accepted | `internal/views/fragments/room/request_accepted.templ` | Update after acceptance | None (display only) |
+| Game Started | `internal/views/fragments/game/game_started.templ` | Redirect to game | JavaScript redirect |
+| Question Drawn | `internal/views/fragments/game/question_drawn.templ` | Display question with form | `hx-post`, `hx-swap` |
+| Answer Submitted | `internal/views/fragments/game/answer_submitted.templ` | Show answer + next action | `hx-post`, `hx-swap` |
+| Notification | `internal/views/fragments/notifications/notification_item.templ` | Notification item | `hx-post` |
 
 ---
 
@@ -205,42 +216,30 @@ s.realtimeService.BroadcastHTMLFragment(roomID, HTMLFragmentEvent{
 
 ## 🚀 Integration Guide
 
-### Step 1: Initialize Template Service
+### Step 1: No Service Initialization Needed
 
-```go
-// In cmd/server/main.go
-templateService, err := services.NewTemplateService("templates")
-if err != nil {
-    log.Fatalf("Failed to initialize template service: %v", err)
-}
-```
+**UPDATE December 2024:** Templ components are compiled Go code - no service initialization required!
 
-### Step 2: Pass to Handlers
+### Step 2: Handlers Use Built-in Rendering
 
-```go
-handler := handlers.NewHandler(
-    roomService,
-    gameService,
-    // ... other services
-    templateService, // Add this
-)
-```
+Handler struct already has `RenderTemplComponent()` and `RenderTemplFragment()` methods.
 
-### Step 3: Render and Broadcast
+### Step 3: Render and Broadcast with Templ
 
 ```go
 // In handler method
-html, err := h.TemplateService.RenderFragment("question_drawn.html", services.QuestionDrawnData{
+data := &viewmodels.QuestionDrawnData{
     RoomID:                roomID.String(),
     QuestionNumber:        room.CurrentQuestion,
     MaxQuestions:          room.MaxQuestions,
     QuestionText:          question.QuestionText,
     IsMyTurn:              isMyTurn,
     CurrentPlayerUsername: currentPlayerUsername,
-})
+}
+
+html, err := h.RenderTemplFragment(c, gameFragments.QuestionDrawn(data))
 if err != nil {
-    log.Printf("Failed to render template: %v", err)
-    return
+    return err
 }
 
 h.RealtimeService.BroadcastHTMLFragment(roomID, services.HTMLFragmentEvent{

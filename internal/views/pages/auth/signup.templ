@@ -1,0 +1,114 @@
+package auth
+
+import (
+	"github.com/hekigan/couples/internal/viewmodels"
+	"github.com/hekigan/couples/internal/views/layouts"
+)
+
+// SignupPage renders the signup page with layout
+templ SignupPage(data *viewmodels.TemplateData) {
+	@layouts.Base(data, SignupContent(data))
+}
+
+// SignupContent renders the signup form
+templ SignupContent(data *viewmodels.TemplateData) {
+	<div class="auth-container">
+		<div class="auth-card">
+			<h1>Create Account</h1>
+			<div class="auth-options">
+				<section>
+					<a href="/auth/oauth/google" role="button" class="btn-oauth btn-google">
+						<span>Continue with Google</span>
+					</a>
+					<a href="/auth/oauth/facebook" role="button" class="btn-oauth btn-facebook">
+						<span>Continue with Facebook</span>
+					</a>
+				</section>
+				<section class="divider">
+					<span>OR</span>
+				</section>
+				<section>
+					<form
+						hx-post="/signup"
+						hx-swap="none"
+						hx-disabled-elt="button[type='submit']"
+						hx-indicator="#signup-loading"
+						hx-on::after-request="handleSignupResponse(event)"
+					>
+						if data.CSRFToken != "" {
+							<input type="hidden" name="csrf" value={ data.CSRFToken }/>
+						}
+						<input
+							type="text"
+							name="username"
+							placeholder="Username"
+							required
+							minlength="3"
+							maxlength="50"
+							pattern="[a-zA-Z0-9_]+"
+							title="Username must be 3-50 characters (letters, numbers, underscore)"
+							autocomplete="username"
+							aria-label="Username"
+						/>
+						<input
+							type="email"
+							name="email"
+							placeholder="Email"
+							required
+							autocomplete="email"
+							aria-label="Email address"
+						/>
+						<input
+							type="password"
+							name="password"
+							placeholder="Password"
+							required
+							minlength="6"
+							autocomplete="new-password"
+							aria-label="Password"
+						/>
+						<input
+							type="password"
+							name="password_confirm"
+							placeholder="Confirm Password"
+							required
+							minlength="6"
+							autocomplete="new-password"
+							aria-label="Confirm password"
+						/>
+						<button type="submit" class="secondary">
+							<span id="signup-loading" class="htmx-indicator" style="display:none;">⏳ </span>
+							Create Account
+						</button>
+					</form>
+					<p class="help-text" style="text-align: center; margin-top: 1rem;">
+						Already have an account?
+						<a href="/login" style="color: var(--primary);">Log in</a>
+					</p>
+				</section>
+			</div>
+		</div>
+	</div>
+	<script>
+		function handleSignupResponse(event) {
+			const xhr = event.detail.xhr;
+
+			if (xhr.status === 200) {
+				// Success - HTMX handles HX-Redirect automatically
+				Toast.success('Account created! Redirecting...');
+			} else {
+				// Error - parse JSON and show toast
+				try {
+					const response = JSON.parse(xhr.responseText);
+					Toast.error(response.error || 'Signup failed. Please try again.');
+				} catch (e) {
+					Toast.error('Signup failed. Please check your information.');
+				}
+
+				// Clear password fields on error
+				event.target.querySelector('input[name="password"]').value = '';
+				event.target.querySelector('input[name="password_confirm"]').value = '';
+			}
+		}
+	</script>
+}

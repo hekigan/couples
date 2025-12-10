@@ -7,6 +7,48 @@ package services
 // Game/Room Template Data Structures
 // ============================================================================
 
+import (
+	"github.com/hekigan/couples/internal/models"
+)
+
+// RoomWithUsername is a room enriched with the other player's username
+type RoomWithUsername struct {
+	*models.Room
+	OtherPlayerUsername string
+	IsOwner             bool
+}
+
+// AnswerWithDetails contains an answer with its question and user info
+type AnswerWithDetails struct {
+	Answer     *models.Answer
+	Question   *models.Question
+	Username   string
+	ActionType string
+}
+
+// GameFinishedData represents data for the game finished page
+type GameFinishedData struct {
+	Room           *models.Room
+	Answers        []AnswerWithDetails
+	TotalQuestions int
+	PassedCount    int
+	AnsweredCount  int
+}
+
+// PlayPageData represents data for the game play page
+type PlayPageData struct {
+	Room                 *models.Room
+	CurrentUserID        string
+	IsMyTurn             bool
+	OtherPlayerName      string
+	QuestionText         string
+	QuestionID           string
+	HasAnswer            bool
+	AnswerText           string
+	ActionType           string
+	AnsweredByPlayerName string
+}
+
 // JoinRequestData represents data for join request partial
 type JoinRequestData struct {
 	ID        string
@@ -300,6 +342,20 @@ type UserFormData struct {
 	IsAnonymous bool
 }
 
+// QuestionFormData represents data for question create/edit form (shared template)
+type QuestionFormData struct {
+	QuestionID     string                 // Empty for create mode, populated for edit mode
+	BaseQuestionID string                 // Base question ID (for translations)
+	Categories     []AdminCategoryOption  // Available categories
+	QuestionText   string                 // English question text
+	TranslationFR  string                 // French translation
+	TranslationJA  string                 // Japanese translation
+	SelectedLang   string                 // Currently selected language (en, fr, ja)
+	LangEN         bool                   // True if English is selected
+	LangFR         bool                   // True if French is selected
+	LangJA         bool                   // True if Japanese is selected
+}
+
 // RoomDetailsData represents data for room details view (read-only)
 type RoomDetailsData struct {
 	ID            string
@@ -354,3 +410,127 @@ type DashboardStatsData struct {
 	TotalQuestions  int
 	TotalCategories int
 }
+
+// ============================================================================
+// Pagination Interface Implementation
+// ============================================================================
+
+// GetTotalCount returns total count for UsersListData
+func (d *UsersListData) GetTotalCount() int { return d.TotalCount }
+
+// GetCurrentPage returns current page for UsersListData
+func (d *UsersListData) GetCurrentPage() int { return d.CurrentPage }
+
+// GetTotalPages returns total pages for UsersListData
+func (d *UsersListData) GetTotalPages() int { return d.TotalPages }
+
+// GetItemsPerPage returns items per page for UsersListData
+func (d *UsersListData) GetItemsPerPage() int { return d.ItemsPerPage }
+
+// GetBaseURL returns base URL for UsersListData
+func (d *UsersListData) GetBaseURL() string { return d.BaseURL }
+
+// GetPageURL returns page URL for UsersListData
+func (d *UsersListData) GetPageURL() string { return d.PageURL }
+
+// GetTarget returns target selector for UsersListData
+func (d *UsersListData) GetTarget() string { return d.Target }
+
+// GetIncludeSelector returns include selector for UsersListData
+func (d *UsersListData) GetIncludeSelector() string { return d.IncludeSelector }
+
+// GetExtraParams returns extra params for UsersListData
+func (d *UsersListData) GetExtraParams() string { return d.ExtraParams }
+
+// GetItemName returns item name for UsersListData
+func (d *UsersListData) GetItemName() string { return d.ItemName }
+
+// GetTotalCount returns total count for QuestionsListData
+func (d *QuestionsListData) GetTotalCount() int { return d.TotalCount }
+
+// GetCurrentPage returns current page for QuestionsListData
+func (d *QuestionsListData) GetCurrentPage() int { return d.CurrentPage }
+
+// GetTotalPages returns total pages for QuestionsListData
+func (d *QuestionsListData) GetTotalPages() int { return d.TotalPages }
+
+// GetItemsPerPage returns items per page for QuestionsListData
+func (d *QuestionsListData) GetItemsPerPage() int { return d.ItemsPerPage }
+
+// GetBaseURL returns base URL for QuestionsListData
+func (d *QuestionsListData) GetBaseURL() string { return d.BaseURL }
+
+// GetPageURL returns page URL for QuestionsListData
+func (d *QuestionsListData) GetPageURL() string { return d.PageURL }
+
+// GetTarget returns target selector for QuestionsListData
+func (d *QuestionsListData) GetTarget() string { return d.Target }
+
+// GetIncludeSelector returns include selector for QuestionsListData
+func (d *QuestionsListData) GetIncludeSelector() string { return d.IncludeSelector }
+
+// GetExtraParams returns extra params for QuestionsListData
+func (d *QuestionsListData) GetExtraParams() string { return d.ExtraParams }
+
+// GetItemName returns item name for QuestionsListData
+func (d *QuestionsListData) GetItemName() string { return d.ItemName }
+
+// GetTotalCount returns total count for CategoriesListData
+func (d *CategoriesListData) GetTotalCount() int { return d.TotalCount }
+
+// GetCurrentPage returns current page for CategoriesListData
+func (d *CategoriesListData) GetCurrentPage() int { return d.CurrentPage }
+
+// GetTotalPages returns total pages for CategoriesListData
+func (d *CategoriesListData) GetTotalPages() int { return d.TotalPages }
+
+// GetItemsPerPage returns items per page for CategoriesListData
+func (d *CategoriesListData) GetItemsPerPage() int { return d.ItemsPerPage }
+
+// GetBaseURL returns base URL for CategoriesListData
+func (d *CategoriesListData) GetBaseURL() string { return d.BaseURL }
+
+// GetPageURL returns page URL for CategoriesListData
+func (d *CategoriesListData) GetPageURL() string { return d.PageURL }
+
+// GetTarget returns target selector for CategoriesListData
+func (d *CategoriesListData) GetTarget() string { return d.Target }
+
+// GetIncludeSelector returns include selector for CategoriesListData
+func (d *CategoriesListData) GetIncludeSelector() string { return d.IncludeSelector }
+
+// GetExtraParams returns extra params for CategoriesListData
+func (d *CategoriesListData) GetExtraParams() string { return d.ExtraParams }
+
+// GetItemName returns item name for CategoriesListData
+func (d *CategoriesListData) GetItemName() string { return d.ItemName }
+
+// GetTotalCount returns total count for RoomsListData
+func (d *RoomsListData) GetTotalCount() int { return d.TotalCount }
+
+// GetCurrentPage returns current page for RoomsListData
+func (d *RoomsListData) GetCurrentPage() int { return d.CurrentPage }
+
+// GetTotalPages returns total pages for RoomsListData
+func (d *RoomsListData) GetTotalPages() int { return d.TotalPages }
+
+// GetItemsPerPage returns items per page for RoomsListData
+func (d *RoomsListData) GetItemsPerPage() int { return d.ItemsPerPage }
+
+// GetBaseURL returns base URL for RoomsListData
+func (d *RoomsListData) GetBaseURL() string { return d.BaseURL }
+
+// GetPageURL returns page URL for RoomsListData
+func (d *RoomsListData) GetPageURL() string { return d.PageURL }
+
+// GetTarget returns target selector for RoomsListData
+func (d *RoomsListData) GetTarget() string { return d.Target }
+
+// GetIncludeSelector returns include selector for RoomsListData
+func (d *RoomsListData) GetIncludeSelector() string { return d.IncludeSelector }
+
+// GetExtraParams returns extra params for RoomsListData
+func (d *RoomsListData) GetExtraParams() string { return d.ExtraParams }
+
+// GetItemName returns item name for RoomsListData
+func (d *RoomsListData) GetItemName() string { return d.ItemName }

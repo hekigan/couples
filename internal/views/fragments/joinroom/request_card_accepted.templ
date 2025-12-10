@@ -1,0 +1,24 @@
+package joinroom
+
+import "github.com/hekigan/couples/internal/services"
+
+// RequestCardAccepted renders the accepted request card with auto-redirect
+templ RequestCardAccepted(data *services.JoinRequestData) {
+	<div class="request-card" id={ "request-" + data.RoomID }>
+		<div class="request-info">
+			<strong>Room: { data.RoomID }</strong>
+			<span class="request-status accepted" role="status" aria-live="assertive">✅ Request accepted! Redirecting...</span>
+		</div>
+	</div>
+	@RequestCardAcceptedScript(data.RoomID)
+}
+
+// RequestCardAcceptedScript renders the auto-redirect JavaScript
+templ RequestCardAcceptedScript(roomID string) {
+	<script>
+	// Auto-redirect after SSE acceptance
+	setTimeout(() => {
+		window.location.href = '/game/room/{ roomID }';
+	}, 1500);
+	</script>
+}

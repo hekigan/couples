@@ -1,0 +1,73 @@
+package admin
+
+import (
+	"github.com/hekigan/couples/internal/services"
+	"github.com/hekigan/couples/internal/viewmodels"
+	"github.com/hekigan/couples/internal/views/layouts"
+	adminFragments "github.com/hekigan/couples/internal/views/fragments/admin"
+)
+
+// CategoriesPage renders the admin categories page with layout
+templ CategoriesPage(templateData *viewmodels.TemplateData) {
+	@layouts.Admin(templateData, CategoriesContent(templateData))
+}
+
+// CategoriesContent renders the admin categories management content
+templ CategoriesContent(templateData *viewmodels.TemplateData) {
+	<div class="admin-container">
+		<h1>Category Management</h1>
+		<div class="admin-actions-header">
+			<div></div>
+			<button data-target="create-modal" onclick="toggleModal(event)" class="btn-add">Add Category</button>
+		</div>
+		<div class="admin-table">
+			if data, ok := templateData.Data.(*services.CategoriesListData); ok {
+				@adminFragments.CategoriesList(data)
+			} else {
+				<p>No categories found.</p>
+			}
+		</div>
+	</div>
+	<!-- Create Category Modal - Using PicoCSS dialog element -->
+	<dialog id="create-modal" class="modal-wide">
+		<article>
+			<header>
+				<button aria-label="Close" rel="prev" data-target="create-modal" onclick="toggleModal(event)"></button>
+				<h3>Create Category</h3>
+			</header>
+			<div
+				id="create-modal-content"
+				class="modal-content"
+				hx-get="/admin/api/v1/categories/new"
+				hx-trigger="load once"
+			>
+				<!-- Form will be loaded here via HTMX -->
+			</div>
+			<footer>
+				<button type="button" class="secondary" data-target="create-modal" onclick="toggleModal(event)">Cancel</button>
+				<button type="button" onclick="submitModalForm(event)">Create</button>
+			</footer>
+		</article>
+	</dialog>
+	<!-- Edit Category Modal -->
+	<dialog id="edit-modal" class="modal-wide">
+		<article>
+			<header>
+				<button aria-label="Close" rel="prev" data-target="edit-modal" onclick="toggleModal(event)"></button>
+				<h3>Edit Category</h3>
+			</header>
+			<div id="edit-modal-content" class="modal-content">
+				<!-- Form will be loaded here via HTMX -->
+			</div>
+			<footer>
+				<button
+					type="button"
+					class="secondary"
+					data-target="edit-modal"
+					onclick="toggleModal(event)"
+				>Cancel</button>
+				<button type="button" onclick="submitModalForm(event)">Save</button>
+			</footer>
+		</article>
+	</dialog>
+}

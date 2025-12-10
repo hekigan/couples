@@ -10,6 +10,7 @@ import (
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/services"
+	playFragments "github.com/hekigan/couples/internal/views/fragments/play"
 	"github.com/labstack/echo/v4"
 )
 
@@ -244,14 +245,14 @@ func (h *Handler) SubmitAnswerAPIHandler(c echo.Context) error {
 	}
 
 	// Render answer review fragment
-	html, err := h.TemplateService.RenderFragment("answer_review.html", services.AnswerReviewData{
+	html, err := h.RenderTemplFragment(c, playFragments.AnswerReview(&services.AnswerReviewData{
 		RoomID:               roomID.String(),
 		AnswerText:           answerText,
 		ActionType:           actionType,
 		ShowNextButton:       false, // Submitter is no longer the active player, so no "Next Question" button
 		AnsweredByPlayerName: currentUser.Username,
 		OtherPlayerName:      otherPlayerName,
-	})
+	}))
 	if err != nil {
 		log.Printf("❌ Error rendering answer_review template: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to render answer review")

@@ -1,0 +1,61 @@
+package admin
+
+import (
+	"fmt"
+	"github.com/hekigan/couples/internal/services"
+)
+
+// CategoriesList renders the admin categories list table
+templ CategoriesList(data *services.CategoriesListData) {
+	<div id="categories-list">
+		<!-- Loading Overlay -->
+		<div id="categories-list-loading" class="htmx-indicator admin-list-loading-overlay">
+			<div class="loading-overlay-content">
+				<div class="spinner"></div>
+				<p>Loading categories...</p>
+			</div>
+		</div>
+		<table>
+			<thead>
+				<tr>
+					<th>Label</th>
+					<th>Key</th>
+					<th>Questions</th>
+					<th>Actions</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, cat := range data.Categories {
+					<tr>
+						<td>{ cat.Label }</td>
+						<td>{ cat.Key }</td>
+						<td>{ fmt.Sprintf("%d", cat.QuestionCount) }</td>
+						<td>
+							<button
+								hx-get={ fmt.Sprintf("/admin/api/v1/categories/%s/edit-form", cat.ID) }
+								hx-target="#edit-modal-content"
+								hx-swap="innerHTML"
+								data-target="edit-modal"
+								onclick="toggleModal(event)"
+								class="btn btn-sm"
+							>
+								Edit
+							</button>
+							<button
+								hx-delete={ fmt.Sprintf("/admin/api/v1/categories/%s", cat.ID) }
+								hx-target="#categories-list"
+								hx-swap="outerHTML"
+								hx-confirm="Are you sure you want to delete this category?"
+								hx-indicator="#categories-list-loading"
+								class="btn btn-sm btn-danger"
+							>
+								Delete
+							</button>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+		@Pagination(data)
+	</div>
+}

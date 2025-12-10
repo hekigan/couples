@@ -1,0 +1,19 @@
+package layouts
+
+import "github.com/hekigan/couples/internal/viewmodels"
+
+// Alerts renders error and success alert messages
+templ Alerts(data *viewmodels.TemplateData) {
+	if data.Error != "" {
+		<div class="alert alert-error">
+			<span class="alert-icon">⚠️</span>
+			<span class="alert-message">{ data.Error }</span>
+		</div>
+	}
+	if data.Success != "" {
+		<div class="alert alert-success">
+			<span class="alert-icon">✅</span>
+			<span class="alert-message">{ data.Success }</span>
+		</div>
+	}
+}

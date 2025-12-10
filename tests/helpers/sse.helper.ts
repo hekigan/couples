@@ -15,7 +15,7 @@ export class SSEHelper {
    * @param timeout - Maximum time to wait (default: 5000ms)
    */
   async waitForSSEConnection(roomId: string, timeout = 5000): Promise<void> {
-    const sseUrl = `/api/rooms/${roomId}/events`;
+    const sseUrl = `/api/v1/stream/rooms/${roomId}/events`;
 
     await this.page.waitForResponse(
       response => {

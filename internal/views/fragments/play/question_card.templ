@@ -1,0 +1,10 @@
+package play
+
+import "github.com/hekigan/couples/internal/services"
+
+// QuestionCard renders the question card display
+templ QuestionCard(data *services.QuestionCardData) {
+	<div class="question-card" role="region" aria-label="Current question">
+		<p class="question-text">{ data.QuestionText }</p>
+	</div>
+}

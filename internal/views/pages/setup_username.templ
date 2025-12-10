@@ -1,0 +1,76 @@
+package pages
+
+import (
+	"github.com/hekigan/couples/internal/viewmodels"
+	"github.com/hekigan/couples/internal/views/layouts"
+)
+
+// SetupUsernamePage renders the username setup page with layout
+templ SetupUsernamePage(data *viewmodels.TemplateData) {
+	@layouts.Base(data, SetupUsernameContent(data))
+}
+
+// SetupUsernameContent renders the username setup form
+templ SetupUsernameContent(data *viewmodels.TemplateData) {
+	<div class="container-sm">
+		<article>
+			<header class="text-center">
+				<h1>👋 Welcome!</h1>
+				<p>Choose a username to get started</p>
+			</header>
+			<form method="POST" action="/setup-username" id="username-form">
+				if data.CSRFToken != "" {
+					<input type="hidden" name="csrf" value={ data.CSRFToken } id="csrf-token"/>
+				}
+				<label for="username">
+					Username
+					<input
+						type="text"
+						id="username"
+						name="username"
+						required
+						minlength="3"
+						maxlength="20"
+						pattern="[a-zA-Z0-9_]+"
+						placeholder="e.g., player123"
+						autocomplete="off"
+					/>
+					<small>3-20 characters, letters, numbers and underscore only</small>
+				</label>
+				<div id="error-message" hidden role="alert" class="alert alert-error"></div>
+				<button type="submit">Continue</button>
+			</form>
+		</article>
+	</div>
+	<script>
+		document.getElementById('username-form').addEventListener('submit', async (e) => {
+			e.preventDefault();
+
+			const username = document.getElementById('username').value;
+			const errorDiv = document.getElementById('error-message');
+			const csrfToken = document.getElementById('csrf-token')?.value || '';
+
+			try {
+				const response = await fetch('/setup-username', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded',
+						'X-CSRF-Token': csrfToken
+					},
+					body: `username=${encodeURIComponent(username)}`
+				});
+
+				if (response.ok) {
+					window.location.href = '/';
+				} else {
+					const data = await response.text();
+					errorDiv.textContent = data || 'Username already taken or invalid';
+					errorDiv.hidden = false;
+				}
+			} catch (error) {
+				errorDiv.textContent = 'An error occurred. Please try again.';
+				errorDiv.hidden = false;
+			}
+		});
+	</script>
+}

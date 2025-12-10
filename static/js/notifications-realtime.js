@@ -141,9 +141,15 @@ function showToastNotification(notification) {
 async function loadNotificationCount() {
     try {
         const response = await fetch('/api/v1/notifications/unread-count');
-        if (response.ok) {
+
+        // Check if response is actually JSON (not a redirect to HTML login page)
+        const contentType = response.headers.get('content-type');
+        if (response.ok && contentType && contentType.includes('application/json')) {
             const data = await response.json();
             updateNotificationBadge(data.count);
+        } else if (response.status === 401 || response.status === 403) {
+            // User not authenticated, silently skip
+            console.log('Not authenticated, skipping notification count');
         }
     } catch (error) {
         console.error('Failed to load notification count:', error);
@@ -188,12 +194,17 @@ document.addEventListener('click', (e) => {
 async function loadNotifications() {
     const list = document.getElementById('notification-list');
     list.innerHTML = '<p class="loading">Loading...</p>';
-    
+
     try {
         const response = await fetch('/api/notifications');
-        if (response.ok) {
+        const contentType = response.headers.get('content-type');
+
+        if (response.ok && contentType && contentType.includes('application/json')) {
             const notifications = await response.json();
             displayNotifications(notifications);
+        } else if (response.status === 401 || response.status === 403) {
+            // User not authenticated
+            list.innerHTML = '<p class="error">Please log in to view notifications</p>';
         } else {
             list.innerHTML = '<p class="error">Failed to load notifications</p>';
         }

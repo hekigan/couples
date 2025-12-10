@@ -1,0 +1,49 @@
+package play
+
+import "github.com/hekigan/couples/internal/services"
+
+// AnswerReview renders the answer review for after a player answers
+templ AnswerReview(data *services.AnswerReviewData) {
+	<div class="answer-review">
+		<div class="answer-display">
+			<h3>{ data.AnsweredByPlayerName }'s answer:</h3>
+			if data.ActionType == "passed" {
+				<p>
+					(Question was passed)
+				</p>
+			} else {
+				<p>
+					if data.AnswerText != "" {
+						{ data.AnswerText }
+					} else {
+						(No answer provided)
+					}
+				</p>
+			}
+			if data.ShowNextButton {
+				<!-- Show "Next Question" button to new active player -->
+				<div style="margin-top: 20px;">
+					<button
+						hx-post={ "/api/v1/rooms/" + data.RoomID + "/next-question" }
+						hx-target="#game-forms"
+						hx-swap="innerHTML"
+						hx-disabled-elt="this"
+						hx-indicator="#next-loading"
+						class=""
+						aria-label="Draw next question"
+					>
+						<span>➡️ Next Question</span>
+						<span id="next-loading" class="htmx-indicator">⏳</span>
+					</button>
+				</div>
+			} else {
+				<!-- Show waiting message to previous active player -->
+				<div>
+					<p role="status" aria-live="polite">
+						⏳ Waiting for { data.OtherPlayerName } to draw next question...
+					</p>
+				</div>
+			}
+		</div>
+	</div>
+}

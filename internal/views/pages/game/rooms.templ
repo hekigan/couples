@@ -1,0 +1,160 @@
+package game
+
+import (
+	"fmt"
+	"github.com/hekigan/couples/internal/services"
+	"github.com/hekigan/couples/internal/viewmodels"
+	"github.com/hekigan/couples/internal/views/layouts"
+	gameFragments "github.com/hekigan/couples/internal/views/fragments/game"
+)
+
+// RoomsPage renders the rooms list page with layout
+templ RoomsPage(data *viewmodels.TemplateData) {
+	@layouts.Base(data, RoomsContent(data))
+}
+
+// RoomsContent renders the rooms list content
+templ RoomsContent(data *viewmodels.TemplateData) {
+	<div class="container">
+		<div class="page-header">
+			<h1>💕 My Rooms</h1>
+			<a href="/game/create-room" role="button">+ New Room</a>
+		</div>
+		<div id="rooms-container">
+			if rooms, ok := data.Data.([]services.RoomWithUsername); ok && len(rooms) > 0 {
+				<div class="rooms-grid">
+					for _, room := range rooms {
+						<div class="room-card" id={ fmt.Sprintf("room-%s", room.ID.String()) }>
+							<div class="room-card-header">
+								<span class="room-id">🆔 { room.ID.String() }</span>
+								<span class={ fmt.Sprintf("room-status room-status-%s", room.Status) }>{ room.Status }</span>
+							</div>
+							<div class="room-card-body">
+								<p class="room-info">
+									<span class="room-info-label">Playing with:</span>
+									<span class="room-info-value">
+										if room.OtherPlayerUsername != "" {
+											👤 { room.OtherPlayerUsername }
+										} else {
+											⏳ Waiting for player...
+										}
+									</span>
+								</p>
+								<p class="room-info">
+									<span class="room-info-label">Language:</span>
+									<span class="room-info-value">
+										if room.Language != "" {
+											{ room.Language }
+										} else {
+											en
+										}
+									</span>
+								</p>
+								<p class="room-info">
+									<span class="room-info-label">Status:</span>
+									<span class="room-info-value">
+										if room.Status == "ready" {
+											✅ Ready to play
+										} else if room.Status == "playing" {
+											🎮 Playing
+										} else {
+											⏳ Waiting for guest
+										}
+									</span>
+								</p>
+								<p class="room-info">
+									<span class="room-info-label">Created:</span>
+									<span class="room-info-value">{ room.CreatedAt.Format("Jan 2, 2006") }</span>
+								</p>
+							</div>
+							<div class="room-card-actions">
+								if room.Status == "waiting" {
+									<a href={ templ.URL(fmt.Sprintf("/game/room/%s", room.ID.String())) } role="button">Enter Room</a>
+								} else if room.Status == "ready" {
+									<a href={ templ.URL(fmt.Sprintf("/game/room/%s", room.ID.String())) } role="button" class="success">Enter Room</a>
+								} else if room.Status == "playing" {
+									<a href={ templ.URL(fmt.Sprintf("/game/play/%s", room.ID.String())) } role="button" class="success">Continue Game</a>
+								} else if room.Status == "finished" {
+									<a href={ templ.URL(fmt.Sprintf("/game/finished/%s", room.ID.String())) } role="button" class="secondary">View Results</a>
+								}
+								if room.IsOwner {
+									<button
+										type="button"
+										class="btn-danger"
+										hx-delete={ fmt.Sprintf("/api/v1/rooms/%s", room.ID.String()) }
+										hx-confirm="⚠️ Are you sure you want to delete this room?\n\nThis action cannot be undone and will remove all game data."
+										hx-target={ fmt.Sprintf("#room-%s", room.ID.String()) }
+										hx-swap="outerHTML swap:300ms"
+										hx-disabled-elt="this"
+										hx-on::after-request="if(event.detail.successful) Toast.success('Room deleted successfully')"
+										aria-label="Delete room"
+									>
+										Delete
+									</button>
+								} else {
+									<button
+										type="button"
+										class="secondary"
+										hx-post={ fmt.Sprintf("/api/v1/rooms/%s/leave", room.ID.String()) }
+										hx-confirm="⚠️ Are you sure you want to leave this room?\n\nThe room will remain for the owner, but you will be removed."
+										hx-target={ fmt.Sprintf("#room-%s", room.ID.String()) }
+										hx-swap="outerHTML swap:300ms"
+										hx-disabled-elt="this"
+										hx-on::after-request="if(event.detail.successful) Toast.success('Left room successfully')"
+										aria-label="Leave room"
+									>
+										Leave
+									</button>
+								}
+							</div>
+						</div>
+					}
+				</div>
+			} else {
+				@gameFragments.EmptyRoomsState()
+			}
+		</div>
+	</div>
+	<script>
+		// ============================================================================
+		// HTMX now handles:
+		// - Room deletion via hx-delete="/api/v1/rooms/{id}"
+		// - Room leave via hx-post="/api/v1/rooms/{id}/leave"
+		// - Confirmation dialogs via hx-confirm attribute
+		// - Fade-out animations via hx-swap="outerHTML swap:300ms"
+		// - Button disable during requests via hx-disabled-elt
+		// ============================================================================
+
+		// Track room deletions to detect when grid becomes empty
+		let roomDeletionInProgress = false;
+
+		// Before swap, check if we're deleting a room card
+		document.body.addEventListener('htmx:beforeSwap', function(event) {
+			const target = event.detail.target;
+			if (target && target.id && target.id.startsWith('room-')) {
+				roomDeletionInProgress = true;
+			}
+		});
+
+		// After request completes, check if we need to load empty state
+		// Note: We use afterRequest instead of afterSwap because when the element is removed
+		// with outerHTML, afterSwap may not bubble up correctly
+		document.body.addEventListener('htmx:afterRequest', function(event) {
+			if (event.detail.successful && roomDeletionInProgress) {
+				roomDeletionInProgress = false;
+
+				// Wait for swap animation to complete (300ms) plus buffer
+				setTimeout(() => {
+					const roomsGrid = document.querySelector('.rooms-grid');
+					if (roomsGrid && roomsGrid.children.length === 0) {
+						// Load empty state partial via HTMX
+						htmx.ajax('GET', '/game/partials/empty-rooms-state', {
+							target: '#rooms-container',
+							swap: 'innerHTML'
+						});
+					}
+				}, 400);
+			}
+		});
+	</script>
+}

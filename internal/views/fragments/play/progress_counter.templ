@@ -1,0 +1,11 @@
+package play
+
+import (
+	"fmt"
+	"github.com/hekigan/couples/internal/services"
+)
+
+// ProgressCounter renders the question progress counter
+templ ProgressCounter(data *services.ProgressCounterData) {
+	Question <span id="currentQuestion" data-testid="current-question">{ fmt.Sprintf("%d", data.CurrentQuestion) }</span> of <span id="maxQuestions" data-testid="max-questions">{ fmt.Sprintf("%d", data.MaxQuestions) }</span>
+}

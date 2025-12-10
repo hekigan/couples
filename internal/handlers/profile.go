@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/hekigan/couples/internal/middleware"
+	"github.com/hekigan/couples/internal/views/pages"
 	"github.com/labstack/echo/v4"
 )
 
@@ -21,12 +22,11 @@ func (h *Handler) ProfileHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load profile")
 	}
 
-	data := &TemplateData{
-		Title: "My Profile",
-		User:  user,
-		Data:  user,
-	}
-	return h.RenderTemplate(c, "profile.html", data)
+	data := NewTemplateData(c)
+	data.Title = "My Profile"
+	data.User = user
+	data.Data = user
+	return h.RenderTemplComponent(c, pages.ProfilePage(data))
 }
 
 // UpdateProfileHandler updates the user's profile

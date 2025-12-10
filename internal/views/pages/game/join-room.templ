@@ -1,0 +1,48 @@
+package game
+
+import (
+	"github.com/hekigan/couples/internal/viewmodels"
+	"github.com/hekigan/couples/internal/views/layouts"
+)
+
+// JoinRoomPage renders the join room page with layout
+templ JoinRoomPage(data *viewmodels.TemplateData) {
+	@layouts.Base(data, JoinRoomContent(data))
+}
+
+// JoinRoomContent renders the join room form content
+templ JoinRoomContent(data *viewmodels.TemplateData) {
+	<div class="container">
+		<div class="page-header">
+			<h1>🎮 Join Room</h1>
+		</div>
+		if data.Error != "" {
+			<div class="alert alert-error" role="alert">
+				⚠️ { data.Error }
+			</div>
+		}
+		<form method="POST" action="/game/join-room">
+			if data.CSRFToken != "" {
+				<input type="hidden" name="csrf" value={ data.CSRFToken }/>
+			}
+			<div class="form-group">
+				<label for="room_id">Room ID</label>
+				<input
+					type="text"
+					id="room_id"
+					name="room_id"
+					placeholder="e.g., 123e4567-e89b-12d3-a456-426614174000"
+					required
+					aria-describedby="room-id-help"
+				/>
+				<small id="room-id-help" style="color: #6b7280;">
+					Ask the room owner to share their Room ID with you.
+				</small>
+			</div>
+			<div class="form-actions">
+				<button type="submit" class="btn-primary">Join Room</button>
+				<a href="/game/rooms" role="button" class="secondary">Cancel</a>
+			</div>
+		</form>
+	</div>
+}

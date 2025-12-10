@@ -13,10 +13,11 @@ make test-db-setup
 # 2. Run tests
 make test
 
-# 3. Development mode (3 terminals for full hot-reload)
-make dev          # Terminal 1: Run server with Air
+# 3. Development mode (4 terminals for full hot-reload)
+make dev          # Terminal 1: Run server with Air (includes templ generation)
 make sass-watch   # Terminal 2: Auto-compile SASS
 make js-watch     # Terminal 3: Auto-bundle JavaScript
+make templ-watch  # Terminal 4: Auto-generate templ components (optional, Air also runs this)
 
 # OR: One-time build and run (production mode)
 make build
@@ -73,7 +74,8 @@ make test-coverage     # View coverage
 
 ## 🛠️ Tech Stack
 
-- **Backend**: Go 1.22+
+- **Backend**: Go 1.22+ with Echo framework
+- **Templates**: templ (type-safe Go templates)
 - **Database**: PostgreSQL (Supabase)
 - **Frontend**: HTMX, SASS, JavaScript (bundled with esbuild)
 - **Bundler**: esbuild (via Go API)
@@ -100,11 +102,13 @@ make help              # See all available commands
 make test-db-setup     # Setup test database (one-time)
 make test              # Run tests
 make test-coverage     # View coverage
-make build             # Build application (includes JS bundling)
+make build             # Build application (includes JS bundling + templ generation)
 make run               # Run application (production mode)
-make dev               # Run with hot-reload (requires 3 terminals)
+make dev               # Run with hot-reload (requires 4 terminals)
 make sass-watch        # Watch and compile SASS
 make js-watch          # Watch and bundle JavaScript
+make templ-watch       # Watch and generate templ components
+make templ-install     # Install templ CLI (one-time)
 make docker-build      # Build Docker image
 ```
 

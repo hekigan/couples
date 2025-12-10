@@ -1,0 +1,59 @@
+package pages
+
+import (
+	"github.com/hekigan/couples/internal/viewmodels"
+	"github.com/hekigan/couples/internal/views/layouts"
+)
+
+// HomePage renders the home page with base layout
+templ HomePage(data *viewmodels.TemplateData) {
+	@layouts.Base(data, HomeContent(data))
+}
+
+// HomeContent renders the home page content without layout
+templ HomeContent(data *viewmodels.TemplateData) {
+	<section class="home">
+		<div class="home-content">
+			<header class="home-header">
+				<h1 class="home-title">Play together, learn together</h1>
+			</header>
+			<section class="home-features">
+				<article class="feature-card">
+					<h3>
+						<span class="feature-icon">❤️</span>
+						Connect Deeper
+					</h3>
+					<p>Ask meaningful questions and strengthen your bond</p>
+				</article>
+				<article class="feature-card">
+					<h3>
+						<span class="feature-icon">🎮</span>
+						Fun & Easy
+					</h3>
+					<p>Simple gameplay, profound conversations</p>
+				</article>
+				<article class="feature-card">
+					<h3>
+						<span class="feature-icon">🌍</span>
+						Multilingual
+					</h3>
+					<p>Available in multiple languages</p>
+				</article>
+			</section>
+			<nav class="home-actions">
+				if data.User != nil {
+					<a href="/game/create-room" role="button" data-testid="create-room-link">Create Room</a>
+					<a href="/game/join-room" role="button" class="secondary" data-testid="join-room-link">Join Room</a>
+				} else {
+					<a href="/login" role="button" data-testid="login-link" class="success">Login/Signup to Play</a>
+					<form action="/auth/anonymous" method="POST" class="d-inline-block">
+						if data.CSRFToken != "" {
+							<input type="hidden" name="csrf" value={ data.CSRFToken }/>
+						}
+						<button type="submit" class="secondary" data-testid="play-as-guest-button">Play as Guest</button>
+					</form>
+				}
+			</nav>
+		</div>
+	</section>
+}

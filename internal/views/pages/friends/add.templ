@@ -1,0 +1,53 @@
+package friends
+
+import (
+	"github.com/hekigan/couples/internal/viewmodels"
+	"github.com/hekigan/couples/internal/views/layouts"
+)
+
+// AddPage renders the add friend page with layout
+templ AddPage(data *viewmodels.TemplateData) {
+	@layouts.Base(data, AddContent(data))
+}
+
+// AddContent renders the add friend form content
+templ AddContent(data *viewmodels.TemplateData) {
+	<div class="container">
+		<div class="page-header">
+			<h1>👫 Add Friend</h1>
+		</div>
+		if data.Error != "" {
+			<div class="alert alert-error" role="alert">
+				⚠️ { data.Error }
+			</div>
+		}
+		if data.Success != "" {
+			<div class="alert alert-success" role="alert">
+				✅ { data.Success }
+			</div>
+		}
+		<form method="POST" action="/friends/add">
+			if data.CSRFToken != "" {
+				<input type="hidden" name="csrf" value={ data.CSRFToken }/>
+			}
+			<div class="form-group">
+				<label for="friend_identifier">Friend ID (UUID)</label>
+				<input
+					type="text"
+					id="friend_identifier"
+					name="friend_identifier"
+					placeholder="e.g., 123e4567-e89b-12d3-a456-426614174000"
+					required
+					aria-describedby="friend-id-help"
+				/>
+				<small id="friend-id-help" style="color: #6b7280;">
+					Ask your friend to share their User ID from their profile page.
+				</small>
+			</div>
+			<div class="form-actions">
+				<button type="submit" class="btn-primary">Send Friend Request</button>
+				<a href="/friends" role="button" class="secondary">Cancel</a>
+			</div>
+		</form>
+	</div>
+}

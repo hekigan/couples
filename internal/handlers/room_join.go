@@ -10,6 +10,9 @@ import (
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/services"
+	joinroomFragments "github.com/hekigan/couples/internal/views/fragments/joinroom"
+	roomFragments "github.com/hekigan/couples/internal/views/fragments/room"
+	gamePages "github.com/hekigan/couples/internal/views/pages/game"
 	"github.com/labstack/echo/v4"
 )
 
@@ -38,12 +41,11 @@ func (h *Handler) ListJoinRequestsHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load join requests")
 	}
 
-	data := &TemplateData{
-		Title: "Join Requests",
-		User:  currentUser,
-		Data:  requests,
-	}
-	return h.RenderTemplate(c, "game/join-requests.html", data)
+	data := NewTemplateData(c)
+	data.Title = "Join Requests"
+	data.User = currentUser
+	data.Data = requests
+	return h.RenderTemplComponent(c, gamePages.JoinRequestsPage(data))
 }
 
 // CreateJoinRequestHandler creates a join request
@@ -103,12 +105,12 @@ func (h *Handler) CreateJoinRequestHandler(c echo.Context) error {
 
 	// Render HTML fragment for the join request
 	log.Printf("🎨 Rendering join_request template for user %s (%s)", username, userID)
-	html, err := h.TemplateService.RenderFragment("join_request.html", services.JoinRequestData{
+	html, err := h.RenderTemplFragment(c, roomFragments.JoinRequest(&services.JoinRequestData{
 		ID:        request.ID.String(),
 		RoomID:    roomID.String(),
 		Username:  username,
 		CreatedAt: request.CreatedAt.Format("3:04 PM"),
-	})
+	}))
 	if err != nil {
 		log.Printf("❌ Failed to render join request template: %v (falling back to JSON SSE)", err)
 		// Fall back to JSON SSE if template rendering fails
@@ -136,7 +138,7 @@ func (h *Handler) CreateJoinRequestHandler(c echo.Context) error {
 		}
 	}
 	// Broadcast badge update
-	if badgeHTML, err := h.TemplateService.RenderFragment("badge_update.html", services.BadgeUpdateData{Count: pendingCount}); err == nil {
+	if badgeHTML, err := h.RenderTemplFragment(c, roomFragments.BadgeUpdate(pendingCount)); err == nil {
 		h.RoomService.GetRealtimeService().BroadcastHTMLFragment(roomID, services.HTMLFragmentEvent{
 			Type:       "badge_update",
 			Target:     "#request-count",
@@ -178,9 +180,9 @@ func (h *Handler) AcceptJoinRequestHandler(c echo.Context) error {
 	}
 
 	// Render HTML fragment for request accepted (shown to room owner)
-	html, err := h.TemplateService.RenderFragment("request_accepted.html", services.RequestAcceptedData{
+	html, err := h.RenderTemplFragment(c, roomFragments.RequestAccepted(&services.RequestAcceptedData{
 		GuestUsername: guestUsername,
-	})
+	}))
 	if err != nil {
 		log.Printf("⚠️ Failed to render request_accepted template: %v (falling back to JSON SSE)", err)
 		// Fall back to JSON SSE
@@ -208,7 +210,7 @@ func (h *Handler) AcceptJoinRequestHandler(c echo.Context) error {
 		}
 	}
 	// Broadcast badge update
-	if badgeHTML, err := h.TemplateService.RenderFragment("badge_update.html", services.BadgeUpdateData{Count: pendingCount}); err == nil {
+	if badgeHTML, err := h.RenderTemplFragment(c, roomFragments.BadgeUpdate(pendingCount)); err == nil {
 		h.RoomService.GetRealtimeService().BroadcastHTMLFragment(joinRequest.RoomID, services.HTMLFragmentEvent{
 			Type:       "badge_update",
 			Target:     "#request-count",
@@ -224,9 +226,9 @@ func (h *Handler) AcceptJoinRequestHandler(c echo.Context) error {
 		log.Printf("⚠️ Failed to refetch room for status badge update: %v", err)
 	} else {
 		log.Printf("🔍 Room status after accepting join request: %s", room.Status)
-		if statusBadgeHTML, err := h.TemplateService.RenderFragment("status_badge.html", services.RoomStatusBadgeData{
+		if statusBadgeHTML, err := h.RenderTemplFragment(c, roomFragments.StatusBadge(&services.RoomStatusBadgeData{
 			Status: room.Status,
-		}); err == nil {
+		})); err == nil {
 			h.RoomService.GetRealtimeService().BroadcastHTMLFragment(joinRequest.RoomID, services.HTMLFragmentEvent{
 				Type:       "room_status_update",
 				Target:     "#room-status-badge",
@@ -274,7 +276,7 @@ func (h *Handler) RejectJoinRequestHandler(c echo.Context) error {
 		}
 	}
 	// Broadcast badge update
-	if badgeHTML, err := h.TemplateService.RenderFragment("badge_update.html", services.BadgeUpdateData{Count: pendingCount}); err == nil {
+	if badgeHTML, err := h.RenderTemplFragment(c, roomFragments.BadgeUpdate(pendingCount)); err == nil {
 		h.RoomService.GetRealtimeService().BroadcastHTMLFragment(joinRequest.RoomID, services.HTMLFragmentEvent{
 			Type:       "badge_update",
 			Target:     "#request-count",
@@ -448,7 +450,7 @@ func (h *Handler) GetMyJoinRequestsHTMLHandler(c echo.Context) error {
 	}
 
 	// Render HTML fragment
-	html, err := h.TemplateService.RenderFragment("pending_requests_list.html", requestsData)
+	html, err := h.RenderTemplFragment(c, joinroomFragments.PendingRequestsList(requestsData))
 	if err != nil {
 		log.Printf("Error rendering pending_requests_list template: %v", err)
 		return c.HTML(http.StatusOK, `<p style="color: #6b7280;">Failed to load pending requests</p>`)

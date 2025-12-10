@@ -1,0 +1,42 @@
+package admin
+
+import (
+	"github.com/hekigan/couples/internal/services"
+	"github.com/hekigan/couples/internal/viewmodels"
+	"github.com/hekigan/couples/internal/views/layouts"
+	adminFragments "github.com/hekigan/couples/internal/views/fragments/admin"
+)
+
+// RoomsPage renders the admin rooms page with layout
+templ RoomsPage(templateData *viewmodels.TemplateData) {
+	@layouts.Admin(templateData, RoomsContent(templateData))
+}
+
+// RoomsContent renders the admin rooms monitoring content
+templ RoomsContent(templateData *viewmodels.TemplateData) {
+	<div class="admin-container">
+		<h1>Room Monitoring</h1>
+		<div class="admin-table">
+			if data, ok := templateData.Data.(*services.RoomsListData); ok {
+				@adminFragments.RoomsList(data)
+			} else {
+				<p>No rooms found.</p>
+			}
+		</div>
+	</div>
+	<!-- View Room Details Modal -->
+	<dialog id="view-modal" class="modal-wide">
+		<article>
+			<header>
+				<button aria-label="Close" rel="prev" data-target="view-modal" onclick="toggleModal(event)"></button>
+				<h3>Room Details</h3>
+			</header>
+			<div id="view-modal-content" class="modal-content">
+				<!-- Details will be loaded here via HTMX -->
+			</div>
+			<footer>
+				<button type="button" class="secondary" data-target="view-modal" onclick="toggleModal(event)">Close</button>
+			</footer>
+		</article>
+	</dialog>
+}

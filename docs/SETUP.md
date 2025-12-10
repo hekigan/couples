@@ -20,6 +20,12 @@ cd /path/to/couple-card-game
 # Install Go dependencies
 go mod download
 
+# Install templ CLI (one-time)
+make templ-install
+
+# Generate templ components
+make templ-generate
+
 # Compile SASS to CSS
 npx sass sass/main.scss static/css/main.css
 ```
@@ -127,12 +133,14 @@ couple-card-game/
 │       ├── user_service.go
 │       ├── game_service.go
 │       └── ...
-├── templates/                # HTML templates
-│   ├── layout.html
-│   ├── home.html
-│   ├── auth/
-│   ├── game/
-│   └── admin/
+├── internal/views/           # Templ components (type-safe Go templates)
+│   ├── layouts/             # Layout wrappers
+│   ├── pages/               # Full page components
+│   │   ├── auth/
+│   │   ├── game/
+│   │   ├── admin/
+│   │   └── friends/
+│   └── fragments/           # HTMX/SSE partial components
 ├── static/                   # Static assets
 │   ├── css/                  # Compiled CSS
 │   ├── js/                   # JavaScript
@@ -151,22 +159,32 @@ couple-card-game/
 
 ## 🔧 Development
 
-### Compile SASS (Watch Mode)
+### Development Mode (4 Terminals)
+
+For the best development experience with full hot-reload:
 
 ```bash
-npx sass --watch sass/main.scss:static/css/main.css
+# Terminal 1: Go server with Air hot-reload
+make dev
+
+# Terminal 2: SASS watcher
+make sass-watch
+
+# Terminal 3: JavaScript watcher
+make js-watch
+
+# Terminal 4: Templ watcher (optional, Air also runs templ generate)
+make templ-watch
 ```
 
-### Run with Live Reload
-
-Using Air (Go live reload):
+### One-Time Build
 
 ```bash
-# Install Air
-go install github.com/cosmtrek/air@latest
+# Build everything at once
+make build
 
-# Run with Air
-air
+# Run in production mode
+ENV=production make run
 ```
 
 ### Database Migrations

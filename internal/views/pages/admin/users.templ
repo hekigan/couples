@@ -1,0 +1,69 @@
+package admin
+
+import (
+	"github.com/hekigan/couples/internal/services"
+	"github.com/hekigan/couples/internal/viewmodels"
+	"github.com/hekigan/couples/internal/views/layouts"
+	adminFragments "github.com/hekigan/couples/internal/views/fragments/admin"
+)
+
+// UsersPage renders the admin users page with layout
+templ UsersPage(templateData *viewmodels.TemplateData) {
+	@layouts.Admin(templateData, UsersContent(templateData))
+}
+
+// UsersContent renders the admin users management content
+templ UsersContent(templateData *viewmodels.TemplateData) {
+	<div class="admin-container">
+		<h1>User Management</h1>
+		<div class="admin-table">
+			if data, ok := templateData.Data.(*services.UsersListData); ok {
+				@adminFragments.UsersList(data)
+			} else {
+				<p>No users found.</p>
+			}
+		</div>
+	</div>
+	<!-- Create User Modal - Using PicoCSS dialog element -->
+	<dialog id="create-modal" class="modal-wide">
+		<article>
+			<header>
+				<button aria-label="Close" rel="prev" data-target="create-modal" onclick="toggleModal(event)"></button>
+				<h3>Create User</h3>
+			</header>
+			<div
+				id="create-modal-content"
+				class="modal-content"
+				hx-get="/admin/api/v1/users/new"
+				hx-trigger="load once"
+			>
+				<!-- Form will be loaded here via HTMX -->
+			</div>
+			<footer>
+				<button type="button" class="secondary" data-target="create-modal" onclick="toggleModal(event)">Cancel</button>
+				<button type="button" onclick="submitModalForm(event)">Create</button>
+			</footer>
+		</article>
+	</dialog>
+	<!-- Edit User Modal -->
+	<dialog id="edit-modal" class="modal-wide">
+		<article>
+			<header>
+				<button aria-label="Close" rel="prev" data-target="edit-modal" onclick="toggleModal(event)"></button>
+				<h3>Edit User</h3>
+			</header>
+			<div id="edit-modal-content" class="modal-content">
+				<!-- Form will be loaded here via HTMX -->
+			</div>
+			<footer>
+				<button
+					type="button"
+					class="secondary"
+					data-target="edit-modal"
+					onclick="toggleModal(event)"
+				>Cancel</button>
+				<button type="button" onclick="submitModalForm(event)">Save</button>
+			</footer>
+		</article>
+	</dialog>
+}

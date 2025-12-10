@@ -1,0 +1,12 @@
+package room
+
+import "github.com/hekigan/couples/internal/services"
+
+// PlayerJoined renders the guest player info when they join
+templ PlayerJoined(data *services.PlayerJoinedData) {
+	<div class="player-info guest-player" id="guest-info">
+		<div class="player-label">Guest:</div>
+		<div class="player-name">{ data.Username }</div>
+		<div class="player-status ready">Ready</div>
+	</div>
+}

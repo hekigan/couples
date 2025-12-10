@@ -9,6 +9,7 @@ import (
 	"github.com/hekigan/couples/internal/handlers"
 	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/services"
+	adminFragments "github.com/hekigan/couples/internal/views/fragments/admin"
 	"github.com/labstack/echo/v4"
 )
 
@@ -146,9 +147,7 @@ func (ah *AdminAPIHandler) ListQuestionsHandler(c echo.Context) error {
 		Categories:               categoryOptions,
 		SelectedCategoryID:       selectedCategoryID,
 		TotalCount:               total,
-		CurrentPage:              page,
 		TotalPages:               totalPages,
-		ItemsPerPage:             perPage,
 		MissingTranslationsCount: missingTranslationsCount,
 		// Pagination template fields
 		BaseURL:         "/admin/api/questions/list",
@@ -159,7 +158,7 @@ func (ah *AdminAPIHandler) ListQuestionsHandler(c echo.Context) error {
 		ItemName:        "questions",
 	}
 
-	html, err := ah.handler.TemplateService.RenderFragment("questions_list", data)
+	html, err := ah.handler.RenderTemplFragment(c, adminFragments.QuestionsList(&data))
 	if err != nil {
 		log.Printf("Error rendering questions list: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
@@ -189,7 +188,7 @@ func (ah *AdminAPIHandler) GetQuestionCreateFormHandler(c echo.Context) error {
 	}
 
 	// Create empty form data for new question
-	data := services.QuestionEditFormData{
+	data := services.QuestionFormData{
 		QuestionID:     "", // Empty indicates create mode
 		BaseQuestionID: "",
 		QuestionText:   "",
@@ -200,10 +199,9 @@ func (ah *AdminAPIHandler) GetQuestionCreateFormHandler(c echo.Context) error {
 		LangFR:         false,
 		LangJA:         false,
 		SelectedLang:   "en",
-		Page:           0, // Not needed for create
 	}
 
-	html, err := ah.handler.TemplateService.RenderFragment("question_form.html", data)
+	html, err := ah.handler.RenderTemplFragment(c, adminFragments.QuestionForm(&data))
 	if err != nil {
 		log.Printf("Error rendering question create form: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
@@ -262,7 +260,7 @@ func (ah *AdminAPIHandler) GetQuestionEditFormHandler(c echo.Context) error {
 		questionText = translations.English.Text // Always show English in main field for reference
 	}
 
-	data := services.QuestionEditFormData{
+	data := services.QuestionFormData{
 		QuestionID:     question.ID.String(),
 		BaseQuestionID: question.BaseQuestionID.String(),
 		QuestionText:   questionText,
@@ -275,7 +273,7 @@ func (ah *AdminAPIHandler) GetQuestionEditFormHandler(c echo.Context) error {
 		SelectedLang:   question.LanguageCode,
 	}
 
-	html, err := ah.handler.TemplateService.RenderFragment("question_form.html", data)
+	html, err := ah.handler.RenderTemplFragment(c, adminFragments.QuestionForm(&data))
 	if err != nil {
 		log.Printf("Error rendering question edit form: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())

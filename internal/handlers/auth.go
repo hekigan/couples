@@ -5,19 +5,23 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/services"
+	authPages "github.com/hekigan/couples/internal/views/pages/auth"
 	"github.com/labstack/echo/v4"
 )
 
 // LoginHandler displays the login page
 func (h *Handler) LoginHandler(c echo.Context) error {
 	data := &TemplateData{
-		Title: "Login - Couple Card Game",
+		Title:     "Login - Couple Card Game",
+		Env:       os.Getenv("ENV"),
+		CSRFToken: GetCSRFToken(c),
 	}
-	return h.RenderTemplate(c, "auth/login.html", data)
+	return h.RenderTemplComponent(c, authPages.LoginPage(data))
 }
 
 // LoginPostHandler handles email/password login via HTMX
@@ -91,9 +95,11 @@ func (h *Handler) LoginPostHandler(c echo.Context) error {
 // SignupHandler displays the signup page
 func (h *Handler) SignupHandler(c echo.Context) error {
 	data := &TemplateData{
-		Title: "Sign Up - Couple Card Game",
+		Title:     "Sign Up - Couple Card Game",
+		Env:       os.Getenv("ENV"),
+		CSRFToken: GetCSRFToken(c),
 	}
-	return h.RenderTemplate(c, "auth/signup.html", data)
+	return h.RenderTemplComponent(c, authPages.SignupPage(data))
 }
 
 // SignupPostHandler handles user registration via HTMX
@@ -190,7 +196,16 @@ func (h *Handler) SignupPostHandler(c echo.Context) error {
 // LogoutHandler logs out the user
 func (h *Handler) LogoutHandler(c echo.Context) error {
 	session, _ := middleware.GetSession(c)
+
+	// Clear all session values
+	for key := range session.Values {
+		delete(session.Values, key)
+	}
+
+	// Mark the session as expired (delete the cookie)
 	session.Options.MaxAge = -1
+
+	// Save the cleared session
 	middleware.SaveSession(c, session)
 
 	// Check if this is an HTMX request
@@ -334,10 +349,12 @@ func (h *Handler) OAuthCallbackHandler(c echo.Context) error {
 
 	// No tokens in query, render callback page to extract from fragment (implicit flow)
 	data := &TemplateData{
-		Title: "Completing Login...",
+		Title:     "Completing Login...",
+		Env:       os.Getenv("ENV"),
+		CSRFToken: GetCSRFToken(c),
 	}
 
-	return h.RenderTemplate(c, "auth/oauth-callback.html", data)
+	return h.RenderTemplComponent(c, authPages.OAuthCallbackPage(data))
 }
 
 // OAuthTokenHandler receives tokens from the client-side script

@@ -1,0 +1,16 @@
+package layouts
+
+import "github.com/hekigan/couples/internal/viewmodels"
+
+// HeadAdmin renders admin-specific <head> elements (CSS and JS)
+templ HeadAdmin(data *viewmodels.TemplateData) {
+	<!-- Admin CSS (always loaded for admin pages) -->
+	<link rel="stylesheet" href="/static/css/admin.css"/>
+	if data.Env == "production" {
+		<!-- Production: Load bundled admin JavaScript -->
+		<script src="/static/dist/admin.bundle.js" defer></script>
+	} else {
+		<!-- Development: Load individual admin file for easier debugging -->
+		<script src="/static/js/admin.js" defer></script>
+	}
+}

@@ -1,0 +1,16 @@
+package play
+
+import "github.com/hekigan/couples/internal/services"
+
+// TurnIndicator renders the turn indicator showing whose turn it is
+templ TurnIndicator(data *services.TurnIndicatorData) {
+	if data.IsMyTurn {
+		<div class="turn-indicator your-turn" role="status" aria-live="polite">
+			<span>✨ It's YOUR turn!</span>
+		</div>
+	} else {
+		<div class="turn-indicator waiting" role="status" aria-live="polite">
+			<span>⏳ Waiting for { data.OtherPlayerName }...</span>
+		</div>
+	}
+}

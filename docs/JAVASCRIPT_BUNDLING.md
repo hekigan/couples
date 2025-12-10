@@ -205,41 +205,42 @@ No special server configuration needed:
 
 ## 🔄 Template Loading (Conditional)
 
-Templates conditionally load bundled or individual files based on `ENV` variable.
+**UPDATE December 2024:** Templates are now templ components. They conditionally load bundled or individual files based on `ENV` variable.
 
-### Production Templates
+### Production Templ Components
 
-```html
-{{if eq .Env "production"}}
-<!-- Production: Load bundled JavaScript -->
-<script src="/static/dist/app.bundle.js"></script>
-{{else}}
-<!-- Development: Load individual files for debugging -->
-<script src="/static/js/htmx.min.js"></script>
-<script src="/static/js/sse.js"></script>
-<script src="/static/js/ui-utils.js"></script>
-<script src="/static/js/notifications-realtime.js" defer></script>
-<script src="/static/js/modal.js" defer></script>
-{{end}}
+```templ
+// In internal/views/layouts/head_common.templ
+if data.Env == "production" {
+    // Production: Load bundled JavaScript
+    <script src="/static/dist/app.bundle.js"></script>
+} else {
+    // Development: Load individual files for debugging
+    <script src="/static/js/htmx.min.js"></script>
+    <script src="/static/js/sse.js"></script>
+    <script src="/static/js/ui-utils.js"></script>
+    <script src="/static/js/notifications-realtime.js" defer></script>
+    <script src="/static/js/modal.js" defer></script>
+}
 ```
 
 ### Implementation
 
-- `Env` field added to `TemplateData` struct (`internal/handlers/base.go`)
-- `RenderTemplate()` populates `Env` from `os.Getenv("ENV")`
+- `Env` field in `viewmodels.TemplateData` struct (`internal/viewmodels/template_data.go`)
+- `RenderTemplComponent()` populates `Env` from `os.Getenv("ENV")`
 - Defaults to `"development"` if not set
-- Templates in `templates/partials/layout/head-common.html` and `head-admin.html`
+- Components in `internal/views/layouts/head_common.templ` and `head_admin.templ`
 
 ---
 
 ## 🚀 Development Workflow
 
-### Full Hot-Reload (3 Terminals)
+### Full Hot-Reload (4 Terminals)
 
-For the best development experience:
+**UPDATE December 2024:** Now requires 4 terminals for templ hot-reload.
 
 ```bash
-# Terminal 1: Go server with Air hot-reload
+# Terminal 1: Go server with Air hot-reload (includes templ generation)
 make dev
 
 # Terminal 2: SASS watcher (auto-compile CSS)
@@ -247,9 +248,12 @@ make sass-watch
 
 # Terminal 3: JavaScript watcher (auto-bundle JS)
 make js-watch
+
+# Terminal 4: Templ watcher (auto-generate components, optional - Air also does this)
+make templ-watch
 ```
 
-**Note:** When you run `make dev`, a colored warning message reminds you to start Terminals 2 and 3.
+**Note:** When you run `make dev`, a colored warning message reminds you to start Terminals 2, 3, and 4.
 
 ### One-Time Build
 

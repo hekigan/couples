@@ -1,0 +1,107 @@
+package admin
+
+import (
+	"fmt"
+	"github.com/hekigan/couples/internal/services"
+)
+
+// RoomDetails renders the room details view for the admin modal
+templ RoomDetails(data *services.RoomDetailsData) {
+	<div id="room-details-view">
+		<div class="detail-section">
+			<h4>Room Information</h4>
+			<dl>
+				<dt>Room ID:</dt>
+				<dd><code>{ data.ShortID }</code></dd>
+				<dt>Full ID:</dt>
+				<dd><small><code>{ data.ID }</code></small></dd>
+				<dt>Name:</dt>
+				<dd>{ data.Name }</dd>
+				<dt>Status:</dt>
+				<dd>{ data.Status }</dd>
+				<dt>Language:</dt>
+				<dd>{ data.Language }</dd>
+				<dt>Max Questions:</dt>
+				<dd>{ fmt.Sprintf("%d", data.MaxQuestions) }</dd>
+				<dt>Created At:</dt>
+				<dd>{ data.CreatedAt }</dd>
+			</dl>
+		</div>
+		<div class="detail-section">
+			<h4>Players</h4>
+			<dl>
+				<dt>Owner:</dt>
+				<dd>
+					{ data.OwnerUsername }
+					if data.OwnerEmail != "" {
+						<br/><small>{ data.OwnerEmail }</small>
+					}
+				</dd>
+				<dt>Guest:</dt>
+				<dd>
+					if data.GuestUsername != "" {
+						{ data.GuestUsername }
+						if data.GuestEmail != "" {
+							<br/><small>{ data.GuestEmail }</small>
+						}
+					} else {
+						<em>No guest yet</em>
+					}
+				</dd>
+			</dl>
+		</div>
+		<div class="detail-section">
+			<h4>Game Settings</h4>
+			<dl>
+				<dt>Selected Categories:</dt>
+				<dd>
+					if data.CategoryCount > 0 {
+						{ fmt.Sprintf("%d", data.CategoryCount) } categories
+					} else {
+						None selected
+					}
+				</dd>
+			</dl>
+		</div>
+	</div>
+	@RoomDetailsStyles()
+}
+
+// RoomDetailsStyles renders the inline CSS for room details
+templ RoomDetailsStyles() {
+	<style>
+	.detail-section {
+		margin-bottom: 1.5rem;
+		padding: 1rem;
+		background: var(--pico-card-sectioning-background-color);
+		border-radius: var(--pico-border-radius);
+	}
+
+	.detail-section h4 {
+		margin-top: 0;
+		margin-bottom: 1rem;
+		border-bottom: 1px solid var(--pico-muted-border-color);
+		padding-bottom: 0.5rem;
+	}
+
+	.detail-section dl {
+		display: grid;
+		grid-template-columns: 140px 1fr;
+		gap: 0.5rem;
+		margin: 0;
+	}
+
+	.detail-section dt {
+		font-weight: 600;
+		color: var(--pico-secondary);
+	}
+
+	.detail-section dd {
+		margin: 0;
+	}
+
+	.detail-section code {
+		font-size: 0.875rem;
+	}
+	</style>
+}

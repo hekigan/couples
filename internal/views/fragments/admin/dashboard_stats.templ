@@ -1,0 +1,44 @@
+package admin
+
+import (
+	"fmt"
+	"github.com/hekigan/couples/internal/services"
+)
+
+// DashboardStats renders the admin dashboard statistics grid
+templ DashboardStats(stats *services.DashboardStatsData) {
+	<div class="stats-grid">
+		<div class="stat-card">
+			<h4><a href="/admin/users">Total Users</a></h4>
+			<p class="stat-value">{ fmt.Sprintf("%d", stats.TotalUsers) }</p>
+			<ul class="stat-list text-muted">
+				<li>{ fmt.Sprintf("%d", stats.AnonymousUsers) } anonymous</li>
+				<li>{ fmt.Sprintf("%d", stats.RegisteredUsers) } registered</li>
+			</ul>
+		</div>
+		<div class="stat-card">
+			<h4>Admin Users</h4>
+			<p class="stat-value">{ fmt.Sprintf("%d", stats.AdminUsers) }</p>
+		</div>
+		<div class="stat-card">
+			<h4><a href="/admin/rooms">Total Rooms</a></h4>
+			<p class="stat-value">{ fmt.Sprintf("%d", stats.TotalRooms) }</p>
+			<ul class="stat-list text-muted">
+				<li>{ fmt.Sprintf("%d", stats.ActiveRooms) } active</li>
+				<li>{ fmt.Sprintf("%d", stats.CompletedRooms) } completed</li>
+			</ul>
+		</div>
+		<div class="stat-card">
+			<h4><a href="/admin/questions">Questions</a></h4>
+			<p class="stat-value">{ fmt.Sprintf("%d", stats.TotalQuestions) }</p>
+		</div>
+		<div class="stat-card">
+			<h4><a href="/admin/categories">Categories</a></h4>
+			<p class="stat-value">{ fmt.Sprintf("%d", stats.TotalCategories) }</p>
+		</div>
+		<div class="stat-card">
+			<h4><a href="/admin/translations">Translations</a></h4>
+			<p>Manage multi-language</p>
+		</div>
+	</div>
+}

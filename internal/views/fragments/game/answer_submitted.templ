@@ -1,0 +1,38 @@
+package game
+
+import (
+	"fmt"
+	"github.com/hekigan/couples/internal/viewmodels"
+)
+
+// AnswerSubmitted renders the answer display after submission
+templ AnswerSubmitted(data *viewmodels.AnswerSubmittedData) {
+	<div class="answer-display" id="answer-display">
+		<div class="answer-header">
+			<span class="answerer">{ data.Username }'s Answer:</span>
+		</div>
+		<div class="answer-content">
+			if data.ActionType == "answered" {
+				<p class="answer-text">{ data.AnswerText }</p>
+			} else {
+				<p class="pass-message">Passed on this question</p>
+			}
+		</div>
+		if data.IsMyTurn {
+			<div class="next-question-section">
+				<button
+					hx-post={ fmt.Sprintf("/api/v1/rooms/%s/next-question", data.RoomID) }
+					hx-swap="outerHTML"
+					hx-target="#current-question"
+					class=""
+				>
+					Draw Next Question
+				</button>
+			</div>
+		} else {
+			<div class="waiting-message">
+				Waiting for { data.CurrentPlayerUsername } to draw the next question...
+			</div>
+		}
+	</div>
+}

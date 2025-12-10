@@ -1,0 +1,91 @@
+package auth
+
+import (
+	"github.com/hekigan/couples/internal/viewmodels"
+	"github.com/hekigan/couples/internal/views/layouts"
+)
+
+// LoginPage renders the login page with layout
+templ LoginPage(data *viewmodels.TemplateData) {
+	@layouts.Base(data, LoginContent(data))
+}
+
+// LoginContent renders the login form
+templ LoginContent(data *viewmodels.TemplateData) {
+	<div class="auth-container">
+		<div class="auth-card">
+			<h1>Login</h1>
+			<div class="auth-options">
+				<section>
+					<a href="/auth/oauth/google" role="button" class="btn-oauth btn-google">
+						<span>Continue with Google</span>
+					</a>
+					<a href="/auth/oauth/facebook" role="button" class="btn-oauth btn-facebook">
+						<span>Continue with Facebook</span>
+					</a>
+				</section>
+				<section class="divider">
+					<span>OR</span>
+				</section>
+				<section>
+					<form
+						hx-post="/login"
+						hx-swap="none"
+						hx-disabled-elt="button[type='submit']"
+						hx-indicator="#login-loading"
+						hx-on::after-request="handleLoginResponse(event)"
+					>
+						if data.CSRFToken != "" {
+							<input type="hidden" name="csrf" value={ data.CSRFToken }/>
+						}
+						<input
+							type="email"
+							name="email"
+							placeholder="Email"
+							required
+							autocomplete="email"
+							aria-label="Email address"
+						/>
+						<input
+							type="password"
+							name="password"
+							placeholder="Password"
+							required
+							autocomplete="current-password"
+							aria-label="Password"
+						/>
+						<button type="submit" class="secondary">
+							<span id="login-loading" class="htmx-indicator" style="display:none;">⏳ </span>
+							Login
+						</button>
+					</form>
+					<p class="help-text" style="text-align: center; margin-top: 1rem;">
+						Don't have an account?
+						<a href="/signup" style="color: var(--primary);">Sign up</a>
+					</p>
+				</section>
+			</div>
+		</div>
+	</div>
+	<script>
+		function handleLoginResponse(event) {
+			const xhr = event.detail.xhr;
+
+			if (xhr.status === 200) {
+				// Success - HTMX handles HX-Redirect automatically
+				Toast.success('Login successful! Redirecting...');
+			} else {
+				// Error - parse JSON and show toast
+				try {
+					const response = JSON.parse(xhr.responseText);
+					Toast.error(response.error || 'Login failed. Please try again.');
+				} catch (e) {
+					Toast.error('Login failed. Please check your credentials.');
+				}
+
+				// Clear password field on error
+				event.target.querySelector('input[name="password"]').value = '';
+			}
+		}
+	</script>
+}

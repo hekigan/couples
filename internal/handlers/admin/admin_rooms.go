@@ -8,6 +8,7 @@ import (
 	"github.com/hekigan/couples/internal/handlers"
 	"github.com/hekigan/couples/internal/services"
 	"github.com/labstack/echo/v4"
+	adminFragments "github.com/hekigan/couples/internal/views/fragments/admin"
 )
 
 // ListRoomsHandler returns an HTML fragment with the rooms list
@@ -70,7 +71,7 @@ func (ah *AdminAPIHandler) ListRoomsHandler(c echo.Context) error {
 		ItemName:        "rooms",
 	}
 
-	html, err := ah.handler.TemplateService.RenderFragment("rooms_list", data)
+	html, err := ah.handler.RenderTemplFragment(c, adminFragments.RoomsList(&data))
 	if err != nil {
 		log.Printf("Error rendering rooms list: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
@@ -151,7 +152,7 @@ func (ah *AdminAPIHandler) GetRoomDetailsHandler(c echo.Context) error {
 		CategoryCount: categoryCount,
 	}
 
-	html, err := ah.handler.TemplateService.RenderFragment("room_details.html", data)
+	html, err := ah.handler.RenderTemplFragment(c, adminFragments.RoomDetails(&data))
 	if err != nil {
 		log.Printf("Error rendering room details: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())

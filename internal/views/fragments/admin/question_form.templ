@@ -1,0 +1,133 @@
+package admin
+
+import "github.com/hekigan/couples/internal/services"
+
+// QuestionForm renders the question create/edit form
+templ QuestionForm(data *services.QuestionFormData) {
+	if data.QuestionID != "" {
+		<!-- Edit Mode - Language selector to choose which translation to edit -->
+		<form
+			id="question-form"
+			hx-put={ "/admin/api/v1/questions/" + data.QuestionID }
+			hx-swap="none"
+			hx-on::after-request="handleDataUpdateResponse(event, '/admin/api/questions/list', '#questions-list')"
+		>
+			<input type="hidden" name="base_question_id" value={ data.BaseQuestionID }/>
+			<div class="grid">
+				<fieldset role="group">
+					<label>Category</label>
+					<select name="category_id" required>
+						for _, cat := range data.Categories {
+							<option value={ cat.ID } selected?={ cat.Selected }>{ cat.Label }</option>
+						}
+					</select>
+				</fieldset>
+				<fieldset role="group">
+					<label>Language:</label>
+					<select name="lang_code" id="lang_code" required onchange="handleLanguageChange(event)">
+						<option value="en" selected?={ data.LangEN }>English</option>
+						<option value="fr" selected?={ data.LangFR }>French</option>
+						<option value="ja" selected?={ data.LangJA }>Japanese</option>
+					</select>
+				</fieldset>
+			</div>
+			<label>English Question Text:</label>
+			<textarea
+				id="question_text"
+				name="question_text"
+				required
+				rows="2"
+				if data.SelectedLang != "en" {
+					disabled
+				}
+			>{ data.QuestionText }</textarea>
+			<div
+				id="translation-section"
+				if data.SelectedLang == "en" {
+					style="display:none"
+				}
+			>
+				<label id="translation-label">
+					if data.SelectedLang == "fr" {
+						French Translation:
+					} else if data.SelectedLang == "ja" {
+						Japanese Translation:
+					} else {
+						Translation:
+					}
+				</label>
+				<textarea
+					id="question_text_translation"
+					name="question_text_translation"
+					rows="2"
+					data-translation-fr={ data.TranslationFR }
+					data-translation-ja={ data.TranslationJA }
+					if data.SelectedLang != "en" {
+						required
+					}
+				>
+					if data.SelectedLang == "fr" {
+						{ data.TranslationFR }
+					} else if data.SelectedLang == "ja" {
+						{ data.TranslationJA }
+					}
+				</textarea>
+			</div>
+			@QuestionFormScript(data)
+		</form>
+	} else {
+		<!-- Create Mode - Show all three language fields at once -->
+		<form
+			id="question-form"
+			hx-post="/admin/api/v1/questions"
+			hx-swap="none"
+			hx-on::after-request="handleDataUpdateResponse(event, '/admin/api/questions/list', '#questions-list')"
+		>
+			<fieldset role="group">
+				<label>Category</label>
+				<select name="category_id" required>
+					for _, cat := range data.Categories {
+						<option value={ cat.ID }>{ cat.Label }</option>
+					}
+				</select>
+			</fieldset>
+			<label>English Question Text: <span style="color: red;">*</span></label>
+			<textarea name="question_text_en" required rows="2" placeholder="Enter English question...">{ data.QuestionText }</textarea>
+			<label>French Translation: <span style="color: gray;">(optional)</span></label>
+			<textarea name="question_text_fr" rows="2" placeholder="Enter French translation...">{ data.TranslationFR }</textarea>
+			<label>Japanese Translation: <span style="color: gray;">(optional)</span></label>
+			<textarea name="question_text_ja" rows="2" placeholder="Enter Japanese translation...">{ data.TranslationJA }</textarea>
+		</form>
+	}
+}
+
+// QuestionFormScript renders the JavaScript for language switching in edit mode
+templ QuestionFormScript(data *services.QuestionFormData) {
+	<script>
+	function handleLanguageChange(event) {
+		const langCode = event.target.value;
+		const questionTextArea = document.getElementById('question_text');
+		const translationSection = document.getElementById('translation-section');
+		const translationLabel = document.getElementById('translation-label');
+		const translationTextArea = document.getElementById('question_text_translation');
+
+		if (langCode === 'en') {
+			questionTextArea.disabled = false;
+			translationSection.style.display = 'none';
+			translationTextArea.required = false;
+		} else {
+			questionTextArea.disabled = true;
+			translationSection.style.display = 'block';
+			translationTextArea.required = true;
+
+			if (langCode === 'fr') {
+				translationLabel.textContent = 'French Translation:';
+				translationTextArea.value = translationTextArea.dataset.translationFr || '';
+			} else if (langCode === 'ja') {
+				translationLabel.textContent = 'Japanese Translation:';
+				translationTextArea.value = translationTextArea.dataset.translationJa || '';
+			}
+		}
+	}
+	</script>
+}

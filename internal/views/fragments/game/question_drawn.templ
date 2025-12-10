@@ -1,0 +1,45 @@
+package game
+
+import (
+	"fmt"
+	"github.com/hekigan/couples/internal/viewmodels"
+)
+
+// QuestionDrawn renders a newly drawn question with answer form
+templ QuestionDrawn(data *viewmodels.QuestionDrawnData) {
+	<div class="question-card" id="current-question">
+		<div class="question-header">
+			<span class="question-number">Question { fmt.Sprintf("%d", data.QuestionNumber) } of { fmt.Sprintf("%d", data.MaxQuestions) }</span>
+			<span class={ fmt.Sprintf("category-badge category-%s", data.Category) }>{ data.CategoryLabel }</span>
+		</div>
+		<div class="question-text">
+			{ data.QuestionText }
+		</div>
+		<div class="question-actions">
+			if data.IsMyTurn {
+				<form hx-post={ fmt.Sprintf("/api/v1/rooms/%s/answer", data.RoomID) } hx-swap="outerHTML" hx-target="#current-question">
+					<textarea
+						name="answer"
+						placeholder="Type your answer..."
+						required
+						class="answer-input"
+					></textarea>
+					<div class="button-group">
+						<button type="submit" class="">Submit Answer</button>
+						<button
+							type="button"
+							hx-post={ fmt.Sprintf("/api/v1/rooms/%s/pass", data.RoomID) }
+							hx-swap="outerHTML"
+							hx-target="#current-question"
+							class="secondary"
+						>Pass</button>
+					</div>
+				</form>
+			} else {
+				<div class="waiting-message">
+					Waiting for { data.CurrentPlayerUsername } to answer...
+				</div>
+			}
+		</div>
+	</div>
+}

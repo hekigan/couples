@@ -1,0 +1,293 @@
+package game
+
+import (
+	"fmt"
+	"github.com/hekigan/couples/internal/services"
+	"github.com/hekigan/couples/internal/viewmodels"
+	"github.com/hekigan/couples/internal/views/layouts"
+)
+
+// PlayPage renders the game play page with layout
+templ PlayPage(templateData *viewmodels.TemplateData) {
+	@layouts.Base(templateData, PlayContent(templateData))
+}
+
+// PlayContent renders the game play content with SSE integration
+templ PlayContent(templateData *viewmodels.TemplateData) {
+	if playData, ok := templateData.Data.(*services.PlayPageData); ok {
+		@PlayStyles()
+		<div
+			class="game-container"
+			data-room-id={ playData.Room.ID.String() }
+			hx-ext="sse"
+			sse-connect={ fmt.Sprintf("/api/v1/stream/rooms/%s/events", playData.Room.ID.String()) }
+			data-testid="game-container"
+		>
+			<div class="game-header" data-testid="game-header">
+				<div
+					class="game-progress"
+					id="progress-counter"
+					data-testid="game-progress"
+					hx-get={ fmt.Sprintf("/api/v1/rooms/%s/progress-counter", playData.Room.ID.String()) }
+					hx-trigger="sse:question_drawn from:body"
+					hx-swap="innerHTML"
+				>
+					Question <span id="currentQuestion" data-testid="current-question">{ fmt.Sprintf("%d", playData.Room.CurrentQuestion) }</span> of <span id="maxQuestions" data-testid="max-questions">{ fmt.Sprintf("%d", playData.Room.MaxQuestions) }</span>
+				</div>
+				<!-- Turn Indicator - server-side rendered -->
+				<div
+					id="turn-indicator"
+					hx-get={ fmt.Sprintf("/api/v1/rooms/%s/turn-indicator", playData.Room.ID.String()) }
+					hx-trigger="sse:turn_changed from:body, sse:answer_submitted from:body"
+					hx-swap="innerHTML"
+				>
+					<div class={ templ.KV("turn-indicator", true), templ.KV("your-turn", playData.IsMyTurn), templ.KV("waiting", !playData.IsMyTurn) } role="status" aria-live="polite">
+						if playData.IsMyTurn {
+							<span>✨ It's YOUR turn!</span>
+						} else {
+							<span>⏳ { playData.OtherPlayerName } turn...</span>
+						}
+					</div>
+				</div>
+			</div>
+			<div id="game-content" data-testid="game-content">
+				<!-- Question Card - server-side rendered -->
+				<div
+					id="question-card"
+					hx-get={ fmt.Sprintf("/api/v1/rooms/%s/question-card", playData.Room.ID.String()) }
+					hx-trigger="sse:question_drawn from:body"
+					hx-swap="innerHTML"
+				>
+					<div class="question-card" role="region" aria-label="Current question">
+						<p class="question-text">{ playData.QuestionText }</p>
+					</div>
+				</div>
+				<!-- Game Forms - server-side rendered -->
+				<div
+					id="game-forms"
+					class="answer-review"
+					hx-get={ fmt.Sprintf("/api/v1/rooms/%s/game-forms", playData.Room.ID.String()) }
+					hx-trigger="sse:turn_changed from:body, sse:question_drawn from:body, sse:answer_submitted from:body, sse:player_typing from:body"
+					hx-swap="innerHTML"
+				>
+					if playData.HasAnswer {
+						<!-- Answer exists - show answer review -->
+						<div class="answer-display">
+							<h3>{ playData.AnsweredByPlayerName }'s answer:</h3>
+							if playData.ActionType == "passed" {
+								<p class="answer-text">Passed</p>
+							} else {
+								<p class="answer-text">{ playData.AnswerText }</p>
+							}
+							if playData.IsMyTurn {
+								<!-- Active player can draw next question -->
+								<div style="margin-top: 20px;">
+									<button
+										hx-post={ fmt.Sprintf("/api/v1/rooms/%s/next-question", playData.Room.ID.String()) }
+										hx-target="#game-forms"
+										hx-swap="innerHTML"
+										hx-disabled-elt="this"
+										class="btn btn-primary"
+									>
+										➡️ Next Question
+									</button>
+								</div>
+							} else {
+								<!-- Passive player waits for next question -->
+								<p>
+									⏳ Waiting for { playData.OtherPlayerName } to draw next question...
+								</p>
+							}
+						</div>
+					} else if playData.IsMyTurn {
+						<!-- No answer yet - Active player shows answer form -->
+						<div class="answer-form">
+							<form
+								hx-post={ fmt.Sprintf("/api/v1/rooms/%s/answer", playData.Room.ID.String()) }
+								hx-target="#game-forms"
+								hx-swap="innerHTML"
+								hx-disabled-elt="button"
+							>
+								if templateData.CSRFToken != "" {
+									<input type="hidden" name="csrf" value={ templateData.CSRFToken }/>
+								}
+								<input type="hidden" name="question_id" value={ playData.QuestionID }/>
+								<label for="answer-text" class="sr-only">Your answer (optional)</label>
+								<textarea
+									id="answer-text"
+									name="answer_text"
+									placeholder="Write your answer here (optional)..."
+									rows="4"
+									aria-label="Your answer"
+								></textarea>
+								<div class="button-group">
+									<button
+										type="submit"
+										name="action_type"
+										value="answered"
+										class="success"
+									>
+										✅ Answer
+									</button>
+									<button
+										type="submit"
+										name="action_type"
+										value="passed"
+										class="btn btn-secondary"
+									>
+										⏭️ Skip
+									</button>
+								</div>
+							</form>
+						</div>
+					} else {
+						<!-- No answer yet - Passive player shows waiting UI -->
+						<div class="answer-display">
+							<p>Waiting for { playData.OtherPlayerName } to answer...</p>
+						</div>
+					}
+				</div>
+				<!-- Finish Game Button -->
+				<div class="button-group" style="margin-top: 30px;">
+					<button
+						class="btn btn-danger"
+						hx-post={ fmt.Sprintf("/api/v1/rooms/%s/finish", playData.Room.ID.String()) }
+						hx-confirm="⚠️ Are you sure you want to finish the game?"
+						hx-disabled-elt="this"
+						aria-label="Finish game"
+					>
+						End Game
+					</button>
+				</div>
+			</div>
+		</div>
+		@PlayScript(playData.Room.ID.String(), playData.CurrentUserID)
+	}
+}
+
+// PlayStyles contains the CSS for the play page
+templ PlayStyles() {
+	<style>
+		.answer-form {
+			margin-top: 30px;
+		}
+
+		.answer-form textarea {
+			width: 100%;
+			padding: 15px;
+			border: 2px solid #dee2e6;
+			border-radius: 8px;
+			font-size: 16px;
+			resize: vertical;
+			min-height: 100px;
+		}
+
+		.answer-display {
+			background: #e9ecef;
+			padding: 20px;
+			border-radius: 8px;
+			margin: 20px 0;
+		}
+
+		.answer-display h3 {
+			margin-top: 0;
+			color: #495057;
+		}
+
+		.loading {
+			text-align: center;
+			padding: 20px;
+			color: #6c757d;
+		}
+
+		.error {
+			background-color: #f8d7da;
+			color: #721c24;
+			padding: 15px;
+			border-radius: 8px;
+			margin: 20px 0;
+		}
+
+		.typing-indicator {
+			animation: pulse 1.5s ease-in-out infinite;
+		}
+
+		@keyframes pulse {
+			0%, 100% { opacity: 1; }
+			50% { opacity: 0.5; }
+		}
+
+		/* HTMX Loading Indicators */
+		.htmx-indicator {
+			display: none;
+			margin-left: 0.5rem;
+		}
+
+		.htmx-request .htmx-indicator,
+		.htmx-request.htmx-indicator {
+			display: inline;
+		}
+
+		/* Accessibility */
+		.sr-only {
+			position: absolute;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+			clip: rect(0,0,0,0);
+		}
+	</style>
+}
+
+// PlayScript contains the JavaScript for SSE event handling
+templ PlayScript(roomID string, currentUserID string) {
+	<script>
+		// Minimal JavaScript for SSE fallback and connection monitoring
+		(function() {
+			const roomId = { roomID };
+
+			// Listen for game_finished event to redirect
+			document.body.addEventListener('sse:game_finished', function(e) {
+				console.log('Game finished, redirecting...');
+				setTimeout(() => {
+					window.location.href = `/game/finished/${roomId}`;
+				}, 500);
+			});
+
+			// Listen for room_update with finished status
+			document.body.addEventListener('sse:room_update', function(e) {
+				try {
+					const data = JSON.parse(e.detail.data);
+					if (data.status === 'finished') {
+						console.log('Room finished, redirecting...');
+						window.location.href = `/game/finished/${roomId}`;
+					}
+				} catch (error) {
+					console.error('Error parsing room_update:', error);
+				}
+			});
+
+			// Progress counter is now updated via HTMX (see hx-trigger on #progress-counter)
+
+			// Handle typing status updates
+			document.body.addEventListener('sse:player_typing', function(e) {
+				try {
+					const data = JSON.parse(e.detail.data);
+					const currentUserId = { currentUserID };
+
+					// Only show typing indicator if it's not the current user typing
+					if (data.user_id !== currentUserId) {
+						const typingIndicator = document.getElementById('typing-indicator');
+						if (typingIndicator) {
+							typingIndicator.style.display = data.is_typing ? 'block' : 'none';
+						}
+					}
+				} catch (error) {
+					console.error('Error handling typing status:', error);
+				}
+			});
+
+			console.log('🎮 Play page initialized with HTMX for room:', roomId);
+		})();
+	</script>
+}

@@ -1,0 +1,8 @@
+package room
+
+import "fmt"
+
+// BadgeUpdate renders just the count for the badge
+templ BadgeUpdate(count int) {
+	{ fmt.Sprintf("%d", count) }
+}

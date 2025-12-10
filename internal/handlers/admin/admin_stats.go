@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/hekigan/couples/internal/services"
+	adminFragments "github.com/hekigan/couples/internal/views/fragments/admin"
 	"github.com/labstack/echo/v4"
 )
 
@@ -31,7 +32,7 @@ func (ah *AdminAPIHandler) GetDashboardStatsHandler(c echo.Context) error {
 		TotalCategories: stats.TotalCategories,
 	}
 
-	html, err := ah.handler.TemplateService.RenderFragment("dashboard_stats.html", data)
+	html, err := ah.handler.RenderTemplFragment(c, adminFragments.DashboardStats(&data))
 	if err != nil {
 		log.Printf("Error rendering dashboard stats: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())

@@ -10,6 +10,7 @@ import (
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/services"
+	playFragments "github.com/hekigan/couples/internal/views/fragments/play"
 	"github.com/labstack/echo/v4"
 )
 
@@ -51,11 +52,11 @@ func (h *Handler) GetTurnIndicatorHandler(c echo.Context) error {
 
 	isMyTurn := room.CurrentTurn != nil && *room.CurrentTurn == userID
 
-	// Render HTML fragment
-	html, err := h.TemplateService.RenderFragment("turn_indicator.html", services.TurnIndicatorData{
+	// Render templ component
+	html, err := h.RenderTemplFragment(c, playFragments.TurnIndicator(&services.TurnIndicatorData{
 		IsMyTurn:        isMyTurn,
 		OtherPlayerName: otherPlayerName,
-	})
+	}))
 	if err != nil {
 		log.Printf("Error rendering turn_indicator template: %v", err)
 		return c.HTML(http.StatusOK, `<div class="turn-indicator"><span>Loading...</span></div>`)
@@ -89,10 +90,10 @@ func (h *Handler) GetQuestionCardHandler(c echo.Context) error {
 		}
 	}
 
-	// Render HTML fragment
-	html, err := h.TemplateService.RenderFragment("question_card.html", services.QuestionCardData{
+	// Render templ component
+	html, err := h.RenderTemplFragment(c, playFragments.QuestionCard(&services.QuestionCardData{
 		QuestionText: questionText,
-	})
+	}))
 	if err != nil {
 		log.Printf("Error rendering question_card template: %v", err)
 		return c.HTML(http.StatusOK, `<div class="question-card"><p class="question-text">Loading...</p></div>`)
@@ -109,11 +110,8 @@ func (h *Handler) GetGameContentHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid room ID")
 	}
 
-	// Render the full game content template which includes
-	// turn indicator, question card, and game forms
-	html, err := h.TemplateService.RenderFragment("game_content.html", services.GameContentData{
-		RoomID: roomID.String(),
-	})
+	// Render templ component for full game content
+	html, err := h.RenderTemplFragment(c, playFragments.GameContent(roomID.String()))
 	if err != nil {
 		log.Printf("Error rendering game_content template: %v", err)
 		return c.HTML(http.StatusOK, `<div class="loading">Loading game interface...</div>`)
@@ -193,14 +191,14 @@ func (h *Handler) GetGameFormsHandler(c echo.Context) error {
 			answeredPlayerName = answeredUser.Username
 		}
 
-		html, err = h.TemplateService.RenderFragment("answer_review.html", services.AnswerReviewData{
+		html, err = h.RenderTemplFragment(c, playFragments.AnswerReview(&services.AnswerReviewData{
 			RoomID:               roomID.String(),
 			AnswerText:           lastAnswer.AnswerText,
 			ActionType:           lastAnswer.ActionType,
 			ShowNextButton:       isMyTurn, // New active player can draw next question
 			AnsweredByPlayerName: answeredPlayerName,
 			OtherPlayerName:      otherPlayerName,
-		})
+		}))
 		if err != nil {
 			log.Printf("Error rendering answer_review template: %v", err)
 			return c.HTML(http.StatusOK, `<div class="loading">Loading answer...</div>`)
@@ -212,19 +210,19 @@ func (h *Handler) GetGameFormsHandler(c echo.Context) error {
 			questionID = room.CurrentQuestionID.String()
 		}
 
-		html, err = h.TemplateService.RenderFragment("answer_form.html", services.AnswerFormData{
+		html, err = h.RenderTemplFragment(c, playFragments.AnswerForm(&services.AnswerFormData{
 			RoomID:     roomID.String(),
 			QuestionID: questionID,
-		})
+		}))
 		if err != nil {
 			log.Printf("Error rendering answer_form template: %v", err)
 			return c.HTML(http.StatusOK, `<div class="loading">Loading form...</div>`)
 		}
 	} else {
 		// No answer yet and it's not my turn - show waiting UI
-		html, err = h.TemplateService.RenderFragment("waiting_ui.html", services.WaitingUIData{
+		html, err = h.RenderTemplFragment(c, playFragments.WaitingUI(&services.WaitingUIData{
 			OtherPlayerName: otherPlayerName,
-		})
+		}))
 		if err != nil {
 			log.Printf("Error rendering waiting_ui template: %v", err)
 			return c.HTML(http.StatusOK, `<div class="loading">Loading...</div>`)
@@ -250,11 +248,11 @@ func (h *Handler) GetProgressCounterHandler(c echo.Context) error {
 		return c.HTML(http.StatusOK, `Question 0 of 0`)
 	}
 
-	// Render HTML fragment
-	html, err := h.TemplateService.RenderFragment("progress_counter.html", services.ProgressCounterData{
+	// Render templ component
+	html, err := h.RenderTemplFragment(c, playFragments.ProgressCounter(&services.ProgressCounterData{
 		CurrentQuestion: room.CurrentQuestion,
 		MaxQuestions:    room.MaxQuestions,
-	})
+	}))
 	if err != nil {
 		log.Printf("Error rendering progress_counter template: %v", err)
 		return c.HTML(http.StatusOK, fmt.Sprintf(`Question %d of %d`, room.CurrentQuestion, room.MaxQuestions))

@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/services"
+	roomFragments "github.com/hekigan/couples/internal/views/fragments/room"
 	"github.com/labstack/echo/v4"
 )
 
@@ -139,15 +140,11 @@ func (h *Handler) GetRoomCategoriesHTMLHandler(c echo.Context) error {
 	}
 
 	// Use helper to render HTML fragment
-	if err := h.RenderHTMLFragment(c, "categories_grid.html", services.CategoriesGridData{
+	return h.RenderTemplComponent(c, roomFragments.CategoriesGrid(&services.CategoriesGridData{
 		Categories: categoryInfos,
 		RoomID:     roomID.String(),
 		GuestReady: room.GuestReady,
-	}); err != nil {
-		log.Printf("Error rendering categories grid template: %v", err)
-		return c.HTML(http.StatusOK, `<p style="color: #6b7280;">Failed to load categories</p>`)
-	}
-	return nil
+	}))
 }
 
 // ToggleCategoryAPIHandler toggles a single category selection (for HTMX)

@@ -1,0 +1,60 @@
+package room
+
+import (
+	"fmt"
+	"github.com/hekigan/couples/internal/services"
+)
+
+// StartGameButton renders the start game button with validation
+templ StartGameButton(data *services.StartGameButtonData) {
+	<button
+		id="start-game-btn"
+		hx-post={ fmt.Sprintf("/api/v1/rooms/%s/start", data.RoomID) }
+		hx-disabled-elt="this"
+		hx-indicator="#start-loading"
+		hx-on::before-request="
+			const checked = document.querySelectorAll('#categories-grid input[type=checkbox]:checked').length;
+			if(checked === 0) {
+				const errorDiv = document.createElement('div');
+				errorDiv.className = 'error-message';
+				errorDiv.textContent = '⚠️ Please select at least one category';
+				errorDiv.style.cssText = 'color: #ef4444; margin-top: 0.5rem; font-size: 0.875rem; text-align: center;';
+				this.parentElement.appendChild(errorDiv);
+				setTimeout(() => errorDiv.remove(), 3000);
+				return false;
+			}
+		"
+		hx-on::after-request="
+			if(!event.detail.successful) {
+				const errorDiv = document.createElement('div');
+				errorDiv.className = 'error-message';
+				errorDiv.textContent = '❌ Failed to start game. Please try again.';
+				errorDiv.style.cssText = 'color: #ef4444; margin-top: 0.5rem; font-size: 0.875rem; text-align: center;';
+				this.parentElement.appendChild(errorDiv);
+				setTimeout(() => errorDiv.remove(), 5000);
+			}
+		"
+		aria-label="Start the game with your guest"
+		if !data.GuestReady {
+			aria-disabled="true"
+			disabled
+			title="Waiting for guest to be ready"
+		}
+		class="btn btn-primary btn-lg start-game-btn"
+	>
+		<span>🚀 Start Game</span>
+		<span id="start-loading" class="htmx-indicator" style="margin-left: 0.5rem;">
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+				<circle cx="12" cy="12" r="10" stroke-width="3" stroke-opacity="0.25"></circle>
+				<path d="M12 2a10 10 0 0 1 10 10" stroke-width="3" stroke-linecap="round">
+					<animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"></animateTransform>
+				</path>
+			</svg>
+		</span>
+	</button>
+	if !data.GuestReady {
+		<p class="waiting-hint" role="status" aria-live="polite" style="margin-top: 1rem; color: #6b7280; text-align: center;">
+			⏳ Waiting for guest to be ready...
+		</p>
+	}
+}

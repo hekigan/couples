@@ -1,0 +1,93 @@
+package admin
+
+import "fmt"
+
+// PaginationData interface for any data structure with pagination fields
+type PaginationData interface {
+	GetTotalCount() int
+	GetCurrentPage() int
+	GetTotalPages() int
+	GetItemsPerPage() int
+	GetBaseURL() string
+	GetPageURL() string
+	GetTarget() string
+	GetIncludeSelector() string
+	GetExtraParams() string
+	GetItemName() string
+}
+
+// Pagination renders generic pagination controls for admin tables
+templ Pagination(data PaginationData) {
+	<div class="pagination">
+		<span class="pagination-info">
+			Showing
+			if data.GetTotalCount() > 0 {
+				{ fmt.Sprintf("%d", (data.GetCurrentPage()-1)*data.GetItemsPerPage()+1) }-
+				if data.GetCurrentPage()*data.GetItemsPerPage() > data.GetTotalCount() {
+					{ fmt.Sprintf("%d", data.GetTotalCount()) }
+				} else {
+					{ fmt.Sprintf("%d", data.GetCurrentPage()*data.GetItemsPerPage()) }
+				}
+			} else {
+				0
+			}
+			{ " " }of { fmt.Sprintf("%d", data.GetTotalCount()) } { data.GetItemName() }
+		</span>
+		<div class="pagination-controls">
+			<label for="per-page-select">Items per page:</label>
+			<select
+				id="per-page-select"
+				name="per_page"
+				hx-get={ data.GetBaseURL() }
+				hx-target={ data.GetTarget() }
+				hx-swap="outerHTML"
+				hx-push-url={ data.GetPageURL() }
+				hx-include={ data.GetIncludeSelector() }
+				hx-indicator="#questions-list-loading"
+				onchange="savePerPagePref(this.value)"
+			>
+				<option value="25" selected?={ data.GetItemsPerPage() == 25 }>25</option>
+				<option value="50" selected?={ data.GetItemsPerPage() == 50 }>50</option>
+				<option value="100" selected?={ data.GetItemsPerPage() == 100 }>100</option>
+			</select>
+			<div class="pagination-buttons">
+				if data.GetCurrentPage() > 1 {
+					<button
+						hx-get={ fmt.Sprintf("%s?page=%d&per_page=%d%s", data.GetBaseURL(), data.GetCurrentPage()-1, data.GetItemsPerPage(), data.GetExtraParams()) }
+						hx-target={ data.GetTarget() }
+						hx-swap="outerHTML"
+						hx-push-url={ fmt.Sprintf("%s?page=%d&per_page=%d%s", data.GetPageURL(), data.GetCurrentPage()-1, data.GetItemsPerPage(), data.GetExtraParams()) }
+						hx-indicator="#questions-list-loading"
+						class="btn btn-sm"
+					>◄ Prev</button>
+				}
+				for i := 0; i < data.GetTotalPages(); i++ {
+					if i+1 == 1 || i+1 == data.GetTotalPages() || (i+1 >= data.GetCurrentPage()-2 && i+1 <= data.GetCurrentPage()+2) {
+						<button
+							hx-get={ fmt.Sprintf("%s?page=%d&per_page=%d%s", data.GetBaseURL(), i+1, data.GetItemsPerPage(), data.GetExtraParams()) }
+							hx-target={ data.GetTarget() }
+							hx-swap="outerHTML"
+							hx-push-url={ fmt.Sprintf("%s?page=%d&per_page=%d%s", data.GetPageURL(), i+1, data.GetItemsPerPage(), data.GetExtraParams()) }
+							hx-indicator="#questions-list-loading"
+							class={ templ.KV("btn btn-sm", true), templ.KV("active", i+1 == data.GetCurrentPage()) }
+						>
+							{ fmt.Sprintf("%d", i+1) }
+						</button>
+					} else if i+1 == 2 || i+1 == data.GetTotalPages()-1 {
+						<span class="pagination-ellipsis">...</span>
+					}
+				}
+				if data.GetCurrentPage() < data.GetTotalPages() {
+					<button
+						hx-get={ fmt.Sprintf("%s?page=%d&per_page=%d%s", data.GetBaseURL(), data.GetCurrentPage()+1, data.GetItemsPerPage(), data.GetExtraParams()) }
+						hx-target={ data.GetTarget() }
+						hx-swap="outerHTML"
+						hx-push-url={ fmt.Sprintf("%s?page=%d&per_page=%d%s", data.GetPageURL(), data.GetCurrentPage()+1, data.GetItemsPerPage(), data.GetExtraParams()) }
+						hx-indicator="#questions-list-loading"
+						class="btn btn-sm"
+					>Next ►</button>
+				}
+			</div>
+		</div>
+	</div>
+}

@@ -43,29 +43,18 @@ func (h *Handler) VerifyRoomParticipant(room *models.Room, userID uuid.UUID) err
 	return nil
 }
 
-// RenderHTMLFragment renders an HTML fragment using TemplateService and writes it to the response
-// Updated to work with echo.Context
+// RenderHTMLFragment is deprecated. Use h.RenderTemplFragment() with templ components instead.
+// This function remains for backward compatibility but should not be used in new code.
 func (h *Handler) RenderHTMLFragment(c echo.Context, templateName string, data interface{}) error {
-	html, err := h.TemplateService.RenderFragment(templateName, data)
-	if err != nil {
-		log.Printf("Error rendering fragment %s: %v", templateName, err)
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-	}
-
-	return c.HTML(http.StatusOK, html)
+	log.Printf("⚠️ DEPRECATED: RenderHTMLFragment called with template %s. Use RenderTemplFragment with templ components instead.", templateName)
+	return echo.NewHTTPError(http.StatusInternalServerError, "RenderHTMLFragment is deprecated")
 }
 
-// RenderHTMLFragmentOrFallback renders an HTML fragment with a fallback on error
-// Updated to work with echo.Context
+// RenderHTMLFragmentOrFallback is deprecated. Use h.RenderTemplFragment() with templ components instead.
+// This function remains for backward compatibility but should not be used in new code.
 func (h *Handler) RenderHTMLFragmentOrFallback(c echo.Context, templateName string, data interface{}, fallback string) error {
-	html, err := h.TemplateService.RenderFragment(templateName, data)
-	if err != nil {
-		log.Printf("Error rendering fragment %s: %v", templateName, err)
-		// Write fallback HTML
-		return c.HTML(http.StatusOK, fallback)
-	}
-
-	return c.HTML(http.StatusOK, html)
+	log.Printf("⚠️ DEPRECATED: RenderHTMLFragmentOrFallback called with template %s. Use RenderTemplFragment with templ components instead.", templateName)
+	return c.HTML(http.StatusOK, fallback)
 }
 
 // FetchCurrentUser gets the current user from context with proper error handling

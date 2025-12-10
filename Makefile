@@ -2,6 +2,7 @@
 .PHONY: js-build js-build-dev js-watch js-clean
 .PHONY: test-db-setup test-db-start test-db-stop test-db-reset test-db-status test-db-studio
 .PHONY: test-e2e test-e2e-ui test-e2e-headed test-e2e-debug test-e2e-report test-e2e-setup
+.PHONY: templ-install templ-generate templ-watch templ-clean
 
 # Default target
 help:
@@ -59,7 +60,7 @@ help:
 	@echo ""
 
 # Build the Go binary
-build: sass js-build
+build: templ-generate sass js-build
 	@echo "Building Go binary..."
 	@go build -o server ./cmd/server
 	@echo "Build complete: ./server"
@@ -98,7 +99,7 @@ test-coverage-html: test-coverage
 	@go tool cover -html=coverage.out
 
 # Clean build artifacts
-clean: js-clean
+clean: js-clean templ-clean
 	@echo "Cleaning build artifacts..."
 	@rm -f server
 	@rm -f couple-game
@@ -145,12 +146,43 @@ js-clean:
 	@echo "✅ JavaScript bundles cleaned"
 
 # ============================================
+# Templ Generation Commands
+# ============================================
+
+# Install templ CLI (one-time setup)
+templ-install:
+	@echo "Installing templ CLI..."
+	@go install github.com/a-h/templ/cmd/templ@latest
+	@echo "✅ Templ CLI installed"
+
+# Generate templ components
+templ-generate:
+	@echo "Generating templ components..."
+	@$(shell go env GOPATH)/bin/templ generate
+	@echo "✅ Templ components generated"
+
+# Watch and regenerate templ components
+templ-watch:
+	@echo "Watching templ files..."
+	@$(shell go env GOPATH)/bin/templ generate --watch
+
+# Clean generated templ files
+templ-clean:
+	@echo "Cleaning generated templ files..."
+	@find internal/views -name "*_templ.go" -type f -delete 2>/dev/null || true
+	@echo "✅ Generated templ files cleaned"
+
+# ============================================
 # Development & Building
 # ============================================
 
 # Development mode with Air hot-reload
-dev: sass js-build-dev
+dev: templ-generate sass js-build-dev
 	@echo "🚀 Starting development mode with Air hot-reload..."
+	@echo "⚠️  For full hot-reload, run in separate terminals:"
+	@echo "   Terminal 2: make sass-watch"
+	@echo "   Terminal 3: make js-watch"
+	@echo "   Terminal 4: make templ-watch"
 	@ENV=development $(shell go env GOPATH)/bin/air
 
 # Build Docker image
@@ -181,6 +213,8 @@ install:
 	@npm install -g sass
 	@echo "Installing Air hot-reload tool..."
 	@go install github.com/air-verse/air@latest
+	@echo "Installing Templ CLI..."
+	@go install github.com/a-h/templ/cmd/templ@latest
 	@echo "Dependencies installed"
 
 # Alias for backward compatibility

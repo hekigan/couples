@@ -1,0 +1,11 @@
+package game
+
+import "github.com/hekigan/couples/internal/viewmodels"
+
+// GameStarted renders a redirect script when the game starts
+templ GameStarted(data *viewmodels.GameStartedData) {
+	<script>
+		// Redirect to game play page
+		window.location.href = '/game/play/{ data.RoomID }';
+	</script>
+}

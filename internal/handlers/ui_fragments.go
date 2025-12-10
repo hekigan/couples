@@ -7,6 +7,7 @@ import (
 
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/services"
+	roomFragments "github.com/hekigan/couples/internal/views/fragments/room"
 	"github.com/labstack/echo/v4"
 )
 
@@ -48,19 +49,19 @@ func (h *Handler) SetGuestReadyAPIHandler(c echo.Context) error {
 	log.Printf("🔍 Room status after refetch: %s (GuestReady: %v)", room.Status, room.GuestReady)
 
 	// Use helper to render HTML fragment for updated button state
-	html, err := h.TemplateService.RenderFragment("guest_ready_button.html", services.GuestReadyButtonData{
+	html, err := h.RenderTemplFragment(c, roomFragments.GuestReadyButton(&services.GuestReadyButtonData{
 		RoomID:     roomID.String(),
 		GuestReady: true,
-	})
+	}))
 	if err != nil {
 		log.Printf("Error rendering guest ready button template: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to render button")
 	}
 
 	// Broadcast room status badge update via SSE (so owner sees status change)
-	if statusBadgeHTML, err := h.TemplateService.RenderFragment("status_badge.html", services.RoomStatusBadgeData{
+	if statusBadgeHTML, err := h.RenderTemplFragment(c, roomFragments.StatusBadge(&services.RoomStatusBadgeData{
 		Status: room.Status,
-	}); err == nil {
+	})); err == nil {
 		h.RoomService.GetRealtimeService().BroadcastHTMLFragment(roomID, services.HTMLFragmentEvent{
 			Type:       "room_status_update",
 			Target:     "#room-status-badge",
@@ -92,9 +93,9 @@ func (h *Handler) RoomStatusBadgeAPIHandler(c echo.Context) error {
 	log.Printf("🔍 RoomStatusBadgeAPIHandler: Room %s status: %s", roomID, room.Status)
 
 	// Use helper to render HTML fragment for status badge
-	return h.RenderHTMLFragment(c, "status_badge.html", services.RoomStatusBadgeData{
+	return h.RenderTemplComponent(c, roomFragments.StatusBadge(&services.RoomStatusBadgeData{
 		Status: room.Status,
-	})
+	}))
 }
 
 // GetStartGameButtonHTMLHandler returns start game button as HTML fragment (for HTMX)
@@ -106,14 +107,10 @@ func (h *Handler) GetStartGameButtonHTMLHandler(c echo.Context) error {
 	}
 
 	// Use helper to render HTML fragment
-	if err := h.RenderHTMLFragment(c, "start_game_button.html", services.StartGameButtonData{
+	return h.RenderTemplComponent(c, roomFragments.StartGameButton(&services.StartGameButtonData{
 		RoomID:     roomID.String(),
 		GuestReady: room.GuestReady,
-	}); err != nil {
-		log.Printf("Error rendering start game button template: %v", err)
-		return c.HTML(http.StatusOK, `<p style="color: #6b7280;">Failed to load start button</p>`)
-	}
-	return nil
+	}))
 }
 
 // GetGuestReadyButtonHTMLHandler returns guest ready button as HTML fragment (for HTMX)
@@ -125,12 +122,8 @@ func (h *Handler) GetGuestReadyButtonHTMLHandler(c echo.Context) error {
 	}
 
 	// Use helper to render HTML fragment
-	if err := h.RenderHTMLFragment(c, "guest_ready_button.html", services.GuestReadyButtonData{
+	return h.RenderTemplComponent(c, roomFragments.GuestReadyButton(&services.GuestReadyButtonData{
 		RoomID:     roomID.String(),
 		GuestReady: room.GuestReady,
-	}); err != nil {
-		log.Printf("Error rendering guest ready button template: %v", err)
-		return c.HTML(http.StatusOK, `<p style="color: #6b7280;">Failed to load ready button</p>`)
-	}
-	return nil
+	}))
 }

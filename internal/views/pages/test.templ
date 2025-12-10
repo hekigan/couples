@@ -1,0 +1,18 @@
+package pages
+
+// TestPage is a simple test component to verify templ setup
+templ TestPage(title string) {
+	<!DOCTYPE html>
+	<html lang="en">
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<title>{ title }</title>
+	</head>
+	<body>
+		<h1>Templ Setup Test</h1>
+		<p>If you can see this, templ is working correctly!</p>
+		<p>Title: { title }</p>
+	</body>
+	</html>
+}

@@ -1,0 +1,26 @@
+package layouts
+
+import "github.com/hekigan/couples/internal/viewmodels"
+
+// Base renders the main layout wrapper for regular pages
+templ Base(data *viewmodels.TemplateData, content templ.Component) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			@HeadCommon(data)
+		</head>
+		<body
+			if data.CSRFToken != "" {
+				hx-headers={ "{\"X-CSRF-Token\": \"" + data.CSRFToken + "\"}" }
+			}
+		>
+			@Header(data)
+			<main class="main-content">
+				@Alerts(data)
+				@content
+			</main>
+			@Footer()
+			@MobileMenu(data)
+		</body>
+	</html>
+}

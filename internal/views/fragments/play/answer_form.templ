@@ -1,0 +1,65 @@
+package play
+
+import "github.com/hekigan/couples/internal/services"
+
+// AnswerForm renders the answer form for the active player
+templ AnswerForm(data *services.AnswerFormData) {
+	<div class="answer-form">
+		<form
+			hx-post={ "/api/v1/rooms/" + data.RoomID + "/answer" }
+			hx-target="#game-forms"
+			hx-swap="innerHTML"
+			hx-disabled-elt="button"
+			hx-indicator="#answer-loading"
+			hx-on::before-request="
+				const questionId = this.querySelector('input[name=question_id]').value;
+				if (!questionId) {
+					alert('⚠️ No question loaded. Please wait...');
+					return false;
+				}
+			"
+			hx-on::after-request="
+				if (event.detail.successful) {
+					this.reset();
+				}
+			"
+		>
+			<input type="hidden" name="question_id" value={ data.QuestionID }/>
+			<label for="answer-text" class="sr-only">Your answer (optional)</label>
+			<textarea
+				id="answer-text"
+				name="answer_text"
+				placeholder="Write your answer here (optional)..."
+				rows="4"
+				aria-label="Your answer"
+				hx-post={ "/api/v1/rooms/" + data.RoomID + "/typing" }
+				hx-trigger="keyup changed delay:300ms"
+				hx-swap="none"
+				hx-vals='{"is_typing": true}'
+			></textarea>
+			<div class="button-group" style="display: flex; gap: 10px; justify-content: center;">
+				<button
+					type="submit"
+					name="action_type"
+					value="answered"
+					class=""
+					aria-label="Mark as answered"
+					style="flex: 1; max-width: 200px;"
+				>
+					<span>✅ Answered</span>
+					<span id="answer-loading" class="htmx-indicator">⏳</span>
+				</button>
+				<button
+					type="submit"
+					name="action_type"
+					value="passed"
+					class="secondary"
+					aria-label="Pass this question"
+					style="flex: 1; max-width: 200px;"
+				>
+					⏭️ Pass
+				</button>
+			</div>
+		</form>
+	</div>
+}
