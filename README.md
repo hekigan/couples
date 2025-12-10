@@ -13,7 +13,12 @@ make test-db-setup
 # 2. Run tests
 make test
 
-# 3. Build and run
+# 3. Development mode (3 terminals for full hot-reload)
+make dev          # Terminal 1: Run server with Air
+make sass-watch   # Terminal 2: Auto-compile SASS
+make js-watch     # Terminal 3: Auto-bundle JavaScript
+
+# OR: One-time build and run (production mode)
 make build
 make run
 ```
@@ -70,7 +75,8 @@ make test-coverage     # View coverage
 
 - **Backend**: Go 1.22+
 - **Database**: PostgreSQL (Supabase)
-- **Frontend**: HTMX, SASS
+- **Frontend**: HTMX, SASS, JavaScript (bundled with esbuild)
+- **Bundler**: esbuild (via Go API)
 - **Real-time**: Server-Sent Events (SSE)
 - **Testing**: Go test, Supabase CLI
 - **Build**: Makefile, Docker
@@ -94,8 +100,11 @@ make help              # See all available commands
 make test-db-setup     # Setup test database (one-time)
 make test              # Run tests
 make test-coverage     # View coverage
-make build             # Build application
-make run               # Run application
+make build             # Build application (includes JS bundling)
+make run               # Run application (production mode)
+make dev               # Run with hot-reload (requires 3 terminals)
+make sass-watch        # Watch and compile SASS
+make js-watch          # Watch and bundle JavaScript
 make docker-build      # Build Docker image
 ```
 

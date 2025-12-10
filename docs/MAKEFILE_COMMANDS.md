@@ -13,6 +13,9 @@ make help              # Show all available commands
 make test-db-setup     # One-time test database setup
 make test-full         # Run full test suite
 make test-coverage-html # View coverage in browser
+make dev               # Run server with hot-reload
+make sass-watch        # Watch and compile SASS
+make js-watch          # Watch and bundle JavaScript
 ```
 
 ---
@@ -87,9 +90,9 @@ make test-db-status
 
 | Command | Description |
 |---------|-------------|
-| `make build` | Build the Go binary |
-| `make run` | Run the server (compiles SASS first) |
-| `make dev` | Run in development mode with hot reload |
+| `make build` | Build the Go binary (includes SASS + JS bundling) |
+| `make run` | Run the server in production mode (builds everything) |
+| `make dev` | Run in development mode with Air hot-reload |
 
 ---
 
@@ -99,6 +102,44 @@ make test-db-status
 |---------|-------------|
 | `make sass` | Compile SASS to CSS once |
 | `make sass-watch` | Watch and auto-compile SASS on changes |
+
+---
+
+## 📦 JavaScript Bundling
+
+| Command | Description | Usage |
+|---------|-------------|-------|
+| `make js-build` | Build production bundles (minified + source maps) | Production builds |
+| `make js-build-dev` | Build development bundles (unminified) | Development mode |
+| `make js-watch` | Watch and auto-bundle JavaScript on changes | Run in separate terminal |
+| `make js-clean` | Remove all generated JavaScript bundles | Clean build artifacts |
+
+### Bundle Information
+
+- **Production bundles:**
+  - `app.bundle.js` (61KB) + `app.bundle.js.map` (158KB)
+  - `admin.bundle.js` (404B) + `admin.bundle.js.map` (4.5KB)
+  - 82-94% size reduction vs development
+
+- **Development bundles:**
+  - `app.bundle.js` (358KB) with inline source maps
+  - `admin.bundle.js` (6.7KB) with inline source maps
+
+### Examples
+
+```bash
+# Production build
+ENV=production make js-build
+
+# Development build
+ENV=development make js-build-dev
+
+# Watch mode (auto-rebuild on file changes)
+make js-watch
+
+# Clean bundles
+make js-clean
+```
 
 ---
 
@@ -160,6 +201,23 @@ make test-db-studio
 # Evening - Stop test database
 make test-db-stop
 ```
+
+### Development with Hot-Reload (3 Terminals)
+
+For full hot-reload experience during active development:
+
+```bash
+# Terminal 1: Go server with Air hot-reload
+make dev
+
+# Terminal 2: SASS watcher (auto-compile CSS)
+make sass-watch
+
+# Terminal 3: JavaScript watcher (auto-bundle JS)
+make js-watch
+```
+
+**Note:** When you run `make dev`, a colored warning message will remind you about Terminals 2 and 3.
 
 ### Before Committing
 

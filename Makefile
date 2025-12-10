@@ -1,4 +1,5 @@
-.PHONY: help build run test test-short test-full test-coverage test-coverage-html clean docker-build docker-run sass dev
+.PHONY: help build run test test-short test-full test-coverage test-coverage-html clean docker-build docker-run sass sass-watch dev
+.PHONY: js-build js-build-dev js-watch js-clean
 .PHONY: test-db-setup test-db-start test-db-stop test-db-reset test-db-status test-db-studio
 .PHONY: test-e2e test-e2e-ui test-e2e-headed test-e2e-debug test-e2e-report test-e2e-setup
 
@@ -39,6 +40,12 @@ help:
 	@echo "  make sass          - Compile SASS to CSS"
 	@echo "  make sass-watch    - Watch and compile SASS"
 	@echo ""
+	@echo "JavaScript:"
+	@echo "  make js-build      - Build JS bundles (production)"
+	@echo "  make js-build-dev  - Build JS bundles (development)"
+	@echo "  make js-watch      - Watch and rebuild JS bundles"
+	@echo "  make js-clean      - Clean JS bundles"
+	@echo ""
 	@echo "Docker:"
 	@echo "  make docker-build  - Build Docker image"
 	@echo "  make docker-run    - Run Docker container"
@@ -52,15 +59,15 @@ help:
 	@echo ""
 
 # Build the Go binary
-build:
+build: sass js-build
 	@echo "Building Go binary..."
 	@go build -o server ./cmd/server/main.go
 	@echo "Build complete: ./server"
 
 # Run the server
-run: sass
+run: build
 	@echo "Starting server..."
-	@./server
+	@ENV=production ./server
 
 # Run short tests (unit tests only, no database required)
 test:
@@ -91,7 +98,7 @@ test-coverage-html: test-coverage
 	@go tool cover -html=coverage.out
 
 # Clean build artifacts
-clean:
+clean: js-clean
 	@echo "Cleaning build artifacts..."
 	@rm -f server
 	@rm -f couple-game
@@ -111,12 +118,40 @@ sass-watch:
 	@echo "Watching SASS files..."
 	@npx sass --watch sass/main.scss:static/css/main.css sass/admin.scss:static/css/admin.css
 
+# ============================================
+# JavaScript Bundling (esbuild)
+# ============================================
+
+# Build JavaScript bundles (production mode)
+js-build:
+	@echo "Building JavaScript bundles (production)..."
+	@ENV=production go run ./cmd/esbuild/main.go build
+	@echo "✅ JavaScript bundles built"
+
+# Build JavaScript bundles (development mode)
+js-build-dev:
+	@echo "Building JavaScript bundles (development)..."
+	@ENV=development go run ./cmd/esbuild/main.go build
+	@echo "✅ JavaScript bundles built (dev mode)"
+
+# Watch and rebuild JavaScript bundles
+js-watch:
+	@echo "Watching JavaScript files..."
+	@ENV=development go run ./cmd/esbuild/main.go watch
+
+# Clean JavaScript bundles
+js-clean:
+	@rm -rf static/dist/*.js static/dist/*.js.map
+	@echo "✅ JavaScript bundles cleaned"
+
+# ============================================
+# Development & Building
+# ============================================
+
 # Development mode with Air hot-reload
-dev:
-	@echo "Starting development mode with Air hot-reload..."
-	@echo "Note: Run 'make sass-watch' in a separate terminal for SASS auto-compilation"
-	@make sass
-	@$(shell go env GOPATH)/bin/air
+dev: sass js-build-dev
+	@echo "🚀 Starting development mode with Air hot-reload..."
+	@ENV=development $(shell go env GOPATH)/bin/air
 
 # Build Docker image
 docker-build:

@@ -2,6 +2,11 @@
 <!-- Admin CSS (always loaded for admin pages) -->
 <link rel="stylesheet" href="/static/css/admin.css">
 
-<!-- Admin JavaScript (always loaded for admin pages) -->
+{{if eq .Env "production"}}
+<!-- Production: Load bundled admin JavaScript -->
+<script src="/static/dist/admin.bundle.js" defer></script>
+{{else}}
+<!-- Development: Load individual admin file for easier debugging -->
 <script src="/static/js/admin.js" defer></script>
+{{end}}
 {{end}}

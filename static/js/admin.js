@@ -108,36 +108,6 @@ document.addEventListener('DOMContentLoaded', function() {
 	}
 });
 
-/**
- * Show a toast notification
- * @param {string} message - The message to display
- * @param {string} type - The type of toast: 'success', 'error', 'warning', 'info'
- */
-function showToast(message, type = 'info') {
-	const toast = document.createElement('div');
-	toast.className = `admin-toast admin-toast-${type}`;
-
-	// Icon based on type
-	let icon = 'ℹ️';
-	if (type === 'success') icon = '✓';
-	else if (type === 'error') icon = '✕';
-	else if (type === 'warning') icon = '⚠';
-
-	toast.innerHTML = `
-		<div class="admin-toast-icon">${icon}</div>
-		<div class="admin-toast-message">${message}</div>
-		<button class="admin-toast-close" onclick="this.parentElement.remove()">✕</button>
-	`;
-
-	document.body.appendChild(toast);
-
-	// Trigger animation
-	setTimeout(() => toast.classList.add('admin-toast-show'), 10);
-
-	// Auto-remove after 5 seconds
-	setTimeout(() => {
-		toast.classList.remove('admin-toast-show');
-		toast.classList.add('admin-toast-hide');
-		setTimeout(() => toast.remove(), 300);
-	}, 5000);
-}
+// Note: showToast() is now available from ui-utils.js
+// It uses the shared Toast notification system
+// Example usage: showToast('Operation successful', 'success')

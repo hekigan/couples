@@ -6,19 +6,17 @@
 <!-- CSS - Pico CSS with custom pastel theme -->
 <link rel="stylesheet" href="/static/css/main.css">
 
-<!-- HTMX Core and SSE Extension -->
+{{if eq .Env "production"}}
+<!-- Production: Load bundled and minified JavaScript -->
+<script src="/static/dist/app.bundle.js"></script>
+{{else}}
+<!-- Development: Load individual files for easier debugging -->
 <script src="/static/js/htmx.min.js"></script>
 <script src="/static/js/sse.js"></script>
-
-<!-- UI Utilities (Toast, Loading, etc.) -->
 <script src="/static/js/ui-utils.js"></script>
-
-<!-- Realtime Client (legacy JavaScript SSE - will be removed in future) -->
-<!-- <script src="/static/js/realtime.js" defer></script> -->
-
-<!-- Notifications Script (Real-time version) -->
 <script src="/static/js/notifications-realtime.js" defer></script>
 <script src="/static/js/modal.js" defer></script>
+{{end}}
 
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 {{end}}

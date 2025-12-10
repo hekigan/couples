@@ -9,7 +9,8 @@ This is a **Couple Card Game** - a Go-based web application built with HTMX and 
 **Tech Stack:**
 - Backend: Go 1.22+ with gorilla/mux router
 - Database: PostgreSQL via Supabase (supabase-community/supabase-go)
-- Frontend: HTMX + SASS
+- Frontend: HTMX + SASS + JavaScript (bundled with esbuild)
+- Bundler: esbuild (via Go API) for JavaScript concatenation and minification
 - Real-time: Server-Sent Events (SSE)
 - Session: gorilla/sessions
 - Testing: Go test + Supabase CLI (local test database)
@@ -32,12 +33,21 @@ tools to resolve library id and get library docs without me having to explicitly
 # First time setup
 make test-db-setup    # Setup local Supabase test database (one-time)
 make deps             # Install Go and Node dependencies
-make build            # Build the Go binary
+make build            # Build the Go binary (includes SASS + JS bundling)
 
-# Development workflow
-make run              # Build and run server (includes SASS compilation)
-make dev              # Run with go run (includes SASS compilation)
-make sass-watch       # Watch and auto-compile SASS in separate terminal
+# Development workflow (requires 3 terminals for full hot-reload)
+make dev              # Terminal 1: Run server with Air hot-reload
+make sass-watch       # Terminal 2: Watch and auto-compile SASS
+make js-watch         # Terminal 3: Watch and auto-bundle JavaScript
+
+# Alternative: One-time build and run
+make run              # Build everything and run server (production mode)
+
+# JavaScript bundling (esbuild)
+make js-build         # Build JS bundles (production: minified + source maps)
+make js-build-dev     # Build JS bundles (development: unminified)
+make js-watch         # Watch and rebuild JS bundles on changes
+make js-clean         # Remove generated bundles
 
 # Testing
 make test             # Run unit tests (no database required)
@@ -51,7 +61,7 @@ make test-db-status   # Check test database status
 # Code quality
 make fmt              # Format Go code
 make lint             # Run golangci-lint
-make clean            # Remove build artifacts
+make clean            # Remove build artifacts (includes JS bundles)
 ```
 
 **Running a single test:**
@@ -366,6 +376,42 @@ Multi-language support via JSON files in `static/i18n/`:
 **Backend:** `I18nService` loads translations, `I18nMiddleware` sets language context
 **Frontend:** JavaScript function `t(key)` for translation lookups
 
+### JavaScript Bundling (esbuild)
+
+The application uses **esbuild** (via Go API) for JavaScript concatenation and minification. This provides:
+- **Development mode:** Individual JS files loaded for easier debugging
+- **Production mode:** Minified bundles with external source maps
+
+**Architecture:**
+```
+esbuild/app-entry.js → esbuild → static/dist/app.bundle.js (61KB minified)
+esbuild/admin-entry.js → esbuild → static/dist/admin.bundle.js (404B minified)
+```
+
+**Key files:**
+- `esbuild/app-entry.js` - Entry point for main bundle (htmx, sse, ui-utils, modal, notifications)
+- `esbuild/admin-entry.js` - Entry point for admin bundle
+- `internal/build/esbuild_service.go` - Bundling service (BuildApp, BuildAdmin, Watch, Clean)
+- `cmd/esbuild/main.go` - CLI tool for building bundles
+
+**Bundle configuration:**
+- **Production:** Minified + external source maps (.js.map files) + 82-94% size reduction
+- **Development:** Unminified + inline source maps for debugging
+- **Format:** IIFE (preserves window.* exports)
+- **Target:** ES2020
+
+**Template loading (conditional):**
+- Production: `<script src="/static/dist/app.bundle.js">` (templates/partials/layout/head-common.html)
+- Development: Individual files `<script src="/static/js/htmx.min.js">`, etc.
+- Controlled by `Env` field in TemplateData (set from ENV environment variable)
+
+**Source maps:**
+- Production: External .map files (e.g., app.bundle.js.map) downloaded only when DevTools open
+- Development: Inline source maps embedded in bundles
+- Browser automatically maps minified code to original source via `//# sourceMappingURL` comment
+
+**Important:** Entry point files in `esbuild/` are build-time only (not served publicly). Only bundles in `static/dist/` are served at runtime.
+
 ## Key Testing Patterns
 
 **Test setup:** All service tests use `test_helpers.go` to create a test Supabase client that connects to the local test database (via `make test-db-start`).
@@ -388,7 +434,7 @@ func TestSomething(t *testing.T) {
 ## Common Gotchas
 
 ### 1. Always Build Before Running
-`make run` depends on `make build` and `make sass`. If you modify Go files, you must rebuild.
+`make run` depends on `make build`, `make sass`, and `make js-build`. If you modify Go files or JavaScript files, you must rebuild. In development, use `make dev` + `make sass-watch` + `make js-watch` for hot-reload.
 
 ### 2. Use Database Views for Queries
 Never manually fetch related user data. Use `rooms_with_players`, `join_requests_with_users`, or `active_games` views to avoid N+1 queries.
@@ -415,6 +461,9 @@ if err != nil {
 ### 7. Context Usage
 Handlers receive `*http.Request` with context. Pass `r.Context()` to service methods for proper request lifecycle management.
 
+### 8. JavaScript Bundling and ENV Variable
+Templates use the `Env` field from TemplateData to conditionally load bundled vs individual JavaScript files. Set `ENV=production` to load minified bundles, or `ENV=development` (or unset) to load individual files. Entry point files in `esbuild/` are build-time only - never modify files there without understanding the bundling architecture.
+
 ## Environment Setup
 
 Copy `.env.example` to `.env` and configure:
@@ -429,46 +478,66 @@ Copy `.env.example` to `.env` and configure:
 
 ```
 couple-game/
-├── cmd/server/main.go          # Application entry point, service init, routing
+├── cmd/
+│   ├── server/main.go         # Application entry point, service init, routing
+│   └── esbuild/main.go        # esbuild CLI tool (build, watch, clean)
 ├── internal/
-│   ├── handlers/               # HTTP handlers (thin layer)
-│   │   ├── admin/             # Admin-specific handlers
-│   │   │   ├── admin_api.go   # Base admin handler struct
+│   ├── build/                 # Build tools and services
+│   │   └── esbuild_service.go # JavaScript bundling service
+│   ├── handlers/              # HTTP handlers (thin layer)
+│   │   ├── admin/            # Admin-specific handlers
+│   │   │   ├── admin_api.go  # Base admin handler struct
 │   │   │   ├── admin_users.go, admin_questions.go, admin_categories.go, etc.
-│   │   │   └── api/csv.go     # CSV export utilities
-│   │   ├── base.go            # Main Handler struct
-│   │   ├── helpers.go         # Shared handler utilities
-│   │   ├── types.go           # Handler type definitions
+│   │   │   └── api/csv.go    # CSV export utilities
+│   │   ├── base.go           # Main Handler struct
+│   │   ├── helpers.go        # Shared handler utilities
+│   │   ├── types.go          # Handler type definitions
 │   │   ├── game_api.go, room_crud.go, room_display.go, etc.
-│   │   └── game.go.old        # Deprecated monolithic handler
-│   ├── middleware/             # HTTP middleware
-│   ├── models/                 # Data models (Room, User, Question, etc.)
-│   └── services/               # Business logic (thick layer)
-│       ├── base_service.go    # Common database query patterns
-│       ├── logging.go         # Service logging utilities
-│       ├── query_helpers.go   # Complex query builders
+│   │   └── game.go.old       # Deprecated monolithic handler
+│   ├── middleware/            # HTTP middleware
+│   ├── models/                # Data models (Room, User, Question, etc.)
+│   └── services/              # Business logic (thick layer)
+│       ├── base_service.go   # Common database query patterns
+│       ├── logging.go        # Service logging utilities
+│       ├── query_helpers.go  # Complex query builders
 │       ├── template_models.go # Template data structures
 │       ├── template_service.go # HTML fragment rendering
-│       └── *_service.go       # Domain-specific services
-├── templates/                  # Full page HTML templates
-│   ├── partials/              # HTML fragments for HTMX/SSE
-│   │   ├── admin/            # Admin panel fragments
-│   │   ├── game/             # Game-related fragments
-│   │   └── notifications/    # Notification fragments
-│   └── layout.html            # Base layout wrapper
+│       └── *_service.go      # Domain-specific services
+├── esbuild/                   # JavaScript bundle entry points (build-time only)
+│   ├── app-entry.js          # Main app bundle entry point
+│   └── admin-entry.js        # Admin bundle entry point
+├── templates/                 # Full page HTML templates
+│   ├── partials/             # HTML fragments for HTMX/SSE
+│   │   ├── admin/           # Admin panel fragments
+│   │   ├── game/            # Game-related fragments
+│   │   └── notifications/   # Notification fragments
+│   └── layout.html           # Base layout wrapper
 ├── static/
-│   ├── css/                   # Compiled CSS (from SASS)
-│   ├── js/                    # Frontend JavaScript (being reduced)
-│   └── i18n/                  # Translation JSON files
-├── sass/                      # SASS source files
-├── sql/                       # Database schema, views, indexes, seeds
-├── scripts/                   # Shell scripts (test DB setup, etc.)
-└── docs/                      # Comprehensive documentation (put all *.md files here, not at the project root)
+│   ├── css/                  # Compiled CSS (from SASS, gitignored)
+│   ├── dist/                 # Bundled JavaScript (gitignored)
+│   │   ├── app.bundle.js    # Main app bundle (prod: 61KB, dev: 358KB)
+│   │   ├── app.bundle.js.map # Source map (prod only)
+│   │   ├── admin.bundle.js  # Admin bundle (prod: 404B, dev: 6.7KB)
+│   │   └── admin.bundle.js.map # Source map (prod only)
+│   ├── js/                   # Source JavaScript files (runtime)
+│   │   ├── htmx.min.js      # HTMX core library
+│   │   ├── sse.js           # HTMX SSE extension
+│   │   ├── ui-utils.js      # Shared utilities (Toast, Loading, etc.)
+│   │   ├── modal.js         # Modal system
+│   │   ├── notifications-realtime.js # Real-time notifications
+│   │   └── admin.js         # Admin panel utilities
+│   └── i18n/                 # Translation JSON files
+├── sass/                     # SASS source files
+├── sql/                      # Database schema, views, indexes, seeds
+├── scripts/                  # Shell scripts (test DB setup, etc.)
+└── docs/                     # Comprehensive documentation (put all *.md files here, not at the project root)
 
 # Generated/ignored:
-├── server                     # Compiled binary (gitignored)
-├── coverage.out              # Test coverage (gitignored)
-└── supabase/                 # Local Supabase files (gitignored)
+├── server                    # Compiled binary (gitignored)
+├── coverage.out             # Test coverage (gitignored)
+├── static/dist/             # JavaScript bundles (gitignored)
+├── static/css/              # Compiled CSS (gitignored)
+└── supabase/                # Local Supabase files (gitignored)
 ```
 
 ## Documentation

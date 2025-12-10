@@ -86,6 +86,21 @@ const Toast = {
     }
 };
 
+// Shared showToast function (used by modal.js, notifications-realtime.js, admin.js)
+// This provides compatibility with code that calls showToast(message, type)
+function showToast(message, type = 'info') {
+    const typeMap = {
+        'info': () => Toast.info(message),
+        'success': () => Toast.success(message),
+        'error': () => Toast.error(message),
+        'warning': () => Toast.warning(message)
+    };
+    if (typeMap[type]) {
+        return typeMap[type]();
+    }
+    return Toast.info(message);
+}
+
 // Loading Overlay
 const Loading = {
     overlay: null,
@@ -345,6 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
 window.Toast = Toast;
 window.Loading = Loading;
 window.MobileMenu = MobileMenu;
+window.showToast = showToast;
 window.setButtonLoading = setButtonLoading;
 window.animateElement = animateElement;
 window.shakeElement = shakeElement;

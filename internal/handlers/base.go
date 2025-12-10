@@ -136,8 +136,9 @@ type TemplateData struct {
 	OwnerUsername     string
 	GuestUsername     string
 	IsOwner           bool
-	IsAdmin           bool // Whether current user is admin
-	JoinRequestsCount int  // Number of pending join requests (for badge)
+	IsAdmin           bool   // Whether current user is admin
+	JoinRequestsCount int    // Number of pending join requests (for badge)
+	Env               string // Environment (development/production) for conditional JS loading
 }
 
 // GetSessionUser extracts user data from session without DB call
@@ -174,6 +175,14 @@ func (h *Handler) RenderTemplate(w http.ResponseWriter, tmpl string, data *Templ
 	if strings.HasPrefix(tmpl, "admin/") {
 		layout = "layout-admin.html"
 		data.IsAdmin = true
+	}
+
+	// Set environment for conditional JS loading (bundles vs individual files)
+	if data.Env == "" {
+		data.Env = os.Getenv("ENV")
+		if data.Env == "" {
+			data.Env = "development" // Default to development
+		}
 	}
 
 	var t *template.Template
