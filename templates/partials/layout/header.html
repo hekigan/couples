@@ -1,0 +1,47 @@
+{{define "layout-header"}}
+<header class="main-header">
+    <div class="container">
+        <div class="header-content">
+            <a href="/" class="logo">
+                <span class="logo-icon">💕</span>
+                <span class="logo-text">Couple Card Game</span>
+            </a>
+
+            <button class="hamburger-btn" onclick="MobileMenu.open()" aria-label="Open menu">
+                <span class="hamburger-icon">☰</span>
+            </button>
+
+            <nav class="main-nav">
+                {{if .User}}
+                <!-- Notification Bell -->
+                    <a href="#" class="notification-bell" onclick="toggleNotifications()" id="notification-btn">
+                        📧
+                        <span class="notification-badge" id="notification-badge" hidden>0</span>
+                    </a>
+                    <div class="notification-dropdown" id="notification-dropdown" hidden>
+                        <div class="notification-header">
+                            <h3>Notifications</h3>
+                            <button onclick="markAllRead()" class="mark-read-btn">Mark all read</button>
+                        </div>
+                        <div class="notification-list" id="notification-list">
+                            <p class="loading">Loading...</p>
+                        </div>
+                    </div>
+
+                    {{if .IsAdmin}}
+                    <a href="/admin" role="button" class="nav-link">Admin Dashboard</a>
+                    {{end}}
+                    <a href="/friends" role="button" class="nav-link">Friends</a>
+                    <a href="/game/rooms" role="button" class="nav-link">Rooms</a>
+                    <a href="/profile" role="button" class="nav-link">Profile</a>
+
+                    <a href="#" role="button" hx-post="/auth/logout" hx-confirm="Are you sure you want to logout?" class="nav-link">Logout</a>
+                {{else}}
+                    <a href="/auth/login" role="button">Login</a>
+                    <a href="/auth/signup" role="button">Signup</a>
+                {{end}}
+            </nav>
+        </div>
+    </div>
+</header>
+{{end}}

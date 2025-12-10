@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/hekigan/couples/internal/middleware"
@@ -71,8 +72,11 @@ func NewHandler(
 		log.Println("📦 Production mode: Caching all templates at startup...")
 		tmpl := template.New("").Funcs(TemplateFuncMap)
 
-		// Parse layout
-		tmpl = template.Must(tmpl.ParseFiles("templates/layout.html"))
+		// Parse both layouts (regular and admin)
+		tmpl = template.Must(tmpl.ParseFiles(
+			"templates/layout.html",
+			"templates/layout-admin.html",
+		))
 
 		// Parse all page templates
 		tmpl = template.Must(tmpl.ParseGlob("templates/*.html"))
@@ -165,6 +169,13 @@ func (h *Handler) RenderTemplate(w http.ResponseWriter, tmpl string, data *Templ
 		data.Title = "Couple Card Game"
 	}
 
+	// Auto-detect layout based on template path
+	layout := "layout.html"
+	if strings.HasPrefix(tmpl, "admin/") {
+		layout = "layout-admin.html"
+		data.IsAdmin = true
+	}
+
 	var t *template.Template
 	var err error
 
@@ -176,7 +187,7 @@ func (h *Handler) RenderTemplate(w http.ResponseWriter, tmpl string, data *Templ
 
 		// Parse and cache on first use
 		t, err = template.New("").Funcs(TemplateFuncMap).ParseFiles(
-			"templates/layout.html",
+			"templates/"+layout,
 			"templates/"+tmpl,
 		)
 		if err != nil {
@@ -187,13 +198,13 @@ func (h *Handler) RenderTemplate(w http.ResponseWriter, tmpl string, data *Templ
 		// Parse component templates
 		t.ParseGlob("templates/components/*.html")
 
-		// Parse partial templates
+		// Parse partial templates (includes layout partials now)
 		t.ParseGlob("templates/partials/*/*.html")
 		t.ParseGlob("templates/partials/*/*/*.html")
 	}
 
-	// Execute layout.html which will include the content template
-	err = t.ExecuteTemplate(w, "layout.html", data)
+	// Execute the determined layout which will include the content template
+	err = t.ExecuteTemplate(w, layout, data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

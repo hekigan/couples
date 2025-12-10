@@ -1,10 +1,11 @@
-{{define "layout.html"}}
+{{define "layout-admin.html"}}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     {{template "layout-head-common" .}}
+    {{template "layout-head-admin" .}}
 </head>
-<body>
+<body data-is-admin="true">
     {{template "layout-header" .}}
 
     <main class="main-content">
@@ -17,4 +18,3 @@
 </body>
 </html>
 {{end}}
-

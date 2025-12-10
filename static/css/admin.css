@@ -1,5 +1,5 @@
 [data-is-admin] {
-  background-image: none;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 [data-is-admin] main {
   width: 100%;
