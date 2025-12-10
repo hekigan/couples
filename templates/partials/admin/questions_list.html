@@ -9,7 +9,7 @@
 	</div>
 
 	<div class="filters">
-		<select hx-get="/admin/api/questions/list"
+		<select hx-get="/admin/api/v1/questions/list"
 		        hx-target="#questions-list"
 		        hx-swap="outerHTML"
 		        hx-push-url="/admin/questions"
@@ -49,7 +49,7 @@
 					{{end}}
 				</td>
 				<td>
-					<button hx-get="/admin/api/questions/{{.ID}}/edit-form"
+					<button hx-get="/admin/api/v1/questions/{{.ID}}/edit-form"
 					        hx-target="#edit-modal-content"
 					        hx-swap="innerHTML"
 					        data-target="edit-modal"
@@ -57,7 +57,7 @@
 					        class="warning">
 						Edit
 					</button>
-					<button hx-delete="/admin/api/questions/{{.ID}}"
+					<button hx-delete="/admin/api/v1/questions/{{.ID}}"
 					        hx-target="#questions-list"
 					        hx-swap="outerHTML"
 					        hx-push-url="true"

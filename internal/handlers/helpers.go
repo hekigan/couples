@@ -2,22 +2,21 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
+	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/models"
+	"github.com/labstack/echo/v4"
 )
 
 // GetRoomFromRequest parses room ID from URL and fetches the room
-// Eliminates 18 duplications in game.go
-func (h *Handler) GetRoomFromRequest(r *http.Request) (*models.Room, uuid.UUID, error) {
-	vars := mux.Vars(r)
-	roomID, err := uuid.Parse(vars["id"])
+// Updated to work with echo.Context
+func (h *Handler) GetRoomFromRequest(c echo.Context) (*models.Room, uuid.UUID, error) {
+	roomID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return nil, uuid.Nil, fmt.Errorf("invalid room ID: %w", err)
 	}
@@ -32,7 +31,7 @@ func (h *Handler) GetRoomFromRequest(r *http.Request) (*models.Room, uuid.UUID, 
 }
 
 // VerifyRoomParticipant checks if the user is a participant (owner or guest) in the room
-// Eliminates 5 duplications in game.go
+// No changes needed - works with uuid.UUID
 func (h *Handler) VerifyRoomParticipant(room *models.Room, userID uuid.UUID) error {
 	isOwner := room.OwnerID == userID
 	isGuest := room.GuestID != nil && *room.GuestID == userID
@@ -45,46 +44,37 @@ func (h *Handler) VerifyRoomParticipant(room *models.Room, userID uuid.UUID) err
 }
 
 // RenderHTMLFragment renders an HTML fragment using TemplateService and writes it to the response
-// Eliminates 13+ duplications in admin_api.go and game.go
-func (h *Handler) RenderHTMLFragment(w http.ResponseWriter, templateName string, data interface{}) error {
+// Updated to work with echo.Context
+func (h *Handler) RenderHTMLFragment(c echo.Context, templateName string, data interface{}) error {
 	html, err := h.TemplateService.RenderFragment(templateName, data)
 	if err != nil {
 		log.Printf("Error rendering fragment %s: %v", templateName, err)
-		return err
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(html))
-	return nil
+	return c.HTML(http.StatusOK, html)
 }
 
 // RenderHTMLFragmentOrFallback renders an HTML fragment with a fallback on error
-// Enhanced version of RenderHTMLFragment with graceful degradation
-func (h *Handler) RenderHTMLFragmentOrFallback(w http.ResponseWriter, templateName string, data interface{}, fallback string) error {
+// Updated to work with echo.Context
+func (h *Handler) RenderHTMLFragmentOrFallback(c echo.Context, templateName string, data interface{}, fallback string) error {
 	html, err := h.TemplateService.RenderFragment(templateName, data)
 	if err != nil {
 		log.Printf("Error rendering fragment %s: %v", templateName, err)
 		// Write fallback HTML
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(fallback))
-		return err
+		return c.HTML(http.StatusOK, fallback)
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(html))
-	return nil
+	return c.HTML(http.StatusOK, html)
 }
 
 // FetchCurrentUser gets the current user from context with proper error handling
-// Eliminates 6 duplications in game.go
-func (h *Handler) FetchCurrentUser(r *http.Request) (*models.User, error) {
+// Updated to work with echo.Context
+func (h *Handler) FetchCurrentUser(c echo.Context) (*models.User, error) {
 	ctx := context.Background()
 
 	// Get user ID from session
-	sessionUser := GetSessionUser(r)
+	sessionUser := GetSessionUser(c)
 	if sessionUser == nil {
 		return nil, fmt.Errorf("user not authenticated")
 	}
@@ -104,11 +94,11 @@ func (h *Handler) FetchCurrentUser(r *http.Request) (*models.User, error) {
 	return currentUser, nil
 }
 
-// ExtractIDFromRoute extracts and validates a UUID from route variables
-// Eliminates 12 duplications in admin_api.go
-func ExtractIDFromRoute(vars map[string]string, key string) (uuid.UUID, error) {
-	idStr, ok := vars[key]
-	if !ok {
+// ExtractIDFromParam extracts and validates a UUID from URL parameter
+// Replaces ExtractIDFromRoute for Echo
+func ExtractIDFromParam(c echo.Context, key string) (uuid.UUID, error) {
+	idStr := c.Param(key)
+	if idStr == "" {
 		return uuid.Nil, fmt.Errorf("missing %s in route", key)
 	}
 
@@ -120,20 +110,15 @@ func ExtractIDFromRoute(vars map[string]string, key string) (uuid.UUID, error) {
 	return id, nil
 }
 
-// ExtractIDFromRouteVars is a convenience wrapper that extracts mux vars from request
-// and parses the UUID in one call
-func ExtractIDFromRouteVars(r *http.Request, key string) (uuid.UUID, error) {
-	vars := mux.Vars(r)
-	return ExtractIDFromRoute(vars, key)
-}
-
 // ParsePaginationParams extracts pagination parameters from the request
-// Eliminates 4 duplications in admin_api.go
-// Returns: page (1-indexed), perPage (validated), offset (0-indexed)
-func ParsePaginationParams(r *http.Request) (page, perPage, offset int) {
+// Updated to work with echo.Context
+// ParsePaginationParams extracts and validates pagination parameters from request
+// Returns: page (1-indexed), perPage (validated)
+// Callers should calculate offset as: offset = (page - 1) * perPage
+func ParsePaginationParams(c echo.Context) (page, perPage int) {
 	// Parse page parameter
 	page = 1
-	if p := r.URL.Query().Get("page"); p != "" {
+	if p := c.QueryParam("page"); p != "" {
 		if parsed, err := strconv.Atoi(p); err == nil && parsed > 0 {
 			page = parsed
 		}
@@ -141,7 +126,7 @@ func ParsePaginationParams(r *http.Request) (page, perPage, offset int) {
 
 	// Parse per_page parameter with validation
 	perPage = 25 // Default
-	if pp := r.URL.Query().Get("per_page"); pp != "" {
+	if pp := c.QueryParam("per_page"); pp != "" {
 		if parsed, err := strconv.Atoi(pp); err == nil {
 			// Validate against allowed values
 			if parsed == 25 || parsed == 50 || parsed == 100 {
@@ -150,32 +135,15 @@ func ParsePaginationParams(r *http.Request) (page, perPage, offset int) {
 		}
 	}
 
-	// Calculate offset
-	offset = (page - 1) * perPage
-
-	return page, perPage, offset
+	return page, perPage
 }
 
-// WriteJSONResponse writes a JSON response with proper headers
-// Standardizes JSON response writing across handlers
-func WriteJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	return json.NewEncoder(w).Encode(data)
-}
-
-// WriteJSONError writes a JSON error response
-// Convenience wrapper for error responses
-func WriteJSONError(w http.ResponseWriter, statusCode int, message string) error {
-	return WriteJSONResponse(w, statusCode, map[string]string{
-		"error": message,
-	})
-}
-
-// WriteJSONSuccess writes a JSON success response
-// Convenience wrapper for success responses
-func WriteJSONSuccess(w http.ResponseWriter, message string) error {
-	return WriteJSONResponse(w, http.StatusOK, map[string]string{
-		"success": message,
-	})
+// GetUserIDFromContext retrieves user ID from Echo context
+// Helper function for cleaner code
+func GetUserIDFromContext(c echo.Context) (uuid.UUID, error) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return uuid.Nil, fmt.Errorf("user not authenticated")
+	}
+	return userID, nil
 }

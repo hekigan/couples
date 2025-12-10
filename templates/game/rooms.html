@@ -55,7 +55,7 @@
                         {{if .IsOwner}}
                             <button type="button"
                                     class="btn-danger"
-                                    hx-delete="/api/rooms/{{.ID}}"
+                                    hx-delete="/api/v1/rooms/{{.ID}}"
                                     hx-confirm="⚠️ Are you sure you want to delete this room?\n\nThis action cannot be undone and will remove all game data."
                                     hx-target="#room-{{.ID}}"
                                     hx-swap="outerHTML swap:300ms"
@@ -67,7 +67,7 @@
                         {{else}}
                             <button type="button"
                                     class="secondary"
-                                    hx-post="/api/rooms/{{.ID}}/leave"
+                                    hx-post="/api/v1/rooms/{{.ID}}/leave"
                                     hx-confirm="⚠️ Are you sure you want to leave this room?\n\nThe room will remain for the owner, but you will be removed."
                                     hx-target="#room-{{.ID}}"
                                     hx-swap="outerHTML swap:300ms"
@@ -90,8 +90,8 @@
 <script>
 // ============================================================================
 // HTMX now handles:
-// - Room deletion via hx-delete="/api/rooms/{id}"
-// - Room leave via hx-post="/api/rooms/{id}/leave"
+// - Room deletion via hx-delete="/api/v1/rooms/{id}"
+// - Room leave via hx-post="/api/v1/rooms/{id}/leave"
 // - Confirmation dialogs via hx-confirm attribute
 // - Fade-out animations via hx-swap="outerHTML swap:300ms"
 // - Button disable during requests via hx-disabled-elt

@@ -5,24 +5,24 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	"github.com/hekigan/couples/internal/handlers"
 	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/services"
+	"github.com/labstack/echo/v4"
 )
 
 // ListCategoriesHandler returns an HTML fragment with the categories list
-func (ah *AdminAPIHandler) ListCategoriesHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) ListCategoriesHandler(c echo.Context) error {
 	ctx := context.Background()
 
 	// Use helper for pagination
-	page, perPage, offset := handlers.ParsePaginationParams(r)
+	page, perPage := handlers.ParsePaginationParams(c)
+	offset := (page - 1) * perPage
 
 	categories, err := ah.categoryService.ListCategories(ctx, perPage, offset)
 	if err != nil {
-		http.Error(w, "Failed to list categories", http.StatusInternalServerError)
 		log.Printf("Error listing categories: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to list categories")
 	}
 
 	totalCount, _ := ah.categoryService.GetCategoryCount(ctx)
@@ -69,17 +69,15 @@ func (ah *AdminAPIHandler) ListCategoriesHandler(w http.ResponseWriter, r *http.
 
 	html, err := ah.handler.TemplateService.RenderFragment("categories_list", data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error rendering categories list: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(html))
+	return c.HTML(http.StatusOK, html)
 }
 
 // GetCategoryCreateFormHandler returns an HTML form for creating a new category
-func (ah *AdminAPIHandler) GetCategoryCreateFormHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) GetCategoryCreateFormHandler(c echo.Context) error {
 	// Create empty form data for create mode
 	data := services.CategoryFormData{
 		ID:    "", // Empty ID indicates create mode
@@ -89,31 +87,26 @@ func (ah *AdminAPIHandler) GetCategoryCreateFormHandler(w http.ResponseWriter, r
 
 	html, err := ah.handler.TemplateService.RenderFragment("category_form.html", data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error rendering category create form: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(html))
+	return c.HTML(http.StatusOK, html)
 }
 
 // GetCategoryEditFormHandler returns an HTML form for editing a category
-func (ah *AdminAPIHandler) GetCategoryEditFormHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) GetCategoryEditFormHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	// Use helper to extract ID
-	vars := mux.Vars(r)
-	categoryID, err := handlers.ExtractIDFromRoute(vars, "id")
+	// Extract ID from route
+	categoryID, err := handlers.ExtractIDFromParam(c, "id")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	category, err := ah.categoryService.GetCategoryByID(ctx, categoryID)
 	if err != nil {
-		http.Error(w, "Category not found", http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, "Category not found")
 	}
 
 	data := services.CategoryFormData{
@@ -124,90 +117,71 @@ func (ah *AdminAPIHandler) GetCategoryEditFormHandler(w http.ResponseWriter, r *
 
 	html, err := ah.handler.TemplateService.RenderFragment("category_form.html", data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error rendering category edit form: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(html))
+	return c.HTML(http.StatusOK, html)
 }
 
 // UpdateCategoryHandler updates a category
-func (ah *AdminAPIHandler) UpdateCategoryHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) UpdateCategoryHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	// Use helper to extract ID
-	vars := mux.Vars(r)
-	categoryID, err := handlers.ExtractIDFromRoute(vars, "id")
+	// Extract ID from route
+	categoryID, err := handlers.ExtractIDFromParam(c, "id")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	category := &models.Category{
 		ID:    categoryID,
-		Key:   r.FormValue("key"),
-		Label: r.FormValue("label"),
+		Key:   c.FormValue("key"),
+		Label: c.FormValue("label"),
 	}
 
 	if err := ah.categoryService.UpdateCategory(ctx, category); err != nil {
-		http.Error(w, "Failed to update category", http.StatusInternalServerError)
 		log.Printf("Error updating category: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update category")
 	}
 
 	// Return updated categories list
-	ah.ListCategoriesHandler(w, r)
+	return ah.ListCategoriesHandler(c)
 }
 
 // CreateCategoryHandler creates a new category
-func (ah *AdminAPIHandler) CreateCategoryHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) CreateCategoryHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
-		return
-	}
-
 	category := &models.Category{
-		Key:   r.FormValue("key"),
-		Label: r.FormValue("label"),
+		Key:   c.FormValue("key"),
+		Label: c.FormValue("label"),
 	}
 
 	if err := ah.categoryService.CreateCategory(ctx, category); err != nil {
-		http.Error(w, "Failed to create category", http.StatusInternalServerError)
 		log.Printf("Error creating category: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create category")
 	}
 
 	// Return updated categories list
-	ah.ListCategoriesHandler(w, r)
+	return ah.ListCategoriesHandler(c)
 }
 
 // DeleteCategoryHandler deletes a category
-func (ah *AdminAPIHandler) DeleteCategoryHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) DeleteCategoryHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	// Use helper to extract ID
-	vars := mux.Vars(r)
-	categoryID, err := handlers.ExtractIDFromRoute(vars, "id")
+	// Extract ID from route
+	categoryID, err := handlers.ExtractIDFromParam(c, "id")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	if err := ah.categoryService.DeleteCategory(ctx, categoryID); err != nil {
-		http.Error(w, "Failed to delete category", http.StatusInternalServerError)
 		log.Printf("Error deleting category: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete category")
 	}
 
 	// Return updated categories list
-	ah.ListCategoriesHandler(w, r)
+	return ah.ListCategoriesHandler(c)
 }

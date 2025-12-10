@@ -4,19 +4,21 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/middleware"
+	"github.com/labstack/echo/v4"
 )
 
 // ProfileHandler displays the user's profile
-func (h *Handler) ProfileHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ProfileHandler(c echo.Context) error {
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
 
 	user, err := h.UserService.GetUserByID(ctx, userID)
 	if err != nil {
-		http.Error(w, "Failed to load profile", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load profile")
 	}
 
 	data := &TemplateData{
@@ -24,30 +26,30 @@ func (h *Handler) ProfileHandler(w http.ResponseWriter, r *http.Request) {
 		User:  user,
 		Data:  user,
 	}
-	h.RenderTemplate(w, "profile.html", data)
+	return h.RenderTemplate(c, "profile.html", data)
 }
 
 // UpdateProfileHandler updates the user's profile
-func (h *Handler) UpdateProfileHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateProfileHandler(c echo.Context) error {
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
 
 	user, err := h.UserService.GetUserByID(ctx, userID)
 	if err != nil {
-		http.Error(w, "Failed to load profile", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load profile")
 	}
 
 	// Update user fields from form
-	if username := r.FormValue("username"); username != "" {
+	if username := c.FormValue("username"); username != "" {
 		user.Username = username
 	}
 
 	if err := h.UserService.UpdateUser(ctx, user); err != nil {
-		http.Error(w, "Failed to update profile", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update profile")
 	}
 
-	http.Redirect(w, r, "/profile", http.StatusSeeOther)
+	return c.Redirect(http.StatusSeeOther, "/profile")
 }
-

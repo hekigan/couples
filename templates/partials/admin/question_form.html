@@ -1,7 +1,7 @@
 {{if .QuestionID}}
 {{/* Edit Mode - Language selector to choose which translation to edit */}}
 <form id="question-form"
-      hx-put="/admin/api/questions/{{.QuestionID}}"
+      hx-put="/admin/api/v1/questions/{{.QuestionID}}"
       hx-swap="none"
       hx-on::after-request="handleDataUpdateResponse(event, '/admin/api/questions/list', '#questions-list')">
 	<input type="hidden" name="base_question_id" value="{{.BaseQuestionID}}">
@@ -68,7 +68,7 @@
 {{else}}
 {{/* Create Mode - Show all three language fields at once */}}
 <form id="question-form"
-      hx-post="/admin/api/questions"
+      hx-post="/admin/api/v1/questions"
       hx-swap="none"
       hx-on::after-request="handleDataUpdateResponse(event, '/admin/api/questions/list', '#questions-list')">
 

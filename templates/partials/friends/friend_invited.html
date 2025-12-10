@@ -3,7 +3,7 @@
         <span class="friend-name">{{.Friend.Username}}</span>
         <span class="invited-badge" role="status" aria-live="polite" style="color: #10b981; font-size: 0.875rem; margin-left: 0.5rem;">✉️ Invited</span>
     </div>
-    <button hx-delete="/api/rooms/invitations/{{.RoomID}}/{{.Friend.ID}}"
+    <button hx-delete="/api/v1/rooms/invitations/{{.RoomID}}/{{.Friend.ID}}"
             hx-target="#friend-{{.Friend.ID}}"
             hx-swap="outerHTML"
             hx-disabled-elt="this"

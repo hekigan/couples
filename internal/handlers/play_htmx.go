@@ -7,32 +7,30 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/services"
+	"github.com/labstack/echo/v4"
 )
 
 // GetTurnIndicatorHandler returns HTML fragment for turn indicator
-func (h *Handler) GetTurnIndicatorHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	roomID, err := uuid.Parse(vars["id"])
+func (h *Handler) GetTurnIndicatorHandler(c echo.Context) error {
+	roomID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid room ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid room ID")
 	}
 
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
 
 	// Get room to check current turn
 	room, err := h.RoomService.GetRoomByID(ctx, roomID)
 	if err != nil {
 		log.Printf("Error fetching room: %v", err)
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`<div class="turn-indicator"><span>Loading...</span></div>`))
-		return
+		return c.HTML(http.StatusOK, `<div class="turn-indicator"><span>Loading...</span></div>`)
 	}
 
 	// Determine other player name
@@ -60,24 +58,17 @@ func (h *Handler) GetTurnIndicatorHandler(w http.ResponseWriter, r *http.Request
 	})
 	if err != nil {
 		log.Printf("Error rendering turn_indicator template: %v", err)
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`<div class="turn-indicator"><span>Loading...</span></div>`))
-		return
+		return c.HTML(http.StatusOK, `<div class="turn-indicator"><span>Loading...</span></div>`)
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(html))
+	return c.HTML(http.StatusOK, html)
 }
 
 // GetQuestionCardHandler returns HTML fragment for current question
-func (h *Handler) GetQuestionCardHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	roomID, err := uuid.Parse(vars["id"])
+func (h *Handler) GetQuestionCardHandler(c echo.Context) error {
+	roomID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid room ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid room ID")
 	}
 
 	ctx := context.Background()
@@ -86,10 +77,7 @@ func (h *Handler) GetQuestionCardHandler(w http.ResponseWriter, r *http.Request)
 	room, err := h.RoomService.GetRoomByID(ctx, roomID)
 	if err != nil {
 		log.Printf("Error fetching room: %v", err)
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`<div class="question-card"><p class="question-text">Waiting to start...</p></div>`))
-		return
+		return c.HTML(http.StatusOK, `<div class="question-card"><p class="question-text">Waiting to start...</p></div>`)
 	}
 
 	questionText := "Waiting for question..."
@@ -107,25 +95,18 @@ func (h *Handler) GetQuestionCardHandler(w http.ResponseWriter, r *http.Request)
 	})
 	if err != nil {
 		log.Printf("Error rendering question_card template: %v", err)
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`<div class="question-card"><p class="question-text">Loading...</p></div>`))
-		return
+		return c.HTML(http.StatusOK, `<div class="question-card"><p class="question-text">Loading...</p></div>`)
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(html))
+	return c.HTML(http.StatusOK, html)
 }
 
 // GetGameContentHandler returns HTML fragment for the full game content area
 // This includes turn indicator, question card, and game forms
-func (h *Handler) GetGameContentHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	roomID, err := uuid.Parse(vars["id"])
+func (h *Handler) GetGameContentHandler(c echo.Context) error {
+	roomID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid room ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid room ID")
 	}
 
 	// Render the full game content template which includes
@@ -135,28 +116,24 @@ func (h *Handler) GetGameContentHandler(w http.ResponseWriter, r *http.Request) 
 	})
 	if err != nil {
 		log.Printf("Error rendering game_content template: %v", err)
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`<div class="loading">Loading game interface...</div>`))
-		return
+		return c.HTML(http.StatusOK, `<div class="loading">Loading game interface...</div>`)
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(html))
+	return c.HTML(http.StatusOK, html)
 }
 
 // GetGameFormsHandler returns HTML fragment for answer form, waiting UI, or answer review
-func (h *Handler) GetGameFormsHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	roomID, err := uuid.Parse(vars["id"])
+func (h *Handler) GetGameFormsHandler(c echo.Context) error {
+	roomID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid room ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid room ID")
 	}
 
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
 
 	log.Printf("🎮 GetGameFormsHandler called for room %s by user %s", roomID, userID)
 
@@ -164,10 +141,7 @@ func (h *Handler) GetGameFormsHandler(w http.ResponseWriter, r *http.Request) {
 	room, err := h.RoomService.GetRoomByID(ctx, roomID)
 	if err != nil {
 		log.Printf("Error fetching room: %v", err)
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`<div class="loading">Loading game interface...</div>`))
-		return
+		return c.HTML(http.StatusOK, `<div class="loading">Loading game interface...</div>`)
 	}
 
 	isMyTurn := room.CurrentTurn != nil && *room.CurrentTurn == userID
@@ -229,10 +203,7 @@ func (h *Handler) GetGameFormsHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		if err != nil {
 			log.Printf("Error rendering answer_review template: %v", err)
-			w.Header().Set("Content-Type", "text/html")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`<div class="loading">Loading answer...</div>`))
-			return
+			return c.HTML(http.StatusOK, `<div class="loading">Loading answer...</div>`)
 		}
 	} else if isMyTurn {
 		// No answer yet and it's my turn - show answer form
@@ -247,10 +218,7 @@ func (h *Handler) GetGameFormsHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		if err != nil {
 			log.Printf("Error rendering answer_form template: %v", err)
-			w.Header().Set("Content-Type", "text/html")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`<div class="loading">Loading form...</div>`))
-			return
+			return c.HTML(http.StatusOK, `<div class="loading">Loading form...</div>`)
 		}
 	} else {
 		// No answer yet and it's not my turn - show waiting UI
@@ -259,25 +227,18 @@ func (h *Handler) GetGameFormsHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		if err != nil {
 			log.Printf("Error rendering waiting_ui template: %v", err)
-			w.Header().Set("Content-Type", "text/html")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`<div class="loading">Loading...</div>`))
-			return
+			return c.HTML(http.StatusOK, `<div class="loading">Loading...</div>`)
 		}
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(html))
+	return c.HTML(http.StatusOK, html)
 }
 
 // GetProgressCounterHandler returns HTML fragment for progress counter
-func (h *Handler) GetProgressCounterHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	roomID, err := uuid.Parse(vars["id"])
+func (h *Handler) GetProgressCounterHandler(c echo.Context) error {
+	roomID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid room ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid room ID")
 	}
 
 	ctx := context.Background()
@@ -286,10 +247,7 @@ func (h *Handler) GetProgressCounterHandler(w http.ResponseWriter, r *http.Reque
 	room, err := h.RoomService.GetRoomByID(ctx, roomID)
 	if err != nil {
 		log.Printf("Error fetching room: %v", err)
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`Question 0 of 0`))
-		return
+		return c.HTML(http.StatusOK, `Question 0 of 0`)
 	}
 
 	// Render HTML fragment
@@ -299,39 +257,33 @@ func (h *Handler) GetProgressCounterHandler(w http.ResponseWriter, r *http.Reque
 	})
 	if err != nil {
 		log.Printf("Error rendering progress_counter template: %v", err)
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(fmt.Sprintf(`Question %d of %d`, room.CurrentQuestion, room.MaxQuestions)))
-		return
+		return c.HTML(http.StatusOK, fmt.Sprintf(`Question %d of %d`, room.CurrentQuestion, room.MaxQuestions))
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(html))
+	return c.HTML(http.StatusOK, html)
 }
 
 // NextQuestionHTMLHandler handles drawing the next question and returns game content
-func (h *Handler) NextQuestionHTMLHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	roomID, err := uuid.Parse(vars["id"])
+func (h *Handler) NextQuestionHTMLHandler(c echo.Context) error {
+	roomID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid room ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid room ID")
 	}
 
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
 
 	// Verify it's the user's turn
 	room, err := h.RoomService.GetRoomByID(ctx, roomID)
 	if err != nil {
-		http.Error(w, "Room not found", http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, "Room not found")
 	}
 
 	if room.CurrentTurn == nil || *room.CurrentTurn != userID {
-		http.Error(w, "Not your turn", http.StatusForbidden)
-		return
+		return echo.NewHTTPError(http.StatusForbidden, "Not your turn")
 	}
 
 	// Clear the current question ID before drawing a new one
@@ -340,8 +292,7 @@ func (h *Handler) NextQuestionHTMLHandler(w http.ResponseWriter, r *http.Request
 	room.CurrentQuestionID = nil
 	if err := h.RoomService.UpdateRoom(ctx, room); err != nil {
 		log.Printf("Error clearing current question: %v", err)
-		http.Error(w, "Failed to clear current question", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to clear current question")
 	}
 	log.Printf("✅ Cleared current_question_id for room %s before drawing next question", roomID)
 
@@ -349,10 +300,9 @@ func (h *Handler) NextQuestionHTMLHandler(w http.ResponseWriter, r *http.Request
 	_, err = h.GameService.DrawQuestion(ctx, roomID)
 	if err != nil {
 		log.Printf("Error drawing question: %v", err)
-		http.Error(w, fmt.Sprintf("Failed to draw question: %v", err), http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to draw question: %v", err))
 	}
 
 	// Return updated game forms (will show answer form to active player)
-	h.GetGameFormsHandler(w, r)
+	return h.GetGameFormsHandler(c)
 }

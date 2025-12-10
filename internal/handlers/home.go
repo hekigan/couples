@@ -6,12 +6,13 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/middleware"
+	"github.com/labstack/echo/v4"
 )
 
 // HomeHandler handles the home page
-func (h *Handler) HomeHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HomeHandler(c echo.Context) error {
 	// Get session user data
-	sessionUser := GetSessionUser(r)
+	sessionUser := GetSessionUser(c)
 
 	// Check if user has a username set
 	if sessionUser != nil {
@@ -26,8 +27,7 @@ func (h *Handler) HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 			// If username is empty or temporary, redirect to setup
 			if userObj.Username == "" || isTemporary {
-				http.Redirect(w, r, "/setup-username", http.StatusSeeOther)
-				return
+				return c.Redirect(http.StatusSeeOther, "/setup-username")
 			}
 		}
 	}
@@ -38,44 +38,38 @@ func (h *Handler) HomeHandler(w http.ResponseWriter, r *http.Request) {
 		IsAdmin: sessionUser != nil && sessionUser.IsAdmin,
 	}
 
-	h.RenderTemplate(w, "home.html", data)
+	return h.RenderTemplate(c, "home.html", data)
 }
 
 // SetupUsernameHandler shows the username setup page
-func (h *Handler) SetupUsernameHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) SetupUsernameHandler(c echo.Context) error {
 	data := &TemplateData{
 		Title: "Setup Username",
 	}
-	h.RenderTemplate(w, "setup-username.html", data)
+	return h.RenderTemplate(c, "setup-username.html", data)
 }
 
 // SetupUsernamePostHandler handles username setup submission
-func (h *Handler) SetupUsernamePostHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(middleware.UserIDKey)
-	if userID == nil {
-		http.Error(w, "Not authenticated", http.StatusUnauthorized)
-		return
+func (h *Handler) SetupUsernamePostHandler(c echo.Context) error {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
 	}
 
-	username := r.FormValue("username")
+	username := c.FormValue("username")
 	if len(username) < 3 || len(username) > 20 {
-		http.Error(w, "Username must be 3-20 characters", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Username must be 3-20 characters")
 	}
 
 	ctx := context.Background()
-	if err := h.UserService.UpdateUsername(ctx, userID.(uuid.UUID), username); err != nil {
-		http.Error(w, "Username already taken or invalid", http.StatusBadRequest)
-		return
+	if err := h.UserService.UpdateUsername(ctx, userID, username); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Username already taken or invalid")
 	}
 
-	w.WriteHeader(http.StatusOK)
+	return c.NoContent(http.StatusOK)
 }
 
 // HealthHandler handles health check requests
-func (h *Handler) HealthHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"healthy"}`))
+func (h *Handler) HealthHandler(c echo.Context) error {
+	return c.JSON(http.StatusOK, map[string]string{"status": "healthy"})
 }
-

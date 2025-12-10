@@ -10,7 +10,7 @@
     </div>
     <div class="question-actions">
         {{if .IsMyTurn}}
-        <form hx-post="/api/game/{{.RoomID}}/answer" hx-swap="outerHTML" hx-target="#current-question">
+        <form hx-post="/api/v1/rooms/{{.RoomID}}/answer" hx-swap="outerHTML" hx-target="#current-question">
             <textarea
                 name="answer"
                 placeholder="Type your answer..."
@@ -20,7 +20,7 @@
                 <button type="submit" class="">Submit Answer</button>
                 <button
                     type="button"
-                    hx-post="/api/game/{{.RoomID}}/pass"
+                    hx-post="/api/v1/rooms/{{.RoomID}}/pass"
                     hx-swap="outerHTML"
                     hx-target="#current-question"
                     class="secondary">Pass</button>

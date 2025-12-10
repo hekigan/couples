@@ -2,7 +2,7 @@
 {{/* Edit Mode - User exists */}}
 <form
 	id="user-edit-form"
-	hx-put="/admin/api/users/{{.ID}}"
+	hx-put="/admin/api/v1/users/{{.ID}}"
 	hx-swap="none"
 	hx-on::after-request="handleDataUpdateResponse(event, '/admin/api/users/list', '#users-list')"
 	>
@@ -27,7 +27,7 @@
 {{/* Create Mode - New user */}}
 <form
 	id="user-create-form"
-	hx-post="/admin/api/users"
+	hx-post="/admin/api/v1/users"
 	hx-swap="none"
 	hx-on::after-request="handleDataUpdateResponse(event, '/admin/api/users/list', '#users-list')"
 	>

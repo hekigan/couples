@@ -109,11 +109,10 @@ func TestUpdateUser(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "update username and name",
+			name: "update username",
 			user: &models.User{
 				ID:       uuid.New(),
 				Username: "updateduser",
-				Name:     "Updated Name",
 			},
 			wantErr: false,
 		},
@@ -122,7 +121,6 @@ func TestUpdateUser(t *testing.T) {
 			user: &models.User{
 				ID:       uuid.New(),
 				Username: "adminuser",
-				Name:     "Admin User",
 				IsAdmin:  true,
 			},
 			wantErr: false,

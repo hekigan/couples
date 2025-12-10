@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Load notification count
 async function loadNotificationCount() {
     try {
-        const response = await fetch('/api/notifications/unread-count');
+        const response = await fetch('/api/v1/notifications/unread-count');
         if (response.ok) {
             const data = await response.json();
             updateNotificationBadge(data.count);
@@ -62,9 +62,9 @@ document.addEventListener('click', (e) => {
 async function loadNotifications() {
     const list = document.getElementById('notification-list');
     list.innerHTML = '<p class="loading">Loading...</p>';
-    
+
     try {
-        const response = await fetch('/api/notifications');
+        const response = await fetch('/api/v1/notifications');
         if (response.ok) {
             const notifications = await response.json();
             displayNotifications(notifications);
@@ -135,7 +135,7 @@ function formatTime(timestamp) {
 async function handleNotificationClick(notificationId, link) {
     // Mark as read
     try {
-        await fetch(`/api/notifications/${notificationId}/read`, {
+        await fetch(`/api/v1/notifications/${notificationId}/read`, {
             method: 'POST'
         });
         
@@ -155,7 +155,7 @@ async function handleNotificationClick(notificationId, link) {
 // Mark all as read
 async function markAllRead() {
     try {
-        const response = await fetch('/api/notifications/read-all', {
+        const response = await fetch('/api/v1/notifications/read-all', {
             method: 'POST'
         });
         

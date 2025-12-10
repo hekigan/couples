@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,72 +9,61 @@ import (
 	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/services"
+	"github.com/labstack/echo/v4"
 )
 
 // LoginHandler displays the login page
-func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) LoginHandler(c echo.Context) error {
 	data := &TemplateData{
 		Title: "Login - Couple Card Game",
 	}
-	h.RenderTemplate(w, "auth/login.html", data)
+	return h.RenderTemplate(c, "auth/login.html", data)
 }
 
 // LoginPostHandler handles email/password login via HTMX
-func (h *Handler) LoginPostHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+func (h *Handler) LoginPostHandler(c echo.Context) error {
+	ctx := c.Request().Context()
 
 	// Parse form data
-	email := r.FormValue("email")
-	password := r.FormValue("password")
+	email := c.FormValue("email")
+	password := c.FormValue("password")
 
 	// Validate inputs
 	if email == "" || password == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
+		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Email and password are required",
 		})
-		return
 	}
 
 	// Create auth service
 	authService, err := services.NewAuthService(h.UserService.GetSupabaseClient())
 	if err != nil {
 		log.Printf("Failed to initialize auth service: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
+		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Authentication service unavailable",
 		})
-		return
 	}
 
 	// Authenticate with Supabase
 	session, err := authService.LoginWithPassword(ctx, email, password)
 	if err != nil {
 		log.Printf("Login failed for %s: %v", email, err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{
+		return c.JSON(http.StatusUnauthorized, map[string]string{
 			"error": "Invalid email or password",
 		})
-		return
 	}
 
 	// Create or update user in database (reuse OAuth pattern)
 	user, err := authService.CreateOrUpdateUserFromOAuth(ctx, session.User)
 	if err != nil {
 		log.Printf("Failed to create/update user: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
+		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Failed to create user session",
 		})
-		return
 	}
 
-	// Create session (pattern from processOAuthTokens, lines 224-241)
-	sess, _ := middleware.Store.Get(r, "couple-card-game-session")
+	// Create session
+	sess, _ := middleware.GetSession(c)
 	sess.Values["user_id"] = user.ID.String()
 	sess.Values["username"] = user.Username
 	if user.Email != nil {
@@ -88,117 +76,93 @@ func (h *Handler) LoginPostHandler(w http.ResponseWriter, r *http.Request) {
 		sess.Values["refresh_token"] = session.RefreshToken
 	}
 
-	if err := sess.Save(r, w); err != nil {
+	if err := middleware.SaveSession(c, sess); err != nil {
 		log.Printf("Failed to save session: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
+		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Failed to save session",
 		})
-		return
 	}
 
 	// Return HX-Redirect header for HTMX to handle
-	w.Header().Set("HX-Redirect", "/")
-	w.WriteHeader(http.StatusOK)
+	c.Response().Header().Set("HX-Redirect", "/")
+	return c.NoContent(http.StatusOK)
 }
 
 // SignupHandler displays the signup page
-func (h *Handler) SignupHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) SignupHandler(c echo.Context) error {
 	data := &TemplateData{
 		Title: "Sign Up - Couple Card Game",
 	}
-	h.RenderTemplate(w, "auth/signup.html", data)
+	return h.RenderTemplate(c, "auth/signup.html", data)
 }
 
 // SignupPostHandler handles user registration via HTMX
-func (h *Handler) SignupPostHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+func (h *Handler) SignupPostHandler(c echo.Context) error {
+	ctx := c.Request().Context()
 
 	// Parse form data
-	email := r.FormValue("email")
-	password := r.FormValue("password")
-	passwordConfirm := r.FormValue("password_confirm")
-	username := r.FormValue("username")
+	email := c.FormValue("email")
+	password := c.FormValue("password")
+	passwordConfirm := c.FormValue("password_confirm")
+	username := c.FormValue("username")
 
 	// Validate inputs
 	if email == "" || password == "" || username == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
+		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "All fields are required",
 		})
-		return
 	}
 
 	// Validate password match
 	if password != passwordConfirm {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
+		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Passwords do not match",
 		})
-		return
 	}
 
 	// Validate password strength (minimum 6 characters)
 	if len(password) < 6 {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
+		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Password must be at least 6 characters long",
 		})
-		return
 	}
 
 	// Validate username (alphanumeric, 3-50 characters)
 	if len(username) < 3 || len(username) > 50 {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
+		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Username must be between 3 and 50 characters",
 		})
-		return
 	}
 
 	// Create auth service
 	authService, err := services.NewAuthService(h.UserService.GetSupabaseClient())
 	if err != nil {
 		log.Printf("Failed to initialize auth service: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
+		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Authentication service unavailable",
 		})
-		return
 	}
 
 	// Create user in Supabase Auth
 	session, err := authService.SignupWithPassword(ctx, email, password, username)
 	if err != nil {
 		log.Printf("❌ Signup failed for %s: %v", email, err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
+		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Signup failed. Email may already be in use.",
 		})
-		return
 	}
 
 	// Create user in application database
 	user, err := authService.CreateOrUpdateUserFromOAuth(ctx, session.User)
 	if err != nil {
 		log.Printf("Failed to create user in database: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
+		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Failed to create user account",
 		})
-		return
 	}
 
 	// Create session
-	sess, _ := middleware.Store.Get(r, "couple-card-game-session")
+	sess, _ := middleware.GetSession(c)
 	sess.Values["user_id"] = user.ID.String()
 	sess.Values["username"] = user.Username
 	if user.Email != nil {
@@ -211,40 +175,37 @@ func (h *Handler) SignupPostHandler(w http.ResponseWriter, r *http.Request) {
 		sess.Values["refresh_token"] = session.RefreshToken
 	}
 
-	if err := sess.Save(r, w); err != nil {
+	if err := middleware.SaveSession(c, sess); err != nil {
 		log.Printf("Failed to save session: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
+		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Failed to save session",
 		})
-		return
 	}
 
 	// Return HX-Redirect header for HTMX to handle
-	w.Header().Set("HX-Redirect", "/")
-	w.WriteHeader(http.StatusOK)
+	c.Response().Header().Set("HX-Redirect", "/")
+	return c.NoContent(http.StatusOK)
 }
 
 // LogoutHandler logs out the user
-func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	session, _ := middleware.Store.Get(r, "couple-card-game-session")
+func (h *Handler) LogoutHandler(c echo.Context) error {
+	session, _ := middleware.GetSession(c)
 	session.Options.MaxAge = -1
-	session.Save(r, w)
+	middleware.SaveSession(c, session)
 
 	// Check if this is an HTMX request
-	if r.Header.Get("HX-Request") == "true" {
+	if c.Request().Header.Get("HX-Request") == "true" {
 		// For HTMX, use HX-Redirect header
-		w.Header().Set("HX-Redirect", "/")
-		w.WriteHeader(http.StatusOK)
-	} else {
-		// For regular requests, use standard redirect
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		c.Response().Header().Set("HX-Redirect", "/")
+		return c.NoContent(http.StatusOK)
 	}
+
+	// For regular requests, use standard redirect
+	return c.Redirect(http.StatusSeeOther, "/")
 }
 
 // DevLoginAsAdminHandler is a development-only endpoint to login as the seeded admin user
-func (h *Handler) DevLoginAsAdminHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DevLoginAsAdminHandler(c echo.Context) error {
 	ctx := context.Background()
 
 	// This is the seeded admin user ID from sql/seed.sql
@@ -252,25 +213,22 @@ func (h *Handler) DevLoginAsAdminHandler(w http.ResponseWriter, r *http.Request)
 
 	adminUUID, err := uuid.Parse(adminUserID)
 	if err != nil {
-		http.Error(w, "Invalid admin user ID", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Invalid admin user ID")
 	}
 
 	// Get the admin user from database
 	adminUser, err := h.UserService.GetUserByID(ctx, adminUUID)
 	if err != nil {
-		http.Error(w, "Admin user not found. Please run sql/seed.sql first.", http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, "Admin user not found. Please run sql/seed.sql first.")
 	}
 
 	// Verify the user is actually an admin
 	if !adminUser.IsAdmin {
-		http.Error(w, "User is not an admin", http.StatusForbidden)
-		return
+		return echo.NewHTTPError(http.StatusForbidden, "User is not an admin")
 	}
 
 	// Create session with both user auth and admin auth flags
-	session, _ := middleware.Store.Get(r, "couple-card-game-session")
+	session, _ := middleware.GetSession(c)
 	session.Values["user_id"] = adminUser.ID.String()
 	session.Values["username"] = adminUser.Username
 	if adminUser.Email != nil {
@@ -279,109 +237,99 @@ func (h *Handler) DevLoginAsAdminHandler(w http.ResponseWriter, r *http.Request)
 	session.Values["is_anonymous"] = false
 	session.Values["is_admin"] = true
 
-	if err := session.Save(r, w); err != nil {
+	if err := middleware.SaveSession(c, session); err != nil {
 		log.Printf("Failed to save session: %v", err)
-		http.Error(w, "Failed to save session", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to save session")
 	}
 
 	log.Printf("✅ Dev login successful for admin user: %s", adminUser.Username)
 
 	// Redirect to admin dashboard
-	http.Redirect(w, r, "/admin", http.StatusSeeOther)
+	return c.Redirect(http.StatusSeeOther, "/admin")
 }
 
 // CreateAnonymousHandler creates an anonymous user
-func (h *Handler) CreateAnonymousHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CreateAnonymousHandler(c echo.Context) error {
 	ctx := context.Background()
-	
+
 	log.Printf("Creating anonymous user...")
-	
+
 	user, err := h.UserService.CreateAnonymousUser(ctx)
 	if err != nil {
 		log.Printf("ERROR creating anonymous user: %v", err)
-		http.Error(w, fmt.Sprintf("Failed to create anonymous user: %v", err), http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to create anonymous user: %v", err))
 	}
 
 	log.Printf("Anonymous user created successfully: %s", user.ID.String())
 
 	// Save to session
-	session, _ := middleware.Store.Get(r, "couple-card-game-session")
+	session, _ := middleware.GetSession(c)
 	session.Values["user_id"] = user.ID.String()
 	session.Values["username"] = user.Username
 	session.Values["email"] = "" // Anonymous users don't have email
 	session.Values["is_anonymous"] = true
-	if err := session.Save(r, w); err != nil {
+	if err := middleware.SaveSession(c, session); err != nil {
 		log.Printf("ERROR saving session: %v", err)
-		http.Error(w, "Failed to save session", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to save session")
 	}
 
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	return c.Redirect(http.StatusSeeOther, "/")
 }
 
 // OAuthGoogleHandler initiates Google OAuth flow
-func (h *Handler) OAuthGoogleHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) OAuthGoogleHandler(c echo.Context) error {
 	authService, err := services.NewAuthService(h.UserService.GetSupabaseClient())
 	if err != nil {
-		http.Error(w, "Failed to initialize auth service", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to initialize auth service")
 	}
 
 	authURL, err := authService.GetOAuthURL(services.ProviderGoogle)
 	if err != nil {
-		http.Error(w, "Failed to generate OAuth URL", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate OAuth URL")
 	}
 
-	http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
+	return c.Redirect(http.StatusTemporaryRedirect, authURL)
 }
 
 // OAuthFacebookHandler initiates Facebook OAuth flow
-func (h *Handler) OAuthFacebookHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) OAuthFacebookHandler(c echo.Context) error {
 	authService, err := services.NewAuthService(h.UserService.GetSupabaseClient())
 	if err != nil {
-		http.Error(w, "Failed to initialize auth service", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to initialize auth service")
 	}
 
 	authURL, err := authService.GetOAuthURL(services.ProviderFacebook)
 	if err != nil {
-		http.Error(w, "Failed to generate OAuth URL", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate OAuth URL")
 	}
 
-	http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
+	return c.Redirect(http.StatusTemporaryRedirect, authURL)
 }
 
 // OAuthGithubHandler initiates GitHub OAuth flow
-func (h *Handler) OAuthGithubHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) OAuthGithubHandler(c echo.Context) error {
 	authService, err := services.NewAuthService(h.UserService.GetSupabaseClient())
 	if err != nil {
-		http.Error(w, "Failed to initialize auth service", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to initialize auth service")
 	}
 
 	authURL, err := authService.GetOAuthURL(services.ProviderGithub)
 	if err != nil {
-		http.Error(w, "Failed to generate OAuth URL", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate OAuth URL")
 	}
 
-	http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
+	return c.Redirect(http.StatusTemporaryRedirect, authURL)
 }
 
 // OAuthCallbackHandler handles OAuth callbacks from Supabase
-func (h *Handler) OAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) OAuthCallbackHandler(c echo.Context) error {
 	// Check if tokens are in query params (PKCE flow)
-	accessToken := r.URL.Query().Get("access_token")
-	refreshToken := r.URL.Query().Get("refresh_token")
+	accessToken := c.QueryParam("access_token")
+	refreshToken := c.QueryParam("refresh_token")
 
 	if accessToken != "" {
 		// Process tokens directly
-		h.processOAuthTokens(w, r, accessToken, refreshToken)
-		return
+		return h.processOAuthTokens(c, accessToken, refreshToken)
 	}
 
 	// No tokens in query, render callback page to extract from fragment (implicit flow)
@@ -389,53 +337,49 @@ func (h *Handler) OAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 		Title: "Completing Login...",
 	}
 
-	h.RenderTemplate(w, "auth/oauth-callback.html", data)
+	return h.RenderTemplate(c, "auth/oauth-callback.html", data)
 }
 
 // OAuthTokenHandler receives tokens from the client-side script
-func (h *Handler) OAuthTokenHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) OAuthTokenHandler(c echo.Context) error {
 	var tokenData struct {
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&tokenData); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
+	if err := c.Bind(&tokenData); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
 
-	h.processOAuthTokens(w, r, tokenData.AccessToken, tokenData.RefreshToken)
+	return h.processOAuthTokens(c, tokenData.AccessToken, tokenData.RefreshToken)
 }
 
 // processOAuthTokens is a helper to process OAuth tokens and create session
-func (h *Handler) processOAuthTokens(w http.ResponseWriter, r *http.Request, accessToken, refreshToken string) {
-	ctx := r.Context()
+func (h *Handler) processOAuthTokens(c echo.Context, accessToken, refreshToken string) error {
+	ctx := c.Request().Context()
 
 	authService, err := services.NewAuthService(h.UserService.GetSupabaseClient())
 	if err != nil {
 		log.Printf("Failed to initialize auth service: %v", err)
-		http.Error(w, "Authentication failed", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Authentication failed")
 	}
 
 	// Get user info from access token
 	oauthUser, err := authService.GetUserFromAccessToken(ctx, accessToken)
 	if err != nil {
 		log.Printf("Failed to get user from token: %v", err)
-		http.Error(w, "Authentication failed", http.StatusUnauthorized)
-		return
+		return echo.NewHTTPError(http.StatusUnauthorized, "Authentication failed")
 	}
 
 	// Create or update user in our database
 	user, err := authService.CreateOrUpdateUserFromOAuth(ctx, oauthUser)
 	if err != nil {
 		log.Printf("Failed to create/update user: %v", err)
-		http.Error(w, "Failed to save user", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to save user")
 	}
 
 	// Save to session
-	session, _ := middleware.Store.Get(r, "couple-card-game-session")
+	session, _ := middleware.GetSession(c)
 	session.Values["user_id"] = user.ID.String()
 	session.Values["username"] = user.Username
 	if user.Email != nil {
@@ -448,19 +392,17 @@ func (h *Handler) processOAuthTokens(w http.ResponseWriter, r *http.Request, acc
 		session.Values["refresh_token"] = refreshToken
 	}
 
-	if err := session.Save(r, w); err != nil {
+	if err := middleware.SaveSession(c, session); err != nil {
 		log.Printf("Failed to save session: %v", err)
-		http.Error(w, "Failed to save session", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to save session")
 	}
 
 	log.Printf("OAuth login successful for user: %s (%s)", user.ID, *user.Email)
 
 	// Return success for JSON requests, redirect for browser
-	if r.Header.Get("Content-Type") == "application/json" {
-		w.WriteHeader(http.StatusOK)
-	} else {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+	if c.Request().Header.Get("Content-Type") == "application/json" {
+		return c.NoContent(http.StatusOK)
 	}
-}
 
+	return c.Redirect(http.StatusSeeOther, "/")
+}

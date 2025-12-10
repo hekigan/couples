@@ -25,7 +25,7 @@
     </div>
 
     {{if eq .Status "pending"}}
-    <button hx-post="/api/rooms/{{.RoomID}}/cancel-my-request"
+    <button hx-post="/api/v1/rooms/{{.RoomID}}/cancel-my-request"
             hx-target="#request-{{.RoomID}}"
             hx-swap="outerHTML swap:300ms"
             hx-confirm="⚠️ Cancel this join request?"

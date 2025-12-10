@@ -6,17 +6,17 @@ import (
 	"net/http"
 
 	"github.com/hekigan/couples/internal/services"
+	"github.com/labstack/echo/v4"
 )
 
 // GetDashboardStatsHandler returns dashboard statistics as HTML for HTMX
-func (ah *AdminAPIHandler) GetDashboardStatsHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) GetDashboardStatsHandler(c echo.Context) error {
 	ctx := context.Background()
 
 	stats, err := ah.adminService.GetDashboardStats(ctx)
 	if err != nil {
-		http.Error(w, "Failed to get dashboard stats", http.StatusInternalServerError)
 		log.Printf("Error getting dashboard stats: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get dashboard stats")
 	}
 
 	data := services.DashboardStatsData{
@@ -33,11 +33,9 @@ func (ah *AdminAPIHandler) GetDashboardStatsHandler(w http.ResponseWriter, r *ht
 
 	html, err := ah.handler.TemplateService.RenderFragment("dashboard_stats.html", data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error rendering dashboard stats: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(html))
+	return c.HTML(http.StatusOK, html)
 }

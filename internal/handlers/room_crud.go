@@ -8,48 +8,49 @@ import (
 	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/models"
+	"github.com/labstack/echo/v4"
 )
 
 // DeleteRoomAPIHandler handles room deletion via API
-func (h *Handler) DeleteRoomAPIHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DeleteRoomAPIHandler(c echo.Context) error {
 	// Use helper to get room and verify ownership
-	room, roomID, err := h.GetRoomFromRequest(r)
+	room, roomID, err := h.GetRoomFromRequest(c)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	}
 
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
 
 	// Only the owner can delete the room
 	if room.OwnerID != userID {
-		http.Error(w, "You are not the owner of this room", http.StatusForbidden)
-		return
+		return echo.NewHTTPError(http.StatusForbidden, "You are not the owner of this room")
 	}
 
 	ctx := context.Background()
 	if err := h.RoomService.DeleteRoom(ctx, roomID); err != nil {
-		http.Error(w, "Failed to delete room", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete room")
 	}
 
 	// Return empty response for HTMX to replace with nothing (removes the element)
-	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(""))
+	return c.HTML(http.StatusOK, "")
 }
 
 // LeaveRoomHandler handles a guest leaving a room
-func (h *Handler) LeaveRoomHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) LeaveRoomHandler(c echo.Context) error {
 	// Use helper to get room
-	room, roomID, err := h.GetRoomFromRequest(r)
+	room, roomID, err := h.GetRoomFromRequest(c)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	}
 
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
 
 	log.Printf("DEBUG LeaveRoom: Room before update - ID: %s, OwnerID: %s, GuestID: %v, Status: %s",
 		room.ID, room.OwnerID, room.GuestID, room.Status)
@@ -59,8 +60,7 @@ func (h *Handler) LeaveRoomHandler(w http.ResponseWriter, r *http.Request) {
 	if room.GuestID == nil || *room.GuestID != userID {
 		log.Printf("ERROR LeaveRoom: User %s is not the guest of room %s (GuestID: %v)",
 			userID, roomID, room.GuestID)
-		http.Error(w, "You are not a guest in this room", http.StatusForbidden)
-		return
+		return echo.NewHTTPError(http.StatusForbidden, "You are not a guest in this room")
 	}
 
 	// Remove the guest from the room by setting GuestID to nil
@@ -71,105 +71,99 @@ func (h *Handler) LeaveRoomHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.RoomService.UpdateRoom(ctx, room); err != nil {
 		log.Printf("ERROR LeaveRoom: Failed to update room: %v", err)
-		http.Error(w, "Failed to leave room", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to leave room")
 	}
 
 	log.Printf("DEBUG LeaveRoom: Successfully updated room %s, guest removed", roomID)
 
 	// Return empty response for HTMX to replace with nothing (removes the element)
-	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(""))
+	return c.HTML(http.StatusOK, "")
 }
 
 // CreateRoomHandler handles room creation
-func (h *Handler) CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CreateRoomHandler(c echo.Context) error {
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
-
-	// Use helper to fetch current user
-	currentUser, err := h.FetchCurrentUser(r)
-	if err != nil {
-		http.Error(w, "Failed to load user information", http.StatusInternalServerError)
-		return
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
 	}
 
-	if r.Method == "GET" {
+	// Use helper to fetch current user
+	currentUser, err := h.FetchCurrentUser(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load user information")
+	}
+
+	if c.Request().Method == "GET" {
 		data := &TemplateData{
 			Title: "Create Room",
 			User:  currentUser,
 		}
-		h.RenderTemplate(w, "game/create-room.html", data)
-		return
+		return h.RenderTemplate(c, "game/create-room.html", data)
 	}
 
 	// POST - Create room
 
 	room := &models.Room{
 		ID:       uuid.New(),
-		Name:     r.FormValue("name"),
+		Name:     c.FormValue("name"),
 		OwnerID:  userID,
 		Status:   "waiting",
 		Language: "en",
 	}
 
 	if err := h.RoomService.CreateRoom(ctx, room); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	http.Redirect(w, r, "/game/room/"+room.ID.String(), http.StatusSeeOther)
+	return c.Redirect(http.StatusSeeOther, "/game/room/"+room.ID.String())
 }
 
 // JoinRoomHandler handles joining a room
-func (h *Handler) JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) JoinRoomHandler(c echo.Context) error {
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
-
-	// Use helper to fetch current user
-	currentUser, err := h.FetchCurrentUser(r)
-	if err != nil {
-		http.Error(w, "Failed to load user information", http.StatusInternalServerError)
-		return
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
 	}
 
-	if r.Method == "GET" {
+	// Use helper to fetch current user
+	currentUser, err := h.FetchCurrentUser(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load user information")
+	}
+
+	if c.Request().Method == "GET" {
 		data := &TemplateData{
 			Title: "Join Room",
 			User:  currentUser,
 		}
-		h.RenderTemplate(w, "game/join-room.html", data)
-		return
+		return h.RenderTemplate(c, "game/join-room.html", data)
 	}
 
 	// POST - Join room logic
 
 	// Parse room ID from form
-	roomIDStr := r.FormValue("room_id")
+	roomIDStr := c.FormValue("room_id")
 	roomID, err := uuid.Parse(roomIDStr)
 	if err != nil {
-		http.Error(w, "Invalid room ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid room ID")
 	}
 
 	// Get the room
 	room, err := h.RoomService.GetRoomByID(ctx, roomID)
 	if err != nil {
-		http.Error(w, "Room not found", http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, "Room not found")
 	}
 
 	// Check if room is already full
 	if room.GuestID != nil {
-		http.Error(w, "Room is full", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Room is full")
 	}
 
 	// Check if user is trying to join their own room
 	if room.OwnerID == userID {
-		http.Error(w, "You cannot join your own room", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "You cannot join your own room")
 	}
 
 	// Join the room by setting the guest_id
@@ -177,28 +171,25 @@ func (h *Handler) JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 	room.Status = "ready" // Room is ready when both players are present
 
 	if err := h.RoomService.UpdateRoom(ctx, room); err != nil {
-		http.Error(w, "Failed to join room", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to join room")
 	}
 
 	// Redirect to the room
-	http.Redirect(w, r, "/game/room/"+room.ID.String(), http.StatusSeeOther)
+	return c.Redirect(http.StatusSeeOther, "/game/room/"+room.ID.String())
 }
 
 // DeleteRoomHandler deletes a room (full page handler)
-func (h *Handler) DeleteRoomHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DeleteRoomHandler(c echo.Context) error {
 	// Use helper to extract room ID
-	roomID, err := ExtractIDFromRouteVars(r, "id")
+	roomID, err := ExtractIDFromParam(c, "id")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	ctx := context.Background()
 	if err := h.RoomService.DeleteRoom(ctx, roomID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	http.Redirect(w, r, "/?success=Room+deleted", http.StatusSeeOther)
+	return c.Redirect(http.StatusSeeOther, "/?success=Room+deleted")
 }

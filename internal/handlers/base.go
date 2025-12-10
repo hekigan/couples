@@ -10,6 +10,7 @@ import (
 
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/services"
+	"github.com/labstack/echo/v4"
 )
 
 // Handler holds all service dependencies
@@ -142,8 +143,9 @@ type TemplateData struct {
 }
 
 // GetSessionUser extracts user data from session without DB call
-func GetSessionUser(r *http.Request) *SessionUser {
-	session, _ := middleware.Store.Get(r, "couple-card-game-session")
+// Updated to work with echo.Context
+func GetSessionUser(c echo.Context) *SessionUser {
+	session, _ := middleware.GetSession(c)
 
 	userID, _ := session.Values["user_id"].(string)
 	if userID == "" {
@@ -165,7 +167,8 @@ func GetSessionUser(r *http.Request) *SessionUser {
 }
 
 // RenderTemplate renders a template with the given data
-func (h *Handler) RenderTemplate(w http.ResponseWriter, tmpl string, data *TemplateData) {
+// Updated to work with echo.Context
+func (h *Handler) RenderTemplate(c echo.Context, tmpl string, data *TemplateData) error {
 	if data.Title == "" {
 		data.Title = "Couple Card Game"
 	}
@@ -200,8 +203,7 @@ func (h *Handler) RenderTemplate(w http.ResponseWriter, tmpl string, data *Templ
 			"templates/"+tmpl,
 		)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
 
 		// Parse component templates
@@ -213,8 +215,14 @@ func (h *Handler) RenderTemplate(w http.ResponseWriter, tmpl string, data *Templ
 	}
 
 	// Execute the determined layout which will include the content template
+	// Use Echo's response writer
+	w := c.Response().Writer
 	err = t.ExecuteTemplate(w, layout, data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
+
+	c.Response().Header().Set("Content-Type", "text/html; charset=UTF-8")
+	c.Response().WriteHeader(http.StatusOK)
+	return nil
 }

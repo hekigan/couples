@@ -2,42 +2,40 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/services"
+	"github.com/labstack/echo/v4"
 )
 
 // ListJoinRequestsHandler lists join requests for a room
-func (h *Handler) ListJoinRequestsHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	roomID, err := uuid.Parse(vars["id"])
+func (h *Handler) ListJoinRequestsHandler(c echo.Context) error {
+	roomID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid room ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid room ID")
 	}
 
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
 
 	// Get current user for template
 	currentUser, err := h.UserService.GetUserByID(ctx, userID)
 	if err != nil {
 		log.Printf("⚠️ Failed to fetch current user: %v", err)
-		http.Error(w, "Failed to load user information", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load user information")
 	}
 
 	requests, err := h.RoomService.GetJoinRequestsByRoom(ctx, roomID)
 	if err != nil {
-		http.Error(w, "Failed to load join requests", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load join requests")
 	}
 
 	data := &TemplateData{
@@ -45,43 +43,42 @@ func (h *Handler) ListJoinRequestsHandler(w http.ResponseWriter, r *http.Request
 		User:  currentUser,
 		Data:  requests,
 	}
-	h.RenderTemplate(w, "game/join-requests.html", data)
+	return h.RenderTemplate(c, "game/join-requests.html", data)
 }
 
 // CreateJoinRequestHandler creates a join request
-func (h *Handler) CreateJoinRequestHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CreateJoinRequestHandler(c echo.Context) error {
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
 
 	// Parse room ID from form
-	roomIDStr := r.FormValue("room_id")
+	roomIDStr := c.FormValue("room_id")
 	roomID, err := uuid.Parse(roomIDStr)
 	if err != nil {
-		http.Error(w, "Invalid room ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid room ID")
 	}
 
 	// Get the room to check if it exists
 	room, err := h.RoomService.GetRoomByID(ctx, roomID)
 	if err != nil {
-		http.Error(w, "Room not found", http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, "Room not found")
 	}
 
 	// Check if user is trying to request their own room
 	if room.OwnerID == userID {
-		http.Error(w, "You cannot request to join your own room", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "You cannot request to join your own room")
 	}
 
 	// Check if room is already full
 	if room.GuestID != nil {
-		http.Error(w, "Room is full", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Room is full")
 	}
 
 	// Create the join request
-	message := r.FormValue("message")
+	message := c.FormValue("message")
 	request := &models.RoomJoinRequest{
 		ID:      uuid.New(),
 		RoomID:  roomID,
@@ -92,8 +89,7 @@ func (h *Handler) CreateJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 
 	if err := h.RoomService.CreateJoinRequest(ctx, request); err != nil {
 		fmt.Printf("ERROR creating join request: %v\n", err)
-		http.Error(w, fmt.Sprintf("Failed to create join request: %v", err), http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to create join request: %v", err))
 	}
 
 	// Get user information for SSE broadcast
@@ -150,18 +146,14 @@ func (h *Handler) CreateJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Return success message for HTMX
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusCreated)
-	fmt.Fprint(w, `<div style="color: #10b981; background: #dcfce7; padding: 0.75rem 1rem; border-radius: 6px;">✅ Join request sent! Waiting for owner approval...</div>`)
+	return c.HTML(http.StatusCreated, `<div style="color: #10b981; background: #dcfce7; padding: 0.75rem 1rem; border-radius: 6px;">✅ Join request sent! Waiting for owner approval...</div>`)
 }
 
 // AcceptJoinRequestHandler accepts a join request
-func (h *Handler) AcceptJoinRequestHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	requestID, err := uuid.Parse(vars["request_id"])
+func (h *Handler) AcceptJoinRequestHandler(c echo.Context) error {
+	requestID, err := uuid.Parse(c.Param("request_id"))
 	if err != nil {
-		http.Error(w, "Invalid request ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request ID")
 	}
 
 	ctx := context.Background()
@@ -169,15 +161,13 @@ func (h *Handler) AcceptJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 	// Get the join request to find the user ID
 	joinRequest, err := h.RoomService.GetJoinRequestByID(ctx, requestID)
 	if err != nil {
-		http.Error(w, "Join request not found", http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, "Join request not found")
 	}
 
 	// Accept the request
 	if err := h.RoomService.AcceptJoinRequest(ctx, requestID); err != nil {
 		fmt.Printf("ERROR: AcceptJoinRequest failed: %v\n", err)
-		http.Error(w, fmt.Sprintf("Failed to accept join request: %v", err), http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to accept join request: %v", err))
 	}
 
 	// Get the guest username
@@ -248,18 +238,14 @@ func (h *Handler) AcceptJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Return empty HTML - HTMX will remove the element via outerHTML swap
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(""))
+	return c.HTML(http.StatusOK, "")
 }
 
 // RejectJoinRequestHandler rejects a join request
-func (h *Handler) RejectJoinRequestHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	requestID, err := uuid.Parse(vars["request_id"])
+func (h *Handler) RejectJoinRequestHandler(c echo.Context) error {
+	requestID, err := uuid.Parse(c.Param("request_id"))
 	if err != nil {
-		http.Error(w, "Invalid request ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request ID")
 	}
 
 	ctx := context.Background()
@@ -267,14 +253,12 @@ func (h *Handler) RejectJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 	// Get the join request to find the user ID and room ID before deleting
 	joinRequest, err := h.RoomService.GetJoinRequestByID(ctx, requestID)
 	if err != nil {
-		http.Error(w, "Join request not found", http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, "Join request not found")
 	}
 
 	// Reject the request
 	if err := h.RoomService.RejectJoinRequest(ctx, requestID); err != nil {
-		http.Error(w, "Failed to reject join request", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to reject join request")
 	}
 
 	// Notify the guest user that their request was rejected
@@ -300,25 +284,20 @@ func (h *Handler) RejectJoinRequestHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Return empty HTML - HTMX will remove the element via outerHTML swap
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(""))
+	return c.HTML(http.StatusOK, "")
 }
 
 // GetJoinRequestsCountHandler gets count of pending requests
-func (h *Handler) GetJoinRequestsCountHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	roomID, err := uuid.Parse(vars["id"])
+func (h *Handler) GetJoinRequestsCountHandler(c echo.Context) error {
+	roomID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid room ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid room ID")
 	}
 
 	ctx := context.Background()
 	requests, err := h.RoomService.GetJoinRequestsByRoom(ctx, roomID)
 	if err != nil {
-		http.Error(w, "Failed to load join requests", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load join requests")
 	}
 
 	// Count pending requests
@@ -329,124 +308,128 @@ func (h *Handler) GetJoinRequestsCountHandler(w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(fmt.Sprintf(`{"count":%d}`, count)))
+	return c.JSON(http.StatusOK, map[string]int{"count": count})
 }
 
 // GetJoinRequestsJSONHandler returns join requests with user information as JSON
-func (h *Handler) GetJoinRequestsJSONHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	roomID, err := uuid.Parse(vars["id"])
+func (h *Handler) GetJoinRequestsJSONHandler(c echo.Context) error {
+	roomID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid room ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid room ID")
 	}
 
 	ctx := context.Background()
 	requests, err := h.RoomService.GetJoinRequestsWithUserInfo(ctx, roomID)
 	if err != nil {
-		http.Error(w, "Failed to load join requests", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load join requests")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(requests)
+	return c.JSON(http.StatusOK, requests)
 }
 
 // CheckMyJoinRequestHandler checks the status of the current user's join request for a room
-func (h *Handler) CheckMyJoinRequestHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	roomID, err := uuid.Parse(vars["id"])
+func (h *Handler) CheckMyJoinRequestHandler(c echo.Context) error {
+	roomID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid room ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid room ID")
 	}
 
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
 
 	// Check if user is already a guest in the room
 	room, err := h.RoomService.GetRoomByID(ctx, roomID)
 	if err == nil && room.GuestID != nil && *room.GuestID == userID {
 		// User is now a guest - request was accepted!
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"accepted","message":"Request accepted"}`))
-		return
+		return c.JSON(http.StatusOK, map[string]string{
+			"status":  "accepted",
+			"message": "Request accepted",
+		})
 	}
 
 	// Check ALL join requests (not just pending) to see status
 	allRequests, err := h.RoomService.GetAllJoinRequestsByRoom(ctx, roomID)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"pending","message":"Waiting for approval"}`))
-		return
+		return c.JSON(http.StatusOK, map[string]string{
+			"status":  "pending",
+			"message": "Waiting for approval",
+		})
 	}
 
 	// Find this user's request
 	for _, req := range allRequests {
 		if req.UserID == userID {
-			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(fmt.Sprintf(`{"status":"%s","message":"Request %s"}`, req.Status, req.Status)))
-			return
+			return c.JSON(http.StatusOK, map[string]string{
+				"status":  req.Status,
+				"message": fmt.Sprintf("Request %s", req.Status),
+			})
 		}
 	}
 
 	// No request found
-	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"status":"not_found","message":"Request not found"}`))
+	return c.JSON(http.StatusOK, map[string]string{
+		"status":  "not_found",
+		"message": "Request not found",
+	})
 }
 
 // CancelMyJoinRequestHandler cancels the current user's join request
-func (h *Handler) CancelMyJoinRequestHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	roomID, err := uuid.Parse(vars["id"])
+func (h *Handler) CancelMyJoinRequestHandler(c echo.Context) error {
+	roomID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid room ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid room ID")
 	}
 
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
 
 	// Find and delete the user's request
 	if err := h.RoomService.CancelJoinRequest(ctx, roomID, userID); err != nil {
-		http.Error(w, "Failed to cancel request", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to cancel request")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"status":"success","message":"Request cancelled"}`))
+	return c.JSON(http.StatusOK, map[string]string{
+		"status":  "success",
+		"message": "Request cancelled",
+	})
 }
 
 // GetMyAcceptedRequestsHandler returns all accepted join requests for the current user
-func (h *Handler) GetMyAcceptedRequestsHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetMyAcceptedRequestsHandler(c echo.Context) error {
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
 
 	// Get all accepted requests for this user
 	requests, err := h.RoomService.GetAcceptedRequestsByUser(ctx, userID)
 	if err != nil {
-		http.Error(w, "Failed to load accepted requests", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load accepted requests")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(requests)
+	return c.JSON(http.StatusOK, requests)
 }
 
 // GetMyJoinRequestsHTMLHandler returns HTML fragment for all user's join requests
-func (h *Handler) GetMyJoinRequestsHTMLHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetMyJoinRequestsHTMLHandler(c echo.Context) error {
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
 
 	// Get all join requests for this user (pending, accepted, rejected)
 	allRequests, err := h.RoomService.GetJoinRequestsByUser(ctx, userID)
 	if err != nil {
 		log.Printf("Error fetching user's join requests: %v", err)
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`<!-- No pending requests -->`))
-		return
+		return c.HTML(http.StatusOK, `<!-- No pending requests -->`)
 	}
 
 	// Convert to template data format
@@ -468,38 +451,31 @@ func (h *Handler) GetMyJoinRequestsHTMLHandler(w http.ResponseWriter, r *http.Re
 	html, err := h.TemplateService.RenderFragment("pending_requests_list.html", requestsData)
 	if err != nil {
 		log.Printf("Error rendering pending_requests_list template: %v", err)
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`<p style="color: #6b7280;">Failed to load pending requests</p>`))
-		return
+		return c.HTML(http.StatusOK, `<p style="color: #6b7280;">Failed to load pending requests</p>`)
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(html))
+	return c.HTML(http.StatusOK, html)
 }
 
 // CancelMyJoinRequestHTMLHandler cancels request and returns empty (for HTMX swap removal)
-func (h *Handler) CancelMyJoinRequestHTMLHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	roomID, err := uuid.Parse(vars["id"])
+func (h *Handler) CancelMyJoinRequestHTMLHandler(c echo.Context) error {
+	roomID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid room ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid room ID")
 	}
 
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
 
 	// Find and delete the user's request
 	if err := h.RoomService.CancelJoinRequest(ctx, roomID, userID); err != nil {
 		log.Printf("Error cancelling join request: %v", err)
-		http.Error(w, "Failed to cancel request", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to cancel request")
 	}
 
 	// Return empty response - HTMX will remove the element
-	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(``))
+	return c.HTML(http.StatusOK, "")
 }

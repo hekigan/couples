@@ -35,7 +35,7 @@
 				<td>{{.Status}}</td>
 				<td>{{.CreatedAt}}</td>
 				<td>
-					<button hx-get="/admin/api/rooms/{{.ID}}/details"
+					<button hx-get="/admin/api/v1/rooms/{{.ID}}/details"
 					        hx-target="#view-modal-content"
 					        hx-swap="innerHTML"
 					        data-target="view-modal"
@@ -43,7 +43,7 @@
 					        class="btn btn-sm">
 						View
 					</button>
-					<button hx-post="/admin/api/rooms/{{.ID}}/close"
+					<button hx-post="/admin/api/v1/rooms/{{.ID}}/close"
 					        hx-target="#rooms-list"
 					        hx-swap="outerHTML"
 					        hx-confirm="Are you sure you want to force close this room?"

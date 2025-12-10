@@ -44,7 +44,7 @@
 
         <!-- Request to Join Form -->
         <div id="request-join-form" class="join-form">
-            <form hx-post="/api/rooms/join-request"
+            <form hx-post="/api/v1/rooms/join-request"
                   hx-target="#request-result"
                   hx-swap="innerHTML"
                   hx-disabled-elt="button[type='submit']"
@@ -95,7 +95,7 @@
         <div id="pending-requests" class="mt-xl">
             <h3>📬 Pending Join Requests</h3>
             <div id="pending-requests-list"
-                 hx-get="/api/rooms/my-join-requests"
+                 hx-get="/api/v1/rooms/my-join-requests"
                  hx-trigger="load, sse:my_request_accepted, sse:my_request_rejected"
                  hx-swap="innerHTML"
                  hx-on::sse-my_request_accepted="

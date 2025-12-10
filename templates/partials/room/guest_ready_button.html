@@ -1,6 +1,6 @@
 {{if not .GuestReady}}
 <button
-    hx-post="/api/rooms/{{.RoomID}}/guest-ready"
+    hx-post="/api/v1/rooms/{{.RoomID}}/guest-ready"
     hx-target="#guest-ready-section"
     hx-swap="innerHTML"
     hx-disabled-elt="this"

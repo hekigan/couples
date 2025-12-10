@@ -10,50 +10,44 @@ import (
 	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/models"
+	"github.com/labstack/echo/v4"
 )
 
 // EmptyRoomsStateHandler serves the empty rooms state partial
-func (h *Handler) EmptyRoomsStateHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) EmptyRoomsStateHandler(c echo.Context) error {
 	// Parse the partial template
 	partialPath := "templates/partials/game/empty-rooms-state.html"
 	tmpl, err := template.ParseFiles(partialPath)
 	if err != nil {
 		log.Printf("Error parsing empty rooms state partial: %v", err)
-		http.Error(w, "Failed to load empty state", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load empty state")
 	}
-
-	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(http.StatusOK)
 
 	// Execute the defined template by name
-	err = tmpl.ExecuteTemplate(w, "partials/game/empty-rooms-state.html", nil)
-	if err != nil {
-		log.Printf("Error executing empty rooms state template: %v", err)
-		http.Error(w, "Failed to render template", http.StatusInternalServerError)
-	}
+	return tmpl.ExecuteTemplate(c.Response().Writer, "partials/game/empty-rooms-state.html", nil)
 }
 
 // ListRoomsHandler lists all rooms for the current user
-func (h *Handler) ListRoomsHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ListRoomsHandler(c echo.Context) error {
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
 
 	log.Printf("DEBUG ListRooms: Fetching rooms for user %s", userID)
 
 	// Use helper to fetch current user
-	currentUser, err := h.FetchCurrentUser(r)
+	currentUser, err := h.FetchCurrentUser(c)
 	if err != nil {
-		http.Error(w, "Failed to load user information", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load user information")
 	}
 
 	// Use database view to get rooms with player info
 	// This eliminates N+1 queries (2 room queries + N user queries → 2 room queries with player info)
 	roomsWithPlayers, err := h.RoomService.GetRoomsByUserIDWithPlayers(ctx, userID)
 	if err != nil {
-		http.Error(w, "Failed to load rooms", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load rooms")
 	}
 
 	log.Printf("DEBUG ListRooms: Found %d rooms (via view)", len(roomsWithPlayers))
@@ -91,27 +85,28 @@ func (h *Handler) ListRoomsHandler(w http.ResponseWriter, r *http.Request) {
 		User:  currentUser,
 		Data:  enrichedRooms,
 	}
-	h.RenderTemplate(w, "game/rooms.html", data)
+	return h.RenderTemplate(c, "game/rooms.html", data)
 }
 
 // RoomHandler displays the room lobby
-func (h *Handler) RoomHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RoomHandler(c echo.Context) error {
 	// Use helper to extract room ID
-	roomID, err := ExtractIDFromRouteVars(r, "id")
+	roomID, err := ExtractIDFromParam(c, "id")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	ctx := context.Background()
-	currentUserID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	currentUserID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
 
 	// Use database view to get room with player info in single query
 	// This replaces 3 queries (room + owner + guest) with 1 query
 	roomWithPlayers, err := h.RoomService.GetRoomWithPlayers(ctx, roomID)
 	if err != nil {
-		http.Error(w, "Room not found", http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, "Room not found")
 	}
 
 	// Extract usernames from the view result
@@ -133,10 +128,9 @@ func (h *Handler) RoomHandler(w http.ResponseWriter, r *http.Request) {
 		roomWithPlayers.ID, currentUserID, roomWithPlayers.OwnerID, isOwner, roomWithPlayers.Status, roomWithPlayers.GuestReady)
 
 	// Use helper to fetch current user
-	currentUser, err := h.FetchCurrentUser(r)
+	currentUser, err := h.FetchCurrentUser(c)
 	if err != nil {
-		http.Error(w, "Failed to load user information", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load user information")
 	}
 
 	// Get pending join requests count for the badge
@@ -164,32 +158,32 @@ func (h *Handler) RoomHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// HTMX refactoring complete - using HTMX version as default
-	h.RenderTemplate(w, "game/room.html", data)
+	return h.RenderTemplate(c, "game/room.html", data)
 }
 
 // PlayHandler handles the game play screen
-func (h *Handler) PlayHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) PlayHandler(c echo.Context) error {
 	// Use helper to extract room ID
-	roomID, err := ExtractIDFromRouteVars(r, "id")
+	roomID, err := ExtractIDFromParam(c, "id")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
 
 	// Use helper to fetch current user
-	currentUser, err := h.FetchCurrentUser(r)
+	currentUser, err := h.FetchCurrentUser(c)
 	if err != nil {
-		http.Error(w, "Failed to load user information", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load user information")
 	}
 
 	room, err := h.RoomService.GetRoomByID(ctx, roomID)
 	if err != nil {
-		http.Error(w, "Room not found", http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, "Room not found")
 	}
 
 	// Debug logging
@@ -278,38 +272,34 @@ func (h *Handler) PlayHandler(w http.ResponseWriter, r *http.Request) {
 		User:  currentUser,
 		Data:  playData,
 	}
-	h.RenderTemplate(w, "game/play.html", data)
+	return h.RenderTemplate(c, "game/play.html", data)
 }
 
 // GameFinishedHandler shows game results with full history
-func (h *Handler) GameFinishedHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GameFinishedHandler(c echo.Context) error {
 	// Use helper to extract room ID
-	roomID, err := ExtractIDFromRouteVars(r, "id")
+	roomID, err := ExtractIDFromParam(c, "id")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	ctx := context.Background()
 
 	// Use helper to fetch current user
-	currentUser, err := h.FetchCurrentUser(r)
+	currentUser, err := h.FetchCurrentUser(c)
 	if err != nil {
-		http.Error(w, "Failed to load user information", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load user information")
 	}
 
 	room, err := h.RoomService.GetRoomByID(ctx, roomID)
 	if err != nil {
-		http.Error(w, "Room not found", http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, "Room not found")
 	}
 
 	// Get all answers for this room
 	answers, err := h.AnswerService.GetAnswersByRoom(ctx, roomID)
 	if err != nil {
-		http.Error(w, "Failed to load answers", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load answers")
 	}
 
 	// Get owner and guest info
@@ -374,5 +364,5 @@ func (h *Handler) GameFinishedHandler(w http.ResponseWriter, r *http.Request) {
 		data.Data.(map[string]interface{})["GuestUsername"] = guest.Username
 	}
 
-	h.RenderTemplate(w, "game/finished.html", data)
+	return h.RenderTemplate(c, "game/finished.html", data)
 }

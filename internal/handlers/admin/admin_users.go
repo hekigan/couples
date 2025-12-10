@@ -5,23 +5,23 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	"github.com/hekigan/couples/internal/handlers"
 	"github.com/hekigan/couples/internal/services"
+	"github.com/labstack/echo/v4"
 )
 
 // ListUsersHandler returns an HTML fragment with the users list
-func (ah *AdminAPIHandler) ListUsersHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) ListUsersHandler(c echo.Context) error {
 	ctx := context.Background()
 
 	// Use helper for pagination
-	page, perPage, offset := handlers.ParsePaginationParams(r)
+	page, perPage := handlers.ParsePaginationParams(c)
+	offset := (page - 1) * perPage
 
 	users, err := ah.adminService.ListAllUsers(ctx, perPage, offset)
 	if err != nil {
-		http.Error(w, "Failed to list users", http.StatusInternalServerError)
 		log.Printf("Error listing users: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to list users")
 	}
 
 	totalCount, _ := ah.adminService.GetUserCount(ctx)
@@ -59,7 +59,7 @@ func (ah *AdminAPIHandler) ListUsersHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Get current user ID from session
-	currentUser := handlers.GetSessionUser(r)
+	currentUser := handlers.GetSessionUser(c)
 	currentUserID := ""
 	if currentUser != nil {
 		currentUserID = currentUser.ID
@@ -84,61 +84,53 @@ func (ah *AdminAPIHandler) ListUsersHandler(w http.ResponseWriter, r *http.Reque
 
 	html, err := ah.handler.TemplateService.RenderFragment("users_list", data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error rendering users list: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(html))
+	return c.HTML(http.StatusOK, html)
 }
 
 // ToggleUserAdminHandler toggles a user's admin status
-func (ah *AdminAPIHandler) ToggleUserAdminHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) ToggleUserAdminHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	// Use helper to extract ID
-	vars := mux.Vars(r)
-	userID, err := handlers.ExtractIDFromRoute(vars, "id")
+	// Extract ID from route
+	userID, err := handlers.ExtractIDFromParam(c, "id")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	if err := ah.adminService.ToggleUserAdmin(ctx, userID); err != nil {
-		http.Error(w, "Failed to toggle admin status", http.StatusInternalServerError)
 		log.Printf("Error toggling admin status: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to toggle admin status")
 	}
 
 	// Return updated users list
-	ah.ListUsersHandler(w, r)
+	return ah.ListUsersHandler(c)
 }
 
 // DeleteUserHandler deletes a user
-func (ah *AdminAPIHandler) DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) DeleteUserHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	// Use helper to extract ID
-	vars := mux.Vars(r)
-	userID, err := handlers.ExtractIDFromRoute(vars, "id")
+	// Extract ID from route
+	userID, err := handlers.ExtractIDFromParam(c, "id")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	if err := ah.adminService.DeleteUser(ctx, userID); err != nil {
-		http.Error(w, "Failed to delete user", http.StatusInternalServerError)
 		log.Printf("Error deleting user: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete user")
 	}
 
 	// Return updated users list
-	ah.ListUsersHandler(w, r)
+	return ah.ListUsersHandler(c)
 }
 
 // GetUserCreateFormHandler returns an HTML form for creating a user
-func (ah *AdminAPIHandler) GetUserCreateFormHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) GetUserCreateFormHandler(c echo.Context) error {
 	// Create empty form data for create mode
 	data := services.UserFormData{
 		ID:          "", // Empty ID indicates create mode
@@ -150,31 +142,26 @@ func (ah *AdminAPIHandler) GetUserCreateFormHandler(w http.ResponseWriter, r *ht
 
 	html, err := ah.handler.TemplateService.RenderFragment("user_form.html", data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error rendering user create form: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(html))
+	return c.HTML(http.StatusOK, html)
 }
 
 // GetUserEditFormHandler returns an HTML form for editing a user
-func (ah *AdminAPIHandler) GetUserEditFormHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) GetUserEditFormHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	// Use helper to extract ID
-	vars := mux.Vars(r)
-	userID, err := handlers.ExtractIDFromRoute(vars, "id")
+	// Extract ID from route
+	userID, err := handlers.ExtractIDFromParam(c, "id")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	user, err := ah.adminService.GetUserByID(ctx, userID)
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, "User not found")
 	}
 
 	email := ""
@@ -192,78 +179,60 @@ func (ah *AdminAPIHandler) GetUserEditFormHandler(w http.ResponseWriter, r *http
 
 	html, err := ah.handler.TemplateService.RenderFragment("user_form.html", data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error rendering user edit form: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(html))
+	return c.HTML(http.StatusOK, html)
 }
 
 // CreateUserHandler creates a new user
-func (ah *AdminAPIHandler) CreateUserHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) CreateUserHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
-		return
-	}
-
-	username := r.FormValue("username")
-	email := r.FormValue("email")
-	isAdmin := r.FormValue("is_admin") == "on"
-	isAnonymous := r.FormValue("is_anonymous") == "on"
+	username := c.FormValue("username")
+	email := c.FormValue("email")
+	isAdmin := c.FormValue("is_admin") == "on"
+	isAnonymous := c.FormValue("is_anonymous") == "on"
 
 	if username == "" {
-		http.Error(w, "Username is required", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Username is required")
 	}
 
 	_, err := ah.adminService.CreateUser(ctx, username, email, isAdmin, isAnonymous)
 	if err != nil {
-		http.Error(w, "Failed to create user", http.StatusInternalServerError)
 		log.Printf("Error creating user: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create user")
 	}
 
 	// Return updated users list
-	ah.ListUsersHandler(w, r)
+	return ah.ListUsersHandler(c)
 }
 
 // UpdateUserHandler updates a user
-func (ah *AdminAPIHandler) UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) UpdateUserHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	// Use helper to extract ID
-	vars := mux.Vars(r)
-	userID, err := handlers.ExtractIDFromRoute(vars, "id")
+	// Extract ID from route
+	userID, err := handlers.ExtractIDFromParam(c, "id")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
-		return
-	}
-
-	username := r.FormValue("username")
-	email := r.FormValue("email")
-	isAdmin := r.FormValue("is_admin") == "on"
-	isAnonymous := r.FormValue("is_anonymous") == "on"
+	username := c.FormValue("username")
+	email := c.FormValue("email")
+	isAdmin := c.FormValue("is_admin") == "on"
+	isAnonymous := c.FormValue("is_anonymous") == "on"
 
 	if username == "" {
-		http.Error(w, "Username is required", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Username is required")
 	}
 
 	if err := ah.adminService.UpdateUser(ctx, userID, username, email, isAdmin, isAnonymous); err != nil {
-		http.Error(w, "Failed to update user", http.StatusInternalServerError)
 		log.Printf("Error updating user: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update user")
 	}
 
 	// Return updated users list
-	ah.ListUsersHandler(w, r)
+	return ah.ListUsersHandler(c)
 }

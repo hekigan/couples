@@ -8,33 +8,34 @@ import (
 	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/services"
+	"github.com/labstack/echo/v4"
 )
 
 // UpdateCategoriesAPIHandler updates selected categories for a room
-func (h *Handler) UpdateCategoriesAPIHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateCategoriesAPIHandler(c echo.Context) error {
 	// Use helper to get room and verify participation
-	room, roomID, err := h.GetRoomFromRequest(r)
+	room, roomID, err := h.GetRoomFromRequest(c)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	}
 
 	ctx := context.Background()
-	userID := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
 
 	// Use helper to verify participant
 	if err := h.VerifyRoomParticipant(room, userID); err != nil {
-		http.Error(w, err.Error(), http.StatusForbidden)
-		return
+		return echo.NewHTTPError(http.StatusForbidden, err.Error())
 	}
 
 	// Parse category IDs from request (multipart form data from FormData)
-	if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MB max
-		http.Error(w, "Failed to parse form", http.StatusBadRequest)
-		return
+	if err := c.Request().ParseMultipartForm(10 << 20); err != nil { // 10 MB max
+		return echo.NewHTTPError(http.StatusBadRequest, "Failed to parse form")
 	}
 
-	categoryIDStrings := r.MultipartForm.Value["category_ids"]
+	categoryIDStrings := c.Request().MultipartForm.Value["category_ids"]
 	categoryIDs := make([]uuid.UUID, 0, len(categoryIDStrings))
 	for _, idStr := range categoryIDStrings {
 		id, err := uuid.Parse(idStr)
@@ -47,56 +48,53 @@ func (h *Handler) UpdateCategoriesAPIHandler(w http.ResponseWriter, r *http.Requ
 	// Update room with selected categories
 	room.SelectedCategories = categoryIDs
 	if err := h.RoomService.UpdateRoom(ctx, room); err != nil {
-		http.Error(w, "Failed to update categories: "+err.Error(), http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update categories: "+err.Error())
 	}
 
 	// Broadcast category update to all room participants via SSE
 	h.RoomService.BroadcastCategoriesUpdated(roomID, categoryIDs)
 
-	// Use helper to write JSON response
-	err = WriteJSONResponse(w, http.StatusOK, map[string]interface{}{
+	// Return JSON response
+	return c.JSON(http.StatusOK, map[string]interface{}{
 		"status":  "success",
 		"message": "Categories updated",
 	})
-	if err != nil {
-		log.Printf("Failed to write JSON response: %v", err)
-	}
 }
 
 // GetCategoriesAPIHandler returns all available categories
-func (h *Handler) GetCategoriesAPIHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetCategoriesAPIHandler(c echo.Context) error {
 	ctx := context.Background()
 
 	categories, err := h.CategoryService.GetCategories(ctx)
 	if err != nil {
-		http.Error(w, "Failed to fetch categories", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch categories")
 	}
 
-	// Manual JSON encoding for simplicity
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	// Build response structure
+	type CategoryResponse struct {
+		ID  string `json:"id"`
+		Key string `json:"key"`
+	}
 
-	jsonStr := `{"categories":[`
+	categoryList := make([]CategoryResponse, len(categories))
 	for i, cat := range categories {
-		if i > 0 {
-			jsonStr += ","
+		categoryList[i] = CategoryResponse{
+			ID:  cat.ID.String(),
+			Key: cat.Key,
 		}
-		jsonStr += `{"id":"` + cat.ID.String() + `","key":"` + cat.Key + `"}`
 	}
-	jsonStr += `]}`
 
-	w.Write([]byte(jsonStr))
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"categories": categoryList,
+	})
 }
 
 // GetRoomCategoriesHTMLHandler returns room categories as HTML fragment (for HTMX)
-func (h *Handler) GetRoomCategoriesHTMLHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetRoomCategoriesHTMLHandler(c echo.Context) error {
 	// Use helper to get room
-	room, roomID, err := h.GetRoomFromRequest(r)
+	room, roomID, err := h.GetRoomFromRequest(c)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	}
 
 	ctx := context.Background()
@@ -105,12 +103,10 @@ func (h *Handler) GetRoomCategoriesHTMLHandler(w http.ResponseWriter, r *http.Re
 	allCategories, err := h.CategoryService.GetCategories(ctx)
 	if err != nil {
 		log.Printf("Error fetching categories: %v", err)
-		if err := h.RenderHTMLFragment(w, "error_message.html", "Failed to load categories"); err != nil {
-			w.Header().Set("Content-Type", "text/html")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`<p style="color: #6b7280;">Failed to load categories</p>`))
+		if err := h.RenderHTMLFragment(c, "error_message.html", "Failed to load categories"); err != nil {
+			return c.HTML(http.StatusOK, `<p style="color: #6b7280;">Failed to load categories</p>`)
 		}
-		return
+		return nil
 	}
 
 	// Get question counts per category for the room's language
@@ -143,40 +139,32 @@ func (h *Handler) GetRoomCategoriesHTMLHandler(w http.ResponseWriter, r *http.Re
 	}
 
 	// Use helper to render HTML fragment
-	if err := h.RenderHTMLFragment(w, "categories_grid.html", services.CategoriesGridData{
+	if err := h.RenderHTMLFragment(c, "categories_grid.html", services.CategoriesGridData{
 		Categories: categoryInfos,
 		RoomID:     roomID.String(),
 		GuestReady: room.GuestReady,
 	}); err != nil {
 		log.Printf("Error rendering categories grid template: %v", err)
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`<p style="color: #6b7280;">Failed to load categories</p>`))
+		return c.HTML(http.StatusOK, `<p style="color: #6b7280;">Failed to load categories</p>`)
 	}
+	return nil
 }
 
 // ToggleCategoryAPIHandler toggles a single category selection (for HTMX)
-func (h *Handler) ToggleCategoryAPIHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ToggleCategoryAPIHandler(c echo.Context) error {
 	// Use helper to get room
-	room, roomID, err := h.GetRoomFromRequest(r)
+	room, roomID, err := h.GetRoomFromRequest(c)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	}
 
 	ctx := context.Background()
 
 	// Get category ID from form
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
-		return
-	}
-
-	categoryIDStr := r.FormValue("category_id")
+	categoryIDStr := c.FormValue("category_id")
 	categoryID, err := uuid.Parse(categoryIDStr)
 	if err != nil {
-		http.Error(w, "Invalid category ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid category ID")
 	}
 
 	// Toggle category - if exists, remove it; if not, add it
@@ -201,15 +189,12 @@ func (h *Handler) ToggleCategoryAPIHandler(w http.ResponseWriter, r *http.Reques
 	room.SelectedCategories = newCategories
 	if err := h.RoomService.UpdateRoom(ctx, room); err != nil {
 		log.Printf("Failed to update categories: %v", err)
-		http.Error(w, "Failed to update categories", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update categories")
 	}
 
 	// Broadcast categories update via SSE
 	h.RoomService.BroadcastCategoriesUpdated(roomID, newCategories)
 
 	// Return success (HTMX will handle via hx-swap="none")
-	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`<!-- Category toggled successfully -->`))
+	return c.HTML(http.StatusOK, `<!-- Category toggled successfully -->`)
 }

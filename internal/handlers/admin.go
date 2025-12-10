@@ -4,23 +4,22 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/services"
+	"github.com/labstack/echo/v4"
 )
 
 // AdminDashboardHandler displays admin dashboard
-func (h *Handler) AdminDashboardHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) AdminDashboardHandler(c echo.Context) error {
 	ctx := context.Background()
 
 	// Get admin service from handler
 	adminService := h.GetAdminService()
 	if adminService == nil {
 		log.Printf("⚠️ AdminService not available")
-		http.Error(w, "Admin service not configured", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Admin service not configured")
 	}
 
 	// Get dashboard statistics
@@ -32,35 +31,20 @@ func (h *Handler) AdminDashboardHandler(w http.ResponseWriter, r *http.Request) 
 
 	data := &TemplateData{
 		Title:   "Admin Dashboard",
-		User:    GetSessionUser(r), // Get user from session (no DB call)
+		User:    GetSessionUser(c), // Get user from session (no DB call)
 		Data:    stats,
 		IsAdmin: true, // Admin pages are protected by middleware
 	}
 
-	h.RenderTemplate(w, "admin/dashboard.html", data)
+	return h.RenderTemplate(c, "admin/dashboard.html", data)
 }
 
 // AdminUsersHandler displays user management
-func (h *Handler) AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) AdminUsersHandler(c echo.Context) error {
 	ctx := context.Background()
 
 	// Parse pagination parameters
-	page := 1
-	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
-		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
-			page = p
-		}
-	}
-
-	perPage := 25 // Default
-	if perPageStr := r.URL.Query().Get("per_page"); perPageStr != "" {
-		if pp, err := strconv.Atoi(perPageStr); err == nil {
-			// Validate against allowed values
-			if pp == 25 || pp == 50 || pp == 100 {
-				perPage = pp
-			}
-		}
-	}
+	page, perPage := ParsePaginationParams(c)
 
 	// Calculate offset
 	offset := (page - 1) * perPage
@@ -109,7 +93,7 @@ func (h *Handler) AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Get current user ID from session
-		currentUser := GetSessionUser(r)
+		currentUser := GetSessionUser(c)
 		currentUserID := ""
 		if currentUser != nil {
 			currentUserID = currentUser.ID
@@ -135,37 +119,22 @@ func (h *Handler) AdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 
 	data := &TemplateData{
 		Title:   "User Management",
-		User:    GetSessionUser(r), // Get user from session (no DB call)
+		User:    GetSessionUser(c), // Get user from session (no DB call)
 		IsAdmin: true,
 		Data:    usersData,
 	}
-	h.RenderTemplate(w, "admin/users.html", data)
+	return h.RenderTemplate(c, "admin/users.html", data)
 }
 
 // AdminQuestionsHandler displays question management
-func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) AdminQuestionsHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	// Parse query parameters
-	page := 1
-	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
-		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
-			page = p
-		}
-	}
-
-	perPage := 25 // Default
-	if perPageStr := r.URL.Query().Get("per_page"); perPageStr != "" {
-		if pp, err := strconv.Atoi(perPageStr); err == nil {
-			// Validate against allowed values
-			if pp == 25 || pp == 50 || pp == 100 {
-				perPage = pp
-			}
-		}
-	}
+	// Parse pagination parameters
+	page, perPage := ParsePaginationParams(c)
 
 	var categoryID *uuid.UUID
-	if catIDStr := r.URL.Query().Get("category_id"); catIDStr != "" {
+	if catIDStr := c.QueryParam("category_id"); catIDStr != "" {
 		if catID, err := uuid.Parse(catIDStr); err == nil {
 			categoryID = &catID
 		}
@@ -323,34 +292,19 @@ func (h *Handler) AdminQuestionsHandler(w http.ResponseWriter, r *http.Request) 
 
 	data := &TemplateData{
 		Title:   "Question Management",
-		User:    GetSessionUser(r), // Get user from session (no DB call)
+		User:    GetSessionUser(c), // Get user from session (no DB call)
 		IsAdmin: true,
 		Data:    questionsData,
 	}
-	h.RenderTemplate(w, "admin/questions.html", data)
+	return h.RenderTemplate(c, "admin/questions.html", data)
 }
 
 // AdminCategoriesHandler displays category management
-func (h *Handler) AdminCategoriesHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) AdminCategoriesHandler(c echo.Context) error {
 	ctx := context.Background()
 
 	// Parse pagination parameters
-	page := 1
-	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
-		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
-			page = p
-		}
-	}
-
-	perPage := 25 // Default
-	if perPageStr := r.URL.Query().Get("per_page"); perPageStr != "" {
-		if pp, err := strconv.Atoi(perPageStr); err == nil {
-			// Validate against allowed values
-			if pp == 25 || pp == 50 || pp == 100 {
-				perPage = pp
-			}
-		}
-	}
+	page, perPage := ParsePaginationParams(c)
 
 	// Calculate offset
 	offset := (page - 1) * perPage
@@ -408,34 +362,19 @@ func (h *Handler) AdminCategoriesHandler(w http.ResponseWriter, r *http.Request)
 
 	data := &TemplateData{
 		Title:   "Category Management",
-		User:    GetSessionUser(r), // Get user from session (no DB call)
+		User:    GetSessionUser(c), // Get user from session (no DB call)
 		IsAdmin: true,
 		Data:    categoriesData,
 	}
-	h.RenderTemplate(w, "admin/categories.html", data)
+	return h.RenderTemplate(c, "admin/categories.html", data)
 }
 
 // AdminRoomsHandler displays room monitoring
-func (h *Handler) AdminRoomsHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) AdminRoomsHandler(c echo.Context) error {
 	ctx := context.Background()
 
 	// Parse pagination parameters
-	page := 1
-	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
-		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
-			page = p
-		}
-	}
-
-	perPage := 25 // Default
-	if perPageStr := r.URL.Query().Get("per_page"); perPageStr != "" {
-		if pp, err := strconv.Atoi(perPageStr); err == nil {
-			// Validate against allowed values
-			if pp == 25 || pp == 50 || pp == 100 {
-				perPage = pp
-			}
-		}
-	}
+	page, perPage := ParsePaginationParams(c)
 
 	// Calculate offset
 	offset := (page - 1) * perPage
@@ -498,19 +437,19 @@ func (h *Handler) AdminRoomsHandler(w http.ResponseWriter, r *http.Request) {
 
 	data := &TemplateData{
 		Title:   "Room Monitoring",
-		User:    GetSessionUser(r), // Get user from session (no DB call)
+		User:    GetSessionUser(c), // Get user from session (no DB call)
 		IsAdmin: true,
 		Data:    roomsData,
 	}
-	h.RenderTemplate(w, "admin/rooms.html", data)
+	return h.RenderTemplate(c, "admin/rooms.html", data)
 }
 
 // AdminTranslationsHandler displays translation management
-func (h *Handler) AdminTranslationsHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) AdminTranslationsHandler(c echo.Context) error {
 	data := &TemplateData{
 		Title:   "Translation Management",
-		User:    GetSessionUser(r), // Get user from session (no DB call)
+		User:    GetSessionUser(c), // Get user from session (no DB call)
 		IsAdmin: true,
 	}
-	h.RenderTemplate(w, "admin/translations.html", data)
+	return h.RenderTemplate(c, "admin/translations.html", data)
 }

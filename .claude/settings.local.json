@@ -35,7 +35,8 @@
       "mcp__context7__get-library-docs",
       "Bash(ls:*)",
       "Bash(ENV=development go run:*)",
-      "Bash(ENV=production go run:*)"
+      "Bash(ENV=production go run:*)",
+      "Bash(go get:*)"
     ],
     "deny": [],
     "ask": []

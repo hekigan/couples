@@ -88,7 +88,7 @@ function submitModalForm(event) {
     form.requestSubmit();
 }
 
-function handleDataUpdateResponse(event, apiPath = '/admin/api/questions/list?page=1', targetSelector = '#questions-list') {
+function handleDataUpdateResponse(event, apiPath = '/admin/api/v1/questions/list?page=1', targetSelector = '#questions-list') {
 	const xhr = event.detail.xhr;
 
 	if (xhr.status === 200) {

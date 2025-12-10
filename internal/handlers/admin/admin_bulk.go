@@ -6,28 +6,29 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
 )
 
 // BulkDeleteUsersHandler deletes multiple users at once
-func (ah *AdminAPIHandler) BulkDeleteUsersHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) BulkDeleteUsersHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	if err := r.ParseForm(); err != nil {
+	// Get form values - Echo automatically parses the request
+	formParams, err := c.FormParams()
+	if err != nil {
 		log.Printf("Error parsing form: %v", err)
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid form data")
 	}
 
 	// Debug: log all form values
-	log.Printf("Form values: %+v", r.Form)
+	log.Printf("Form values: %+v", formParams)
 
-	userIDs := r.Form["user_ids[]"]
+	userIDs := formParams["user_ids[]"]
 	log.Printf("Received %d user IDs: %v", len(userIDs), userIDs)
 
 	if len(userIDs) == 0 {
 		log.Printf("No users selected for bulk delete")
-		http.Error(w, "No users selected", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "No users selected")
 	}
 
 	deletedCount := 0
@@ -49,22 +50,21 @@ func (ah *AdminAPIHandler) BulkDeleteUsersHandler(w http.ResponseWriter, r *http
 	log.Printf("✅ Bulk deleted %d users out of %d requested", deletedCount, len(userIDs))
 
 	// Return updated users list
-	ah.ListUsersHandler(w, r)
+	return ah.ListUsersHandler(c)
 }
 
 // BulkDeleteQuestionsHandler deletes multiple questions at once
-func (ah *AdminAPIHandler) BulkDeleteQuestionsHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) BulkDeleteQuestionsHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
-		return
+	formParams, err := c.FormParams()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid form data")
 	}
 
-	questionIDs := r.Form["question_ids[]"]
+	questionIDs := formParams["question_ids[]"]
 	if len(questionIDs) == 0 {
-		http.Error(w, "No questions selected", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "No questions selected")
 	}
 
 	deletedCount := 0
@@ -85,22 +85,21 @@ func (ah *AdminAPIHandler) BulkDeleteQuestionsHandler(w http.ResponseWriter, r *
 	log.Printf("Bulk deleted %d questions", deletedCount)
 
 	// Return updated questions list
-	ah.ListQuestionsHandler(w, r)
+	return ah.ListQuestionsHandler(c)
 }
 
 // BulkDeleteCategoriesHandler deletes multiple categories at once
-func (ah *AdminAPIHandler) BulkDeleteCategoriesHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) BulkDeleteCategoriesHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
-		return
+	formParams, err := c.FormParams()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid form data")
 	}
 
-	categoryIDs := r.Form["category_ids[]"]
+	categoryIDs := formParams["category_ids[]"]
 	if len(categoryIDs) == 0 {
-		http.Error(w, "No categories selected", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "No categories selected")
 	}
 
 	deletedCount := 0
@@ -121,22 +120,21 @@ func (ah *AdminAPIHandler) BulkDeleteCategoriesHandler(w http.ResponseWriter, r 
 	log.Printf("Bulk deleted %d categories", deletedCount)
 
 	// Return updated categories list
-	ah.ListCategoriesHandler(w, r)
+	return ah.ListCategoriesHandler(c)
 }
 
 // BulkCloseRoomsHandler closes multiple rooms at once
-func (ah *AdminAPIHandler) BulkCloseRoomsHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) BulkCloseRoomsHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
-		return
+	formParams, err := c.FormParams()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid form data")
 	}
 
-	roomIDs := r.Form["room_ids[]"]
+	roomIDs := formParams["room_ids[]"]
 	if len(roomIDs) == 0 {
-		http.Error(w, "No rooms selected", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "No rooms selected")
 	}
 
 	closedCount := 0
@@ -157,5 +155,5 @@ func (ah *AdminAPIHandler) BulkCloseRoomsHandler(w http.ResponseWriter, r *http.
 	log.Printf("Bulk closed %d rooms", closedCount)
 
 	// Return updated rooms list
-	ah.ListRoomsHandler(w, r)
+	return ah.ListRoomsHandler(c)
 }

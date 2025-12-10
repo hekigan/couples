@@ -15,7 +15,7 @@
     {{if .IsMyTurn}}
     <div class="next-question-section">
         <button
-            hx-post="/api/game/{{.RoomID}}/next-question"
+            hx-post="/api/v1/rooms/{{.RoomID}}/next-question"
             hx-swap="outerHTML"
             hx-target="#current-question"
             class="">

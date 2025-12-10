@@ -1,6 +1,6 @@
 <button
     id="start-game-btn"
-    hx-post="/api/rooms/{{.RoomID}}/start"
+    hx-post="/api/v1/rooms/{{.RoomID}}/start"
     hx-disabled-elt="this"
     hx-indicator="#start-loading"
     hx-on::before-request="

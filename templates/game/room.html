@@ -63,7 +63,7 @@
 
         <div id="categories-grid"
              data-testid="categories-grid"
-             hx-get="/api/rooms/{{.Data.ID}}/categories"
+             hx-get="/api/v1/rooms/{{.Data.ID}}/categories"
              hx-trigger="load, sse:categories_updated from:body"
              hx-swap="innerHTML">
             <p class="loading-text">Loading categories...</p>
@@ -76,7 +76,7 @@
         <div class="start-game-section"
              id="start-game-section"
              style="{{if ne .Data.Status "ready"}}display: none;{{end}}"
-             hx-get="/api/rooms/{{.Data.ID}}/start-button"
+             hx-get="/api/v1/rooms/{{.Data.ID}}/start-button"
              hx-trigger="load, sse:room_update from:body"
              hx-swap="innerHTML">
             <p class="loading-text">Loading...</p>
@@ -88,7 +88,7 @@
         {{if eq .Data.Status "ready"}}
         <div class="guest-ready-section"
              id="guest-ready-section"
-             hx-get="/api/rooms/{{.Data.ID}}/ready-button"
+             hx-get="/api/v1/rooms/{{.Data.ID}}/ready-button"
              hx-trigger="load"
              hx-swap="innerHTML">
             <p class="loading-text">Loading...</p>
@@ -103,7 +103,7 @@
         <h2>👥 Invite Friends</h2>
         <div id="friends-list"
              class="friends-list"
-             hx-get="/api/friends/list-html?room_id={{.Data.ID}}"
+             hx-get="/api/v1/friends/list-html?room_id={{.Data.ID}}"
              hx-trigger="load"
              hx-swap="innerHTML">
             <p class="loading-text">Loading friends...</p>
@@ -193,16 +193,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ============================================================================
 // HTMX now handles:
-// - Friends list loading via hx-get="/api/friends/list-html"
-// - Categories loading via hx-get="/api/rooms/{id}/categories"
+// - Friends list loading via hx-get="/api/v1/friends/list-html"
+// - Categories loading via hx-get="/api/v1/rooms/{id}/categories"
 // - Category toggle via hx-post in template (optimistic UI)
 // - Friend invitation via hx-post in template (server-rendered state transitions)
 // ============================================================================
 
 // ============================================================================
 // HTMX now handles:
-// - Guest ready button via hx-post="/api/rooms/{id}/guest-ready"
-// - Start game button via hx-post="/api/rooms/{id}/start"
+// - Guest ready button via hx-post="/api/v1/rooms/{id}/guest-ready"
+// - Start game button via hx-post="/api/v1/rooms/{id}/start"
 // - Category validation via hx-on::before-request in templates
 // - Button state syncing via SSE (room_update event)
 // ============================================================================

@@ -5,7 +5,7 @@
         <div class="friend-info">
             <span class="friend-name">{{.Username}}</span>
         </div>
-        <button hx-post="/api/rooms/invitations"
+        <button hx-post="/api/v1/rooms/invitations"
                 hx-vals='{"room_id": "{{$.RoomID}}", "invitee_id": "{{.ID}}"}'
                 hx-target="#friend-{{.ID}}"
                 hx-swap="outerHTML"

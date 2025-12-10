@@ -2,31 +2,31 @@ package admin
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
 	"github.com/hekigan/couples/internal/handlers"
 	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/services"
+	"github.com/labstack/echo/v4"
 )
 
-// ListQuestionsHandler returns an HTML fragment with the questions list  
-func (ah *AdminAPIHandler) ListQuestionsHandler(w http.ResponseWriter, r *http.Request) {
+// ListQuestionsHandler returns an HTML fragment with the questions list
+func (ah *AdminAPIHandler) ListQuestionsHandler(c echo.Context) error {
 	ctx := context.Background()
 
 	// Parse filters
 	var categoryID *uuid.UUID
-	if catID := r.URL.Query().Get("category_id"); catID != "" {
+	if catID := c.QueryParam("category_id"); catID != "" {
 		if parsed, err := uuid.Parse(catID); err == nil {
 			categoryID = &parsed
 		}
 	}
 
 	// Use helper for pagination
-	page, perPage, offset := handlers.ParsePaginationParams(r)
+	page, perPage := handlers.ParsePaginationParams(c)
+	offset := (page - 1) * perPage
 
 	// Always filter to English only
 	langCode := "en"
@@ -34,9 +34,8 @@ func (ah *AdminAPIHandler) ListQuestionsHandler(w http.ResponseWriter, r *http.R
 	// Fetch questions
 	questions, err := ah.questionService.ListQuestions(ctx, perPage, offset, categoryID, &langCode)
 	if err != nil {
-		http.Error(w, "Failed to list questions", http.StatusInternalServerError)
 		log.Printf("Error listing questions: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to list questions")
 	}
 
 	// Get total count for pagination (English only)
@@ -162,24 +161,21 @@ func (ah *AdminAPIHandler) ListQuestionsHandler(w http.ResponseWriter, r *http.R
 
 	html, err := ah.handler.TemplateService.RenderFragment("questions_list", data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error rendering questions list: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(html))
+	return c.HTML(http.StatusOK, html)
 }
 
 // GetQuestionCreateFormHandler returns an HTML form for creating a new question
-func (ah *AdminAPIHandler) GetQuestionCreateFormHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) GetQuestionCreateFormHandler(c echo.Context) error {
 	ctx := context.Background()
 
 	categories, err := ah.categoryService.GetCategories(ctx)
 	if err != nil {
-		http.Error(w, "Failed to fetch categories", http.StatusInternalServerError)
 		log.Printf("Error fetching categories: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch categories")
 	}
 
 	// Build category options (none selected)
@@ -209,39 +205,33 @@ func (ah *AdminAPIHandler) GetQuestionCreateFormHandler(w http.ResponseWriter, r
 
 	html, err := ah.handler.TemplateService.RenderFragment("question_form.html", data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error rendering question create form: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(html))
+	return c.HTML(http.StatusOK, html)
 }
 
 // GetQuestionEditFormHandler returns an HTML form for editing a question
-func (ah *AdminAPIHandler) GetQuestionEditFormHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) GetQuestionEditFormHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	// Use helper to extract ID
-	vars := mux.Vars(r)
-	questionID, err := handlers.ExtractIDFromRoute(vars, "id")
+	// Extract ID from route
+	questionID, err := handlers.ExtractIDFromParam(c, "id")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	question, err := ah.questionService.GetQuestionByID(ctx, questionID)
 	if err != nil {
-		http.Error(w, "Question not found", http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, "Question not found")
 	}
 
 	// Fetch all translations for this question
 	translations, err := ah.questionService.GetQuestionTranslations(ctx, question.BaseQuestionID)
 	if err != nil {
-		http.Error(w, "Failed to fetch translations", http.StatusInternalServerError)
 		log.Printf("Error fetching translations: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch translations")
 	}
 
 	categories, _ := ah.categoryService.GetCategories(ctx)
@@ -287,65 +277,43 @@ func (ah *AdminAPIHandler) GetQuestionEditFormHandler(w http.ResponseWriter, r *
 
 	html, err := ah.handler.TemplateService.RenderFragment("question_form.html", data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error rendering question edit form: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(html))
+	return c.HTML(http.StatusOK, html)
 }
 
 // UpdateQuestionHandler updates a question or its translation
-func (ah *AdminAPIHandler) UpdateQuestionHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) UpdateQuestionHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	// Use helper to extract ID
-	vars := mux.Vars(r)
-	questionID, err := handlers.ExtractIDFromRoute(vars, "id")
+	// Extract ID from route
+	questionID, err := handlers.ExtractIDFromParam(c, "id")
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-		return
-	}
-
-	if err := r.ParseForm(); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid form data"})
-		return
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 
 	// Get the current question to access base_question_id
 	currentQuestion, err := ah.questionService.GetQuestionByID(ctx, questionID)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Question not found"})
-		return
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "Question not found"})
 	}
 
-	categoryID, err := uuid.Parse(r.FormValue("category_id"))
+	categoryID, err := uuid.Parse(c.FormValue("category_id"))
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid category ID"})
-		return
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid category ID"})
 	}
 
-	langCode := r.FormValue("lang_code")
-	questionText := r.FormValue("question_text")
-	translationText := r.FormValue("question_text_translation")
+	langCode := c.FormValue("lang_code")
+	questionText := c.FormValue("question_text")
+	translationText := c.FormValue("question_text_translation")
 
 	// Fetch all translations to find the correct question to update
 	translations, err := ah.questionService.GetQuestionTranslations(ctx, currentQuestion.BaseQuestionID)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to fetch translations"})
 		log.Printf("Error fetching translations: %v", err)
-		return
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to fetch translations"})
 	}
 
 	// Determine which question to update based on selected language
@@ -373,19 +341,13 @@ func (ah *AdminAPIHandler) UpdateQuestionHandler(w http.ResponseWriter, r *http.
 		}
 
 		if err := ah.questionService.UpdateQuestion(ctx, question); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(map[string]string{"error": "Failed to update question"})
 			log.Printf("Error updating question: %v", err)
-			return
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to update question"})
 		}
 	} else {
 		// Create new translation (only for FR/JA, English should always exist)
 		if langCode == "en" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{"error": "English question not found"})
-			return
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "English question not found"})
 		}
 
 		newTranslation := &models.Question{
@@ -397,43 +359,31 @@ func (ah *AdminAPIHandler) UpdateQuestionHandler(w http.ResponseWriter, r *http.
 		}
 
 		if err := ah.questionService.CreateQuestion(ctx, newTranslation); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(map[string]string{"error": "Failed to create translation"})
 			log.Printf("Error creating translation: %v", err)
-			return
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create translation"})
 		}
 	}
 
 	// Return success response
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"success": "Question updated successfully"})
+	return c.JSON(http.StatusOK, map[string]string{"success": "Question updated successfully"})
 }
 
 // CreateQuestionHandler creates a new question with optional translations
-func (ah *AdminAPIHandler) CreateQuestionHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) CreateQuestionHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
-		return
-	}
-
-	categoryID, err := uuid.Parse(r.FormValue("category_id"))
+	categoryID, err := uuid.Parse(c.FormValue("category_id"))
 	if err != nil {
-		http.Error(w, "Invalid category ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid category ID")
 	}
 
 	// Get form values
-	questionTextEN := r.FormValue("question_text_en")
-	questionTextFR := r.FormValue("question_text_fr")
-	questionTextJA := r.FormValue("question_text_ja")
+	questionTextEN := c.FormValue("question_text_en")
+	questionTextFR := c.FormValue("question_text_fr")
+	questionTextJA := c.FormValue("question_text_ja")
 
 	if questionTextEN == "" {
-		http.Error(w, "English question text is required", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "English question text is required")
 	}
 
 	// Generate UUID for the base English question
@@ -449,9 +399,8 @@ func (ah *AdminAPIHandler) CreateQuestionHandler(w http.ResponseWriter, r *http.
 	}
 
 	if err := ah.questionService.CreateQuestion(ctx, englishQuestion); err != nil {
-		http.Error(w, "Failed to create English question", http.StatusInternalServerError)
 		log.Printf("Error creating English question: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create English question")
 	}
 
 	// Create French translation if provided
@@ -487,27 +436,24 @@ func (ah *AdminAPIHandler) CreateQuestionHandler(w http.ResponseWriter, r *http.
 	}
 
 	// Return updated questions list
-	ah.ListQuestionsHandler(w, r)
+	return ah.ListQuestionsHandler(c)
 }
 
 // DeleteQuestionHandler deletes a question
-func (ah *AdminAPIHandler) DeleteQuestionHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) DeleteQuestionHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	// Use helper to extract ID
-	vars := mux.Vars(r)
-	questionID, err := handlers.ExtractIDFromRoute(vars, "id")
+	// Extract ID from route
+	questionID, err := handlers.ExtractIDFromParam(c, "id")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	if err := ah.questionService.DeleteQuestion(ctx, questionID); err != nil {
-		http.Error(w, "Failed to delete question", http.StatusInternalServerError)
 		log.Printf("Error deleting question: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete question")
 	}
 
 	// Return updated questions list
-	ah.ListQuestionsHandler(w, r)
+	return ah.ListQuestionsHandler(c)
 }

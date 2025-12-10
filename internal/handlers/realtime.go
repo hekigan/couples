@@ -1,17 +1,16 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/services"
+	"github.com/labstack/echo/v4"
 )
 
 // RealtimeHandler handles real-time connections
@@ -51,31 +50,25 @@ func formatSSEData(eventType, data string) string {
 }
 
 // StreamRoomEvents streams room events via SSE
-func (h *RealtimeHandler) StreamRoomEvents(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	roomID, err := uuid.Parse(vars["id"])
+func (h *RealtimeHandler) StreamRoomEvents(c echo.Context) error {
+	roomID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid room ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid room ID")
 	}
 
-	// Safe type assertion to prevent panics
-	userIDVal := r.Context().Value(middleware.UserIDKey)
-	if userIDVal == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	userID, ok := userIDVal.(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
 	}
 
 	// Set SSE headers
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("X-Accel-Buffering", "no")
+	c.Response().Header().Set("Content-Type", "text/event-stream")
+	c.Response().Header().Set("Cache-Control", "no-cache")
+	c.Response().Header().Set("Connection", "keep-alive")
+	c.Response().Header().Set("X-Accel-Buffering", "no")
+
+	// Access underlying writer for SSE
+	w := c.Response().Writer
 
 	// Subscribe to room events
 	client := h.realtimeService.Subscribe(roomID, userID)
@@ -84,8 +77,7 @@ func (h *RealtimeHandler) StreamRoomEvents(w http.ResponseWriter, r *http.Reques
 	// Stream events
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Streaming not supported")
 	}
 
 	// Send initial connection message
@@ -104,7 +96,7 @@ func (h *RealtimeHandler) StreamRoomEvents(w http.ResponseWriter, r *http.Reques
 		case event, ok := <-client.Channel:
 			if !ok {
 				// Channel closed
-				return
+				return nil
 			}
 			// Check if this is an HTML fragment (string data) or JSON data
 			if htmlStr, isString := event.Data.(string); isString {
@@ -115,16 +107,16 @@ func (h *RealtimeHandler) StreamRoomEvents(w http.ResponseWriter, r *http.Reques
 				// JSON data - use the normal EventToSSE function
 				sseData := services.EventToSSE(event)
 				if _, err := fmt.Fprint(w, sseData); err != nil {
-					return
+					return nil
 				}
 			}
 			flusher.Flush()
-		case <-r.Context().Done():
-			return
+		case <-c.Request().Context().Done():
+			return nil
 		case <-ticker.C:
 			// Send keepalive ping every 15 seconds
 			if _, err := fmt.Fprintf(w, "event: ping\ndata: {\"time\":\"%s\"}\n\n", time.Now().Format(time.RFC3339)); err != nil {
-				return
+				return nil
 			}
 			flusher.Flush()
 		}
@@ -132,24 +124,20 @@ func (h *RealtimeHandler) StreamRoomEvents(w http.ResponseWriter, r *http.Reques
 }
 
 // StreamUserNotifications streams user-specific notifications via SSE
-func (h *RealtimeHandler) StreamUserNotifications(w http.ResponseWriter, r *http.Request) {
-	// Safe type assertion to prevent panics
-	userIDVal := r.Context().Value(middleware.UserIDKey)
-	if userIDVal == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	userID, ok := userIDVal.(uuid.UUID)
+func (h *RealtimeHandler) StreamUserNotifications(c echo.Context) error {
+	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
 	}
 
 	// Set SSE headers
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("X-Accel-Buffering", "no")
+	c.Response().Header().Set("Content-Type", "text/event-stream")
+	c.Response().Header().Set("Cache-Control", "no-cache")
+	c.Response().Header().Set("Connection", "keep-alive")
+	c.Response().Header().Set("X-Accel-Buffering", "no")
+
+	// Access underlying writer for SSE
+	w := c.Response().Writer
 
 	// Subscribe to user events (use a dummy room ID since we're not in a room)
 	dummyRoomID := uuid.MustParse("00000000-0000-0000-0000-000000000000")
@@ -159,8 +147,7 @@ func (h *RealtimeHandler) StreamUserNotifications(w http.ResponseWriter, r *http
 	// Stream events
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Streaming not supported")
 	}
 
 	// Send initial connection message
@@ -176,7 +163,7 @@ func (h *RealtimeHandler) StreamUserNotifications(w http.ResponseWriter, r *http
 		case event, ok := <-client.Channel:
 			if !ok {
 				// Channel closed
-				return
+				return nil
 			}
 			// Check if this is an HTML fragment (string data) or JSON data
 			if htmlStr, isString := event.Data.(string); isString {
@@ -187,16 +174,16 @@ func (h *RealtimeHandler) StreamUserNotifications(w http.ResponseWriter, r *http
 				// JSON data - use the normal EventToSSE function
 				sseData := services.EventToSSE(event)
 				if _, err := fmt.Fprint(w, sseData); err != nil {
-					return
+					return nil
 				}
 			}
 			flusher.Flush()
-		case <-r.Context().Done():
-			return
+		case <-c.Request().Context().Done():
+			return nil
 		case <-ticker.C:
 			// Send keepalive ping every 15 seconds
 			if _, err := fmt.Fprintf(w, "event: ping\ndata: {\"time\":\"%s\"}\n\n", time.Now().Format(time.RFC3339)); err != nil {
-				return
+				return nil
 			}
 			flusher.Flush()
 		}
@@ -204,8 +191,8 @@ func (h *RealtimeHandler) StreamUserNotifications(w http.ResponseWriter, r *http
 }
 
 // GetRoomPlayers gets current room players
-func (h *RealtimeHandler) GetRoomPlayers(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "Not yet implemented", http.StatusNotImplemented)
+func (h *RealtimeHandler) GetRoomPlayers(c echo.Context) error {
+	return echo.NewHTTPError(http.StatusNotImplemented, "Not yet implemented")
 }
 
 // RoomStateResponse represents the room state for the frontend
@@ -222,41 +209,30 @@ type RoomStateResponse struct {
 }
 
 // GetRoomState gets current room state
-func (h *RealtimeHandler) GetRoomState(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	roomID, err := uuid.Parse(vars["id"])
+func (h *RealtimeHandler) GetRoomState(c echo.Context) error {
+	roomID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		http.Error(w, "Invalid room ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid room ID")
 	}
 
-	ctx := r.Context()
+	ctx := c.Request().Context()
 
-	// Safe type assertion to prevent panics
-	userIDVal := r.Context().Value(middleware.UserIDKey)
-	if userIDVal == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	userID, ok := userIDVal.(uuid.UUID)
+	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
 	}
 
 	// Get the room
 	room, err := h.handler.RoomService.GetRoomByID(ctx, roomID)
 	if err != nil {
-		http.Error(w, "Room not found", http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, "Room not found")
 	}
 
 	// Check if user is part of this room
 	isOwner := room.OwnerID == userID
 	isGuest := room.GuestID != nil && *room.GuestID == userID
 	if !isOwner && !isGuest {
-		http.Error(w, "You are not a member of this room", http.StatusForbidden)
-		return
+		return echo.NewHTTPError(http.StatusForbidden, "You are not a member of this room")
 	}
 
 	// Fetch the current question if it exists
@@ -284,7 +260,5 @@ func (h *RealtimeHandler) GetRoomState(w http.ResponseWriter, r *http.Request) {
 		CurrentQuestionData: currentQuestionData, // Include question data if exists
 	}
 
-	// Return the room state as JSON
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	return c.JSON(http.StatusOK, response)
 }

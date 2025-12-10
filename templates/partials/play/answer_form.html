@@ -1,5 +1,5 @@
 <div class="answer-form">
-    <form hx-post="/api/rooms/{{.RoomID}}/answer"
+    <form hx-post="/api/v1/rooms/{{.RoomID}}/answer"
           hx-target="#game-forms"
           hx-swap="innerHTML"
           hx-disabled-elt="button"
@@ -24,7 +24,7 @@
                   placeholder="Write your answer here (optional)..."
                   rows="4"
                   aria-label="Your answer"
-                  hx-post="/api/rooms/{{.RoomID}}/typing"
+                  hx-post="/api/v1/rooms/{{.RoomID}}/typing"
                   hx-trigger="keyup changed delay:300ms"
                   hx-swap="none"
                   hx-vals='{"is_typing": true}'></textarea>

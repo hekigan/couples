@@ -5,23 +5,23 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	"github.com/hekigan/couples/internal/handlers"
 	"github.com/hekigan/couples/internal/services"
+	"github.com/labstack/echo/v4"
 )
 
 // ListRoomsHandler returns an HTML fragment with the rooms list
-func (ah *AdminAPIHandler) ListRoomsHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) ListRoomsHandler(c echo.Context) error {
 	ctx := context.Background()
 
 	// Use helper for pagination
-	page, perPage, offset := handlers.ParsePaginationParams(r)
+	page, perPage := handlers.ParsePaginationParams(c)
+	offset := (page - 1) * perPage
 
 	rooms, err := ah.adminService.ListAllRooms(ctx, perPage, offset)
 	if err != nil {
-		http.Error(w, "Failed to list rooms", http.StatusInternalServerError)
 		log.Printf("Error listing rooms: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to list rooms")
 	}
 
 	totalCount, _ := ah.adminService.GetRoomCount(ctx)
@@ -72,53 +72,45 @@ func (ah *AdminAPIHandler) ListRoomsHandler(w http.ResponseWriter, r *http.Reque
 
 	html, err := ah.handler.TemplateService.RenderFragment("rooms_list", data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error rendering rooms list: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(html))
+	return c.HTML(http.StatusOK, html)
 }
 
 // CloseRoomHandler forces a room to close
-func (ah *AdminAPIHandler) CloseRoomHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) CloseRoomHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	// Use helper to extract ID
-	vars := mux.Vars(r)
-	roomID, err := handlers.ExtractIDFromRoute(vars, "id")
+	// Extract ID from route
+	roomID, err := handlers.ExtractIDFromParam(c, "id")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	if err := ah.adminService.ForceCloseRoom(ctx, roomID); err != nil {
-		http.Error(w, "Failed to close room", http.StatusInternalServerError)
 		log.Printf("Error closing room: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to close room")
 	}
 
 	// Return updated rooms list
-	ah.ListRoomsHandler(w, r)
+	return ah.ListRoomsHandler(c)
 }
 
 // GetRoomDetailsHandler returns room details for viewing (read-only)
-func (ah *AdminAPIHandler) GetRoomDetailsHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AdminAPIHandler) GetRoomDetailsHandler(c echo.Context) error {
 	ctx := context.Background()
 
-	// Use helper to extract ID
-	vars := mux.Vars(r)
-	roomID, err := handlers.ExtractIDFromRoute(vars, "id")
+	// Extract ID from route
+	roomID, err := handlers.ExtractIDFromParam(c, "id")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	room, err := ah.handler.RoomService.GetRoomWithPlayers(ctx, roomID)
 	if err != nil {
-		http.Error(w, "Room not found", http.StatusNotFound)
-		return
+		return echo.NewHTTPError(http.StatusNotFound, "Room not found")
 	}
 
 	// TODO: Get category count - for now default to 0
@@ -161,11 +153,9 @@ func (ah *AdminAPIHandler) GetRoomDetailsHandler(w http.ResponseWriter, r *http.
 
 	html, err := ah.handler.TemplateService.RenderFragment("room_details.html", data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error rendering room details: %v", err)
-		return
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(html))
+	return c.HTML(http.StatusOK, html)
 }

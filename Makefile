@@ -61,7 +61,7 @@ help:
 # Build the Go binary
 build: sass js-build
 	@echo "Building Go binary..."
-	@go build -o server ./cmd/server/main.go
+	@go build -o server ./cmd/server
 	@echo "Build complete: ./server"
 
 # Run the server

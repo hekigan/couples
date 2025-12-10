@@ -27,7 +27,7 @@ function submitBulkAction(type) {
 		return;
 	}
 
-	const url = '/admin/api/' + type + '/bulk-' + action;
+	const url = '/admin/api/v1/' + type + '/bulk-' + action;
 
 	// Create URL-encoded form data to handle arrays correctly
 	const formData = new FormData(form);
