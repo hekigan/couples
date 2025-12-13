@@ -61,7 +61,7 @@ templ RoomContent(data *viewmodels.TemplateData) {
 								Copy
 							</button>
 						</fieldset>
-						<small class="text-muted">Copy the room ID to share with friends</small>
+						<small class="text-muted">Copy the room ID to share with friend</small>
 					</form>
 				</div>
 			</div>
@@ -69,7 +69,7 @@ templ RoomContent(data *viewmodels.TemplateData) {
 			<div class="room-players" id="player-list" data-testid="player-list">
 				<h2 data-testid="players-heading">Players</h2>
 				<div class="player-grid">
-					<div class="player-card" data-testid="owner-card">
+					<div class="player-card" data-player="owner" data-testid="owner-card">
 						<span class="player-label">Owner</span>
 						<span class="player-name" data-testid="owner-name">
 							if data.OwnerUsername != "" {
@@ -82,12 +82,13 @@ templ RoomContent(data *viewmodels.TemplateData) {
 					<!-- Guest card - Updated via SSE when request accepted -->
 					<div
 						class={ templ.KV("player-card", true), templ.KV("empty", room.GuestID == nil) }
+						data-player="guest"
 						id="guest-info"
 						sse-swap="request_accepted"
 						data-testid="guest-card"
 					>
+						<span class="player-label">Guest</span>
 						if room.GuestID != nil {
-							<span class="player-label">Guest</span>
 							<span class="player-name" id="guest-name" data-testid="guest-name">
 								if data.GuestUsername != "" {
 									{ data.GuestUsername }
@@ -96,7 +97,7 @@ templ RoomContent(data *viewmodels.TemplateData) {
 								}
 							</span>
 						} else {
-							<span id="guest-waiting" data-testid="guest-waiting">Waiting for guest...</span>
+							<span class="player-name" id="guest-waiting" data-testid="guest-waiting">Waiting for guest...</span>
 						}
 					</div>
 				</div>
@@ -402,12 +403,6 @@ templ RoomStyles() {
 		.copy-btn {
 			white-space: nowrap;
 			transition: all 0.2s;
-		}
-
-		.player-card {
-			display: flex;
-			flex-direction: column;
-			gap: 0.5rem;
 		}
 
 		.player-label {

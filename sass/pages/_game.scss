@@ -131,20 +131,36 @@
 }
 
 .player-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: $spacing-md;
+  display: flex;
+  flex-direction: column;
 }
 
 .player-card {
   background-color: $bg-primary;
-  border: 2px solid $primary-color;
-  border-radius: $border-radius-md;
-  padding: $spacing-lg;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+
+  .player-label,
+  .player-name {
+    padding: $spacing-sm $spacing-md;
+  }
+
+  &[data-player="owner"] {
+    .player-label {
+      background-color: var(--pico-secondary-background);
+    }
+  }
+
+  &[data-player="guest"] {
+    border-top-left-radius: $border-radius-md;
+    border-top-right-radius: $border-radius-md;
+    
+    .player-label {
+      background-color: color.adjust($warning-color, $lightness: 30%);
+    }
+  }
   
   &.empty {
-    border-style: dashed;
     color: $text-muted;
   }
 }
