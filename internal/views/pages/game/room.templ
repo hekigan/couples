@@ -113,11 +113,10 @@ templ RoomContent(data *viewmodels.TemplateData) {
 				<div
 					id="categories-grid"
 					data-testid="categories-grid"
-					hx-get={ fmt.Sprintf("/api/v1/rooms/%s/categories", room.ID.String()) }
-					hx-trigger="load, sse:categories_updated from:body"
+					hx-trigger="sse:categories_updated from:body"
 					hx-swap="innerHTML"
 				>
-					<p class="loading-text">Loading categories...</p>
+					@templ.Raw(data.CategoriesGridHTML)
 				</div>
 			</div>
 			<!-- Start Game Button (shown when ready) - OWNER ONLY -->
@@ -126,11 +125,10 @@ templ RoomContent(data *viewmodels.TemplateData) {
 					class="start-game-section"
 					id="start-game-section"
 					style={ templ.KV("display: none;", room.Status != "ready") }
-					hx-get={ fmt.Sprintf("/api/v1/rooms/%s/start-button", room.ID.String()) }
-					hx-trigger="load, sse:room_update from:body"
+					hx-trigger="sse:room_update from:body"
 					hx-swap="innerHTML"
 				>
-					<p class="loading-text">Loading...</p>
+					@templ.Raw(data.ActionButtonHTML)
 				</div>
 			}
 			<!-- Ready Button - GUEST ONLY -->
@@ -139,11 +137,8 @@ templ RoomContent(data *viewmodels.TemplateData) {
 					<div
 						class="guest-ready-section"
 						id="guest-ready-section"
-						hx-get={ fmt.Sprintf("/api/v1/rooms/%s/ready-button", room.ID.String()) }
-						hx-trigger="load"
-						hx-swap="innerHTML"
 					>
-						<p class="loading-text">Loading...</p>
+						@templ.Raw(data.ActionButtonHTML)
 					</div>
 				}
 			}
@@ -154,11 +149,8 @@ templ RoomContent(data *viewmodels.TemplateData) {
 					<div
 						id="friends-list"
 						class="friends-list"
-						hx-get={ fmt.Sprintf("/api/v1/friends/list-html?room_id=%s", room.ID.String()) }
-						hx-trigger="load"
-						hx-swap="innerHTML"
 					>
-						<p class="loading-text">Loading friends...</p>
+						@templ.Raw(data.FriendsListHTML)
 					</div>
 				</div>
 				<!-- Pending Join Requests Section (hidden when guest joined) - OWNER ONLY -->

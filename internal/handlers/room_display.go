@@ -139,6 +139,13 @@ func (h *Handler) RoomHandler(c echo.Context) error {
 		}
 	}
 
+	// Render fragments server-side (eliminates hx-trigger="load")
+	categoriesHTML, friendsHTML, actionButtonHTML, err := h.RenderRoomFragments(c, &roomWithPlayers.Room, roomID, currentUserID, isOwner)
+	if err != nil {
+		log.Printf("⚠️ Warning: Failed to render some fragments: %v", err)
+		// Continue anyway - fragments will have fallback error messages
+	}
+
 	data := NewTemplateData(c)
 	data.Title = "Room - " + roomWithPlayers.Name
 	data.User = currentUser
@@ -147,6 +154,10 @@ func (h *Handler) RoomHandler(c echo.Context) error {
 	data.GuestUsername = guestUsername
 	data.IsOwner = isOwner
 	data.JoinRequestsCount = joinRequestsCount
+	// Add pre-rendered fragments
+	data.CategoriesGridHTML = categoriesHTML
+	data.FriendsListHTML = friendsHTML
+	data.ActionButtonHTML = actionButtonHTML
 
 	// HTMX refactoring complete - using HTMX version as default
 	return h.RenderTemplComponent(c, gamePages.RoomPage(data))

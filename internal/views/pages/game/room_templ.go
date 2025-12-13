@@ -266,20 +266,15 @@ func RoomContent(data *viewmodels.TemplateData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\"><h2 data-testid=\"categories-heading\">Select Question Categories</h2><p class=\"categories-hint\">Both players can select categories. Selections sync in real-time!</p><div id=\"categories-grid\" data-testid=\"categories-grid\" hx-get=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\"><h2 data-testid=\"categories-heading\">Select Question Categories</h2><p class=\"categories-hint\">Both players can select categories. Selections sync in real-time!</p><div id=\"categories-grid\" data-testid=\"categories-grid\" hx-trigger=\"sse:categories_updated from:body\" hx-swap=\"innerHTML\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var15 string
-			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/api/v1/rooms/%s/categories", room.ID.String()))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 116, Col: 74}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
+			templ_7745c5c3_Err = templ.Raw(data.CategoriesGridHTML).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\" hx-trigger=\"load, sse:categories_updated from:body\" hx-swap=\"innerHTML\"><p class=\"loading-text\">Loading categories...</p></div></div><!-- Start Game Button (shown when ready) - OWNER ONLY -->")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</div></div><!-- Start Game Button (shown when ready) - OWNER ONLY -->")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -288,29 +283,24 @@ func RoomContent(data *viewmodels.TemplateData) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var16 string
-				templ_7745c5c3_Var16, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(templ.KV("display: none;", room.Status != "ready"))
+				var templ_7745c5c3_Var15 string
+				templ_7745c5c3_Var15, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(templ.KV("display: none;", room.Status != "ready"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 128, Col: 63}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 127, Col: 63}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\" hx-get=\"")
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var17 string
-				templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/api/v1/rooms/%s/start-button", room.ID.String()))
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 129, Col: 76}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\" hx-trigger=\"sse:room_update from:body\" hx-swap=\"innerHTML\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\" hx-trigger=\"load, sse:room_update from:body\" hx-swap=\"innerHTML\"><p class=\"loading-text\">Loading...</p></div>")
+				templ_7745c5c3_Err = templ.Raw(data.ActionButtonHTML).Render(ctx, templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "</div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -321,20 +311,15 @@ func RoomContent(data *viewmodels.TemplateData) templ.Component {
 			}
 			if !data.IsOwner {
 				if room.Status == "ready" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<div class=\"guest-ready-section\" id=\"guest-ready-section\" hx-get=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<div class=\"guest-ready-section\" id=\"guest-ready-section\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var18 string
-					templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/api/v1/rooms/%s/ready-button", room.ID.String()))
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 142, Col: 77}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
+					templ_7745c5c3_Err = templ.Raw(data.ActionButtonHTML).Render(ctx, templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\" hx-trigger=\"load\" hx-swap=\"innerHTML\"><p class=\"loading-text\">Loading...</p></div>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</div>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -349,38 +334,33 @@ func RoomContent(data *viewmodels.TemplateData) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var19 string
-				templ_7745c5c3_Var19, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("margin-top: 2rem; %s", templ.KV("display: none;", room.GuestID != nil)))
+				var templ_7745c5c3_Var16 string
+				templ_7745c5c3_Var16, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("margin-top: 2rem; %s", templ.KV("display: none;", room.GuestID != nil)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 152, Col: 144}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 147, Col: 144}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "\"><h2>👥 Invite Friends</h2><div id=\"friends-list\" class=\"friends-list\" hx-get=\"")
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var20 string
-				templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/api/v1/friends/list-html?room_id=%s", room.ID.String()))
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 157, Col: 84}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "\"><h2>👥 Invite Friends</h2><div id=\"friends-list\" class=\"friends-list\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "\" hx-trigger=\"load\" hx-swap=\"innerHTML\"><p class=\"loading-text\">Loading friends...</p></div></div><!-- Pending Join Requests Section (hidden when guest joined) - OWNER ONLY --> <div id=\"join-requests-section\" style=\"")
+				templ_7745c5c3_Err = templ.Raw(data.FriendsListHTML).Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var21 string
-				templ_7745c5c3_Var21, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("margin-top: 2rem; %s", templ.KV("display: none;", room.GuestID != nil)))
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "</div></div><!-- Pending Join Requests Section (hidden when guest joined) - OWNER ONLY --> <div id=\"join-requests-section\" style=\"")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 165, Col: 128}
+					return templ_7745c5c3_Err
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
+				var templ_7745c5c3_Var17 string
+				templ_7745c5c3_Var17, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("margin-top: 2rem; %s", templ.KV("display: none;", room.GuestID != nil)))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 157, Col: 128}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -388,12 +368,12 @@ func RoomContent(data *viewmodels.TemplateData) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var22 string
-				templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", data.JoinRequestsCount))
+				var templ_7745c5c3_Var18 string
+				templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", data.JoinRequestsCount))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 168, Col: 112}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 160, Col: 112}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -411,12 +391,12 @@ func RoomContent(data *viewmodels.TemplateData) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var23 templ.SafeURL
-				templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(fmt.Sprintf("/game/room/%s/delete", room.ID.String())))
+				var templ_7745c5c3_Var19 templ.SafeURL
+				templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(fmt.Sprintf("/game/room/%s/delete", room.ID.String())))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 177, Col: 84}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 169, Col: 84}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -429,12 +409,12 @@ func RoomContent(data *viewmodels.TemplateData) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var24 string
-					templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(data.CSRFToken)
+					var templ_7745c5c3_Var20 string
+					templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(data.CSRFToken)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 179, Col: 62}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 171, Col: 62}
 					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -486,9 +466,9 @@ func RoomScript() templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var25 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var25 == nil {
-			templ_7745c5c3_Var25 = templ.NopComponent
+		templ_7745c5c3_Var21 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var21 == nil {
+			templ_7745c5c3_Var21 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "<script>\n\t\t// ============================================================================\n\t\t// MINIMAL JAVASCRIPT - Only for non-SSE features\n\t\t// ============================================================================\n\t\t// This is dramatically reduced from 800+ lines to ~200 lines\n\t\t// All SSE event handling is now done by HTMX\n\n\t\t// Copy room ID to clipboard\n\t\tfunction copyRoomId() {\n\t\t\tconst input = document.getElementById('room-id-input');\n\t\t\tinput.select();\n\t\t\tdocument.execCommand('copy');\n\n\t\t\tconst btn = event.target;\n\t\t\tconst originalText = btn.textContent;\n\t\t\tbtn.textContent = '✅ Copied!';\n\t\t\tbtn.style.background = '#10b981';\n\n\t\t\tsetTimeout(() => {\n\t\t\t\tbtn.textContent = originalText;\n\t\t\t\tbtn.style.background = '';\n\t\t\t}, 2000);\n\t\t}\n\n\t\t// Load page state on DOM ready\n\t\tdocument.addEventListener('DOMContentLoaded', async () => {\n\t\t\tconst container = document.querySelector('.room-container');\n\t\t\tconst roomId = container?.dataset.roomId || '';\n\t\t\tconst isOwner = container?.dataset.isOwner === 'true';\n\n\t\t\tconsole.log('🔍 Room ID:', roomId, 'IsOwner:', isOwner);\n\n\t\t\t// Fetch fresh state from database to fix race conditions\n\t\t\ttry {\n\t\t\t\tconsole.log('📡 Fetching fresh room state...');\n\t\t\t\tconst response = await fetch(`/api/v1/stream/rooms/${roomId}/state`);\n\t\t\t\tif (response.ok) {\n\t\t\t\t\tconst state = await response.json();\n\t\t\t\t\tconsole.log('📊 Fresh state loaded:', state);\n\n\t\t\t\t\t// If game already started, redirect\n\t\t\t\t\tif (state.status === 'playing') {\n\t\t\t\t\t\tconsole.log('🎮 Game already started, redirecting...');\n\t\t\t\t\t\twindow.location.href = `/game/play/${roomId}`;\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t} catch (error) {\n\t\t\t\tconsole.error('❌ Failed to load initial state:', error);\n\t\t\t}\n\n\t\t\tconsole.log('✅ HTMX SSE connection established via hx-ext=\"sse\"');\n\t\t\tconsole.log('✅ Phase A: Friends & Categories loading via HTMX hx-get');\n\t\t});\n\n\t\t// ============================================================================\n\t\t// HTMX now handles:\n\t\t// - Friends list loading via hx-get=\"/api/v1/friends/list-html\"\n\t\t// - Categories loading via hx-get=\"/api/v1/rooms/{id}/categories\"\n\t\t// - Category toggle via hx-post in template (optimistic UI)\n\t\t// - Friend invitation via hx-post in template (server-rendered state transitions)\n\t\t// ============================================================================\n\n\t\t// ============================================================================\n\t\t// HTMX now handles:\n\t\t// - Guest ready button via hx-post=\"/api/v1/rooms/{id}/guest-ready\"\n\t\t// - Start game button via hx-post=\"/api/v1/rooms/{id}/start\"\n\t\t// - Category validation via hx-on::before-request in templates\n\t\t// - Button state syncing via SSE (room_update event)\n\t\t// ============================================================================\n\n\t\t// ============================================================================\n\t\t// UI Utilities\n\t\t// ============================================================================\n\t\tfunction showNotification(message, type) {\n\t\t\tconst notification = document.createElement('div');\n\t\t\tnotification.className = `notification notification-${type}`;\n\t\t\tnotification.textContent = message;\n\t\t\tnotification.style.cssText = `\n\t\t\t\tposition: fixed;\n\t\t\t\ttop: 20px;\n\t\t\t\tright: 20px;\n\t\t\t\tpadding: 1rem 1.5rem;\n\t\t\t\tbackground: ${type === 'success' ? '#10b981' : '#ef4444'};\n\t\t\t\tcolor: white;\n\t\t\t\tborder-radius: 8px;\n\t\t\t\tbox-shadow: 0 4px 6px rgba(0,0,0,0.1);\n\t\t\t\tz-index: 10000;\n\t\t\t\tanimation: slideIn 0.3s ease-out;\n\t\t\t`;\n\n\t\t\tdocument.body.appendChild(notification);\n\n\t\t\tsetTimeout(() => {\n\t\t\t\tnotification.style.animation = 'slideOut 0.3s ease-out';\n\t\t\t\tsetTimeout(() => notification.remove(), 300);\n\t\t\t}, 3000);\n\t\t}\n\n\t\t// ============================================================================\n\t\t// HTMX will handle all SSE events automatically:\n\t\t// - join_request → appends to #join-requests\n\t\t// - request_accepted → replaces #guest-info\n\t\t// - categories_updated → updates #categories-section\n\t\t// - game_started → updates #game-start-redirect (triggers redirect)\n\t\t// - room_update → handled by backend HTML fragments\n\t\t// ============================================================================\n\t\tconsole.log('✅ HTMX SSE mode active - ~80% less JavaScript than original!');\n\t</script>")
@@ -516,9 +496,9 @@ func RoomStyles() templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var26 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var26 == nil {
-			templ_7745c5c3_Var26 = templ.NopComponent
+		templ_7745c5c3_Var22 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var22 == nil {
+			templ_7745c5c3_Var22 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<style>\n\t\t/* Accessibility */\n\t\t.sr-only {\n\t\t\tposition: absolute;\n\t\t\twidth: 1px;\n\t\t\theight: 1px;\n\t\t\tpadding: 0;\n\t\t\tmargin: -1px;\n\t\t\toverflow: hidden;\n\t\t\tclip: rect(0, 0, 0, 0);\n\t\t\twhite-space: nowrap;\n\t\t\tborder-width: 0;\n\t\t}\n\n\t\t/* HTMX Loading Indicators */\n\t\t.htmx-indicator {\n\t\t\tdisplay: none;\n\t\t}\n\t\t.htmx-request .htmx-indicator,\n\t\t.htmx-request.htmx-indicator {\n\t\t\tdisplay: inline;\n\t\t}\n\n\t\t/* Error/Success States */\n\t\t.category-checkbox.error {\n\t\t\tanimation: shake 0.3s ease-in-out;\n\t\t\tbackground-color: rgba(239, 68, 68, 0.1);\n\t\t}\n\t\t.category-checkbox.saved {\n\t\t\tanimation: pulse 0.3s ease-in-out;\n\t\t\tbackground-color: rgba(16, 185, 129, 0.1);\n\t\t}\n\n\t\t@keyframes shake {\n\t\t\t0%, 100% { transform: translateX(0); }\n\t\t\t25% { transform: translateX(-4px); }\n\t\t\t75% { transform: translateX(4px); }\n\t\t}\n\n\t\t@keyframes pulse {\n\t\t\t0%, 100% { opacity: 1; }\n\t\t\t50% { opacity: 0.7; }\n\t\t}\n\n\t\t.badge {\n\t\t\tdisplay: inline-block;\n\t\t\tpadding: 0.25rem 0.5rem;\n\t\t\tbackground: #ef4444;\n\t\t\tcolor: white;\n\t\t\tborder-radius: 12px;\n\t\t\tfont-size: 0.75rem;\n\t\t\tfont-weight: 600;\n\t\t\tmargin-left: 0.5rem;\n\t\t}\n\n\t\t.info-box {\n\t\t\tborder-radius: 8px;\n\t\t\tmargin: 1rem 0;\n\t\t}\n\n\t\t@keyframes slideIn {\n\t\t\tfrom { transform: translateX(400px); opacity: 0; }\n\t\t\tto { transform: translateX(0); opacity: 1; }\n\t\t}\n\n\t\t@keyframes slideOut {\n\t\t\tfrom { transform: translateX(0); opacity: 1; }\n\t\t\tto { transform: translateX(400px); opacity: 0; }\n\t\t}\n\n\t\t.room-header-section {\n\t\t\tmargin-bottom: 2rem;\n\t\t}\n\n\t\t.room-header-section h1 {\n\t\t\tdisplay: inline-flex;\n\t\t}\n\n\t\t.room-id-input {\n\t\t\tfont-family: monospace;\n\t\t\tpadding: 0.5rem 0.75rem;\n\t\t\tborder: 2px solid #e5e7eb;\n\t\t\tborder-radius: 6px;\n\t\t\tbackground: #f9fafb;\n\t\t\tfont-size: 0.875rem;\n\t\t\tcolor: #4b5563;\n\t\t\twidth: 300px;\n\t\t\tcursor: text;\n\t\t}\n\n\t\t.room-id-input:focus {\n\t\t\toutline: none;\n\t\t\tborder-color: #6B4CE6;\n\t\t}\n\n\t\t.copy-btn {\n\t\t\twhite-space: nowrap;\n\t\t\ttransition: all 0.2s;\n\t\t}\n\n\t\t.player-label {\n\t\t\tfont-size: 0.875rem;\n\t\t\tcolor: #6b7280;\n\t\t\tfont-weight: 500;\n\t\t}\n\n\t\t.player-name {\n\t\t\tfont-size: 1.125rem;\n\t\t\tfont-weight: 600;\n\t\t\tcolor: #111827;\n\t\t}\n\n\t\t.invite-section {\n\t\t\tbackground: white;\n\t\t\tborder-radius: 8px;\n\t\t\tpadding: 1.5rem;\n\t\t\tbox-shadow: 0 1px 3px rgba(0,0,0,0.1);\n\t\t}\n\n\t\t.friends-list {\n\t\t\tdisplay: flex;\n\t\t\tflex-direction: column;\n\t\t\tgap: 0.75rem;\n\t\t\tmargin-top: 1rem;\n\t\t}\n\n\t\t.friend-item {\n\t\t\tdisplay: flex;\n\t\t\tjustify-content: space-between;\n\t\t\talign-items: center;\n\t\t\tpadding: 0.75rem 1rem;\n\t\t\tbackground: #f9fafb;\n\t\t\tborder-radius: 6px;\n\t\t\tborder: 1px solid #e5e7eb;\n\t\t}\n\n\t\t.friend-info {\n\t\t\tdisplay: flex;\n\t\t\talign-items: center;\n\t\t\tgap: 0.75rem;\n\t\t}\n\n\t\t.friend-name {\n\t\t\tfont-weight: 500;\n\t\t\tcolor: #111827;\n\t\t}\n\n\t\t.friend-item button:disabled {\n\t\t\tcursor: not-allowed;\n\t\t}\n\n\t\t/* Start Game Section */\n\t\t.start-game-section {\n\t\t\tmargin-top: 2rem;\n\t\t\ttext-align: center;\n\t\t\tpadding: 2rem;\n\t\t\tbackground: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n\t\t\tborder-radius: 12px;\n\t\t\tbox-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);\n\t\t}\n\n\t\t.start-game-btn {\n\t\t\tfont-size: 1.25rem;\n\t\t\tpadding: 1rem 3rem;\n\t\t\tbackground: white;\n\t\t\tcolor: #667eea;\n\t\t\tborder: none;\n\t\t\tborder-radius: 50px;\n\t\t\tfont-weight: 700;\n\t\t\tcursor: pointer;\n\t\t\ttransition: all 0.3s ease;\n\t\t\tbox-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);\n\t\t}\n\n\t\t.start-game-btn:hover {\n\t\t\ttransform: translateY(-2px);\n\t\t\tbox-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);\n\t\t\tbackground: #f0f0f0;\n\t\t}\n\n\t\t.start-game-btn:active {\n\t\t\ttransform: translateY(0);\n\t\t}\n\n\t\t/* Status badge colors */\n\t\t.status-ready {\n\t\t\tbackground: #dcfce7;\n\t\t\tcolor: #166534;\n\t\t}\n\n\t\t.status-playing {\n\t\t\tbackground: #dbeafe;\n\t\t\tcolor: #1e40af;\n\t\t}\n\n\t\t.status-waiting {\n\t\t\tbackground: #fef3c7;\n\t\t\tcolor: #92400e;\n\t\t}\n\n\t\t/* Categories Section */\n\t\t.categories-section {\n\t\t\tbackground: white;\n\t\t\tborder-radius: 12px;\n\t\t\tpadding: 2rem;\n\t\t\tmargin: 2rem 0;\n\t\t\tbox-shadow: 0 1px 3px rgba(0,0,0,0.1);\n\t\t}\n\n\t\t.categories-section h2 {\n\t\t\tmargin-top: 0;\n\t\t\tcolor: #111827;\n\t\t\tmargin-bottom: 0.5rem;\n\t\t}\n\n\t\t.categories-hint {\n\t\t\tcolor: #6b7280;\n\t\t\tfont-size: 0.875rem;\n\t\t\tmargin-bottom: 1.5rem;\n\t\t}\n\n\t\t.categories-grid {\n\t\t\tdisplay: grid;\n\t\t\tgrid-template-columns: repeat(auto-fill, minmax(200px, 1fr));\n\t\t\tgap: 1rem;\n\t\t}\n\n\t\t.category-checkbox {\n\t\t\tdisplay: flex;\n\t\t\talign-items: center;\n\t\t\tgap: 0.75rem;\n\t\t\tpadding: 1rem;\n\t\t\tbackground: #f9fafb;\n\t\t\tborder: 2px solid #e5e7eb;\n\t\t\tborder-radius: 8px;\n\t\t\tcursor: pointer;\n\t\t\ttransition: all 0.2s;\n\t\t\tuser-select: none;\n\t\t\twidth: 100% !important;\n\t\t}\n\n\t\t.category-checkbox:hover {\n\t\t\tbackground: #f3f4f6;\n\t\t\tborder-color: #667eea;\n\t\t}\n\n\t\t.category-checkbox input[type=\"checkbox\"] {\n\t\t\twidth: 20px;\n\t\t\theight: 20px;\n\t\t\tcursor: pointer;\n\t\t\taccent-color: #667eea;\n\t\t}\n\n\t\t.category-checkbox input[type=\"checkbox\"]:checked + .category-label {\n\t\t\tcolor: #667eea;\n\t\t\tfont-weight: 600;\n\t\t}\n\n\t\t.category-label {\n\t\t\tflex: 1;\n\t\t\tfont-size: 1rem;\n\t\t\tcolor: #374151;\n\t\t\ttext-transform: capitalize;\n\t\t}\n\n\t\t@media (max-width: 768px) {\n\t\t\t.categories-grid {\n\t\t\t\tgrid-template-columns: 1fr;\n\t\t\t}\n\t\t}\n\n\t\t/* Guest Ready Section */\n\t\t.guest-ready-section {\n\t\t\ttext-align: center;\n\t\t\tpadding: 2rem;\n\t\t\tbackground: white;\n\t\t\tborder-radius: 12px;\n\t\t\tmargin: 1rem 0;\n\t\t}\n\n\t\t.ready-btn {\n\t\t\tfont-size: 1.25rem;\n\t\t\tpadding: 1rem 2rem;\n\t\t\tbackground: #10b981;\n\t\t\tborder: none;\n\t\t\tcolor: white;\n\t\t\tfont-weight: 600;\n\t\t\ttransition: all 0.3s;\n\t\t}\n\n\t\t.ready-btn:hover {\n\t\t\tbackground: #059669;\n\t\t\ttransform: translateY(-2px);\n\t\t\tbox-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);\n\t\t}\n\n\t\t.ready-hint {\n\t\t\tcolor: #6b7280;\n\t\t\tfont-size: 0.875rem;\n\t\t\tmargin-top: 0.5rem;\n\t\t}\n\n\t\t.ready-confirmed-message {\n\t\t\tbackground: #dcfce7;\n\t\t\tcolor: #166534;\n\t\t\tpadding: 1.5rem;\n\t\t\tborder-radius: 8px;\n\t\t\tfont-weight: 600;\n\t\t\tfont-size: 1.1rem;\n\t\t}\n\n\t\t/* Disabled checkboxes */\n\t\t.category-checkbox input[type=\"checkbox\"]:disabled {\n\t\t\tcursor: not-allowed;\n\t\t\topacity: 0.6;\n\t\t}\n\n\t\t.category-checkbox input[type=\"checkbox\"]:disabled + .category-label {\n\t\t\tcolor: #9ca3af;\n\t\t}\n\t</style>")

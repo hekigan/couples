@@ -14,6 +14,10 @@ type TemplateData struct {
 	JoinRequestsCount int    // Number of pending join requests (for badge)
 	Env               string // Environment (development/production) for conditional JS loading
 	CSRFToken         string // CSRF token for forms and HTMX requests
+	// Pre-rendered fragment HTML for SSR (to avoid hx-trigger="load")
+	CategoriesGridHTML string // Categories grid fragment (rendered server-side)
+	FriendsListHTML    string // Friends list fragment (rendered server-side, owner only)
+	ActionButtonHTML   string // Start/ready button fragment (rendered server-side)
 }
 
 // GameStartedData represents data for game_started SSE fragment

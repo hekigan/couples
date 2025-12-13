@@ -10,6 +10,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/models"
+	"github.com/hekigan/couples/internal/services"
+	friendsFragments "github.com/hekigan/couples/internal/views/fragments/friends"
+	roomFragments "github.com/hekigan/couples/internal/views/fragments/room"
 	"github.com/labstack/echo/v4"
 )
 
@@ -135,4 +138,135 @@ func GetUserIDFromContext(c echo.Context) (uuid.UUID, error) {
 		return uuid.Nil, fmt.Errorf("user not authenticated")
 	}
 	return userID, nil
+}
+
+// RenderRoomFragments fetches data and renders all fragments for the room page
+// This eliminates the need for hx-trigger="load" by rendering fragments server-side
+func (h *Handler) RenderRoomFragments(c echo.Context, room *models.Room, roomID uuid.UUID, userID uuid.UUID, isOwner bool) (categoriesHTML, friendsHTML, actionButtonHTML string, err error) {
+	ctx := context.Background()
+
+	// 1. Render categories grid (always shown)
+	categoriesHTML, err = h.renderCategoriesGrid(c, ctx, room, roomID)
+	if err != nil {
+		log.Printf("⚠️ Failed to render categories grid: %v", err)
+		categoriesHTML = `<p style="color: #6b7280;">Failed to load categories</p>`
+	}
+
+	// 2. Render friends list (owner only, when waiting for guest)
+	if isOwner && room.GuestID == nil {
+		friendsHTML, err = h.renderFriendsList(c, ctx, userID, roomID)
+		if err != nil {
+			log.Printf("⚠️ Failed to render friends list: %v", err)
+			friendsHTML = `<p style="color: #6b7280;">Failed to load friends</p>`
+		}
+	}
+
+	// 3. Render action button (based on role and room status)
+	if room.Status == "ready" {
+		actionButtonHTML, err = h.renderActionButton(c, ctx, room, roomID, isOwner)
+		if err != nil {
+			log.Printf("⚠️ Failed to render action button: %v", err)
+			actionButtonHTML = `<p style="color: #6b7280;">Failed to load button</p>`
+		}
+	}
+
+	return categoriesHTML, friendsHTML, actionButtonHTML, nil
+}
+
+// renderCategoriesGrid fetches and renders the categories grid fragment
+func (h *Handler) renderCategoriesGrid(c echo.Context, ctx context.Context, room *models.Room, roomID uuid.UUID) (string, error) {
+	// Import needed at top of file
+	// roomFragments "github.com/hekigan/couples/internal/views/fragments/room"
+	// "github.com/hekigan/couples/internal/services"
+
+	// Get all categories
+	allCategories, err := h.CategoryService.GetCategories(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch categories: %w", err)
+	}
+
+	// Get question counts per category for the room's language
+	questionCounts, err := h.QuestionService.GetQuestionCountsByCategory(ctx, room.Language)
+	if err != nil {
+		log.Printf("⚠️ Failed to fetch question counts: %v", err)
+		questionCounts = make(map[string]int) // Continue without counts
+	}
+
+	// Build CategoryInfo array with selection state and question counts
+	categoryInfos := make([]services.CategoryInfo, 0, len(allCategories))
+	for _, cat := range allCategories {
+		isSelected := false
+		// Check if this category is in room's selected categories
+		for _, selectedID := range room.SelectedCategories {
+			if selectedID == cat.ID {
+				isSelected = true
+				break
+			}
+		}
+
+		categoryInfos = append(categoryInfos, services.CategoryInfo{
+			ID:            cat.ID.String(),
+			Key:           cat.Key,
+			Label:         cat.Label,
+			IsSelected:    isSelected,
+			QuestionCount: questionCounts[cat.ID.String()],
+		})
+	}
+
+	// Import needed: roomFragments "github.com/hekigan/couples/internal/views/fragments/room"
+	return h.RenderTemplFragment(c, roomFragments.CategoriesGrid(&services.CategoriesGridData{
+		Categories: categoryInfos,
+		RoomID:     roomID.String(),
+		GuestReady: room.GuestReady,
+	}))
+}
+
+// renderFriendsList fetches and renders the friends list fragment
+func (h *Handler) renderFriendsList(c echo.Context, ctx context.Context, userID uuid.UUID, roomID uuid.UUID) (string, error) {
+	// Import needed: friendsFragments "github.com/hekigan/couples/internal/views/fragments/friends"
+
+	// Get friends
+	friendsList, err := h.FriendService.GetFriends(ctx, userID)
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch friends: %w", err)
+	}
+
+	// Build FriendsListData
+	friends := make([]services.FriendInfo, 0, len(friendsList))
+	for _, friend := range friendsList {
+		// Determine which ID is the actual friend (not the current user)
+		friendIDStr := friend.FriendID.String()
+		if friend.FriendID == userID {
+			friendIDStr = friend.UserID.String()
+		}
+		friends = append(friends, services.FriendInfo{
+			ID:       friendIDStr,
+			Username: friend.Username,
+		})
+	}
+
+	// Import needed: friendsFragments "github.com/hekigan/couples/internal/views/fragments/friends"
+	return h.RenderTemplFragment(c, friendsFragments.FriendsList(&services.FriendsListData{
+		Friends: friends,
+		RoomID:  roomID.String(),
+	}))
+}
+
+// renderActionButton renders the appropriate action button (start or ready)
+func (h *Handler) renderActionButton(c echo.Context, ctx context.Context, room *models.Room, roomID uuid.UUID, isOwner bool) (string, error) {
+	// Import needed: roomFragments "github.com/hekigan/couples/internal/views/fragments/room"
+
+	if isOwner {
+		// Render start game button
+		return h.RenderTemplFragment(c, roomFragments.StartGameButton(&services.StartGameButtonData{
+			RoomID:     roomID.String(),
+			GuestReady: room.GuestReady,
+		}))
+	} else {
+		// Render guest ready button
+		return h.RenderTemplFragment(c, roomFragments.GuestReadyButton(&services.GuestReadyButtonData{
+			RoomID:     roomID.String(),
+			GuestReady: room.GuestReady,
+		}))
+	}
 }
