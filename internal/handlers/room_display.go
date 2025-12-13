@@ -125,25 +125,24 @@ func (h *Handler) RoomHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load user information")
 	}
 
-	// Get pending join requests count for the badge
-	joinRequestsCount := 0
-	if isOwner {
-		joinRequests, err := h.RoomService.GetJoinRequestsByRoom(ctx, roomID)
-		if err == nil {
-			// Count pending requests only
-			for _, req := range joinRequests {
-				if req.Status == "pending" {
-					joinRequestsCount++
-				}
-			}
-		}
-	}
-
 	// Render fragments server-side (eliminates hx-trigger="load")
 	categoriesHTML, friendsHTML, actionButtonHTML, err := h.RenderRoomFragments(c, &roomWithPlayers.Room, roomID, currentUserID, isOwner)
 	if err != nil {
 		log.Printf("⚠️ Warning: Failed to render some fragments: %v", err)
 		// Continue anyway - fragments will have fallback error messages
+	}
+
+	// Get pending join requests and render them (owner only)
+	joinRequestsHTML := ""
+	joinRequestsCount := 0
+	if isOwner {
+		joinRequestsHTML, joinRequestsCount, err = h.renderJoinRequests(c, ctx, roomID)
+		if err != nil {
+			log.Printf("⚠️ Failed to render join requests: %v", err)
+			// Continue with empty state
+			joinRequestsHTML = ""
+			joinRequestsCount = 0
+		}
 	}
 
 	data := NewTemplateData(c)
@@ -158,6 +157,7 @@ func (h *Handler) RoomHandler(c echo.Context) error {
 	data.CategoriesGridHTML = categoriesHTML
 	data.FriendsListHTML = friendsHTML
 	data.ActionButtonHTML = actionButtonHTML
+	data.JoinRequestsHTML = joinRequestsHTML
 
 	// HTMX refactoring complete - using HTMX version as default
 	return h.RenderTemplComponent(c, gamePages.RoomPage(data))

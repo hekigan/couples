@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/middleware"
@@ -269,4 +270,39 @@ func (h *Handler) renderActionButton(c echo.Context, ctx context.Context, room *
 			GuestReady: room.GuestReady,
 		}))
 	}
+}
+
+// renderJoinRequests fetches and renders pending join requests as HTML
+// Uses database view for optimal performance (single query with usernames)
+func (h *Handler) renderJoinRequests(c echo.Context, ctx context.Context, roomID uuid.UUID) (html string, count int, err error) {
+	// Use database view - includes username, already filtered for pending
+	joinRequests, err := h.RoomService.GetJoinRequestsWithUserInfo(ctx, roomID)
+	if err != nil {
+		return "", 0, err
+	}
+
+	count = len(joinRequests)
+	if count == 0 {
+		return "", 0, nil
+	}
+
+	var htmlParts []string
+	for _, req := range joinRequests {
+		fragment, err := h.RenderTemplFragment(c, roomFragments.JoinRequest(&services.JoinRequestData{
+			ID:        req.ID.String(),
+			RoomID:    req.RoomID.String(),
+			UserID:    req.UserID.String(),
+			Username:  req.Username,
+			Message:   "", // Database view doesn't include message field
+			Status:    req.Status,
+			CreatedAt: req.CreatedAt.Format("Jan 2, 15:04"),
+		}))
+		if err == nil {
+			htmlParts = append(htmlParts, fragment)
+		} else {
+			log.Printf("⚠️ Failed to render join request %s: %v", req.ID, err)
+		}
+	}
+
+	return strings.Join(htmlParts, "\n"), count, nil
 }

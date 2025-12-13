@@ -52,8 +52,20 @@ func (h *Handler) UpdateCategoriesAPIHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update categories: "+err.Error())
 	}
 
-	// Broadcast category update to all room participants via SSE
-	h.RoomService.BroadcastCategoriesUpdated(roomID, categoryIDs)
+	// Render the updated categories grid HTML
+	categoriesHTML, err := h.renderCategoriesGrid(c, ctx, room, roomID)
+	if err != nil {
+		log.Printf("⚠️ Failed to render categories grid for SSE: %v", err)
+		// Continue without SSE broadcast (graceful degradation)
+	} else {
+		// Broadcast HTML fragment via SSE
+		h.RoomService.GetRealtimeService().BroadcastHTMLFragment(roomID, services.HTMLFragmentEvent{
+			Type:       "categories_updated",
+			Target:     "#categories-grid",
+			SwapMethod: "innerHTML",
+			HTML:       categoriesHTML,
+		})
+	}
 
 	// Return JSON response
 	return c.JSON(http.StatusOK, map[string]interface{}{
@@ -189,8 +201,20 @@ func (h *Handler) ToggleCategoryAPIHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update categories")
 	}
 
-	// Broadcast categories update via SSE
-	h.RoomService.BroadcastCategoriesUpdated(roomID, newCategories)
+	// Render the updated categories grid HTML
+	categoriesHTML, err := h.renderCategoriesGrid(c, ctx, room, roomID)
+	if err != nil {
+		log.Printf("⚠️ Failed to render categories grid for SSE: %v", err)
+		// Continue without SSE broadcast (graceful degradation)
+	} else {
+		// Broadcast HTML fragment via SSE
+		h.RoomService.GetRealtimeService().BroadcastHTMLFragment(roomID, services.HTMLFragmentEvent{
+			Type:       "categories_updated",
+			Target:     "#categories-grid",
+			SwapMethod: "innerHTML",
+			HTML:       categoriesHTML,
+		})
+	}
 
 	// Return success (HTMX will handle via hx-swap="none")
 	return c.HTML(http.StatusOK, `<!-- Category toggled successfully -->`)

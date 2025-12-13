@@ -113,7 +113,7 @@ templ RoomContent(data *viewmodels.TemplateData) {
 				<div
 					id="categories-grid"
 					data-testid="categories-grid"
-					hx-trigger="sse:categories_updated from:body"
+					sse-swap="categories_updated"
 					hx-swap="innerHTML"
 				>
 					@templ.Raw(data.CategoriesGridHTML)
@@ -125,8 +125,8 @@ templ RoomContent(data *viewmodels.TemplateData) {
 					class="start-game-section"
 					id="start-game-section"
 					style={ templ.KV("display: none;", room.Status != "ready") }
-					hx-trigger="sse:room_update from:body"
-					hx-swap="innerHTML"
+					hx-get={ fmt.Sprintf("/api/v1/rooms/%s/start-button", room.ID.String()) }
+					hx-trigger="load, sse:room_update from:body"
 				>
 					@templ.Raw(data.ActionButtonHTML)
 				</div>
@@ -159,8 +159,10 @@ templ RoomContent(data *viewmodels.TemplateData) {
 						📬 Join Requests
 						<span id="request-count" class="badge" sse-swap="badge_update">{ fmt.Sprintf("%d", data.JoinRequestsCount) }</span>
 					</h2>
-					<!-- Join requests appended via SSE (beforeend appends to list) -->
-					<div id="join-requests" sse-swap="join_request" hx-swap="beforeend"></div>
+					<!-- Join requests: initial load + SSE appends new ones (beforeend) -->
+					<div id="join-requests" sse-swap="join_request" hx-swap="beforeend">
+						@templ.Raw(data.JoinRequestsHTML)
+					</div>
 				</div>
 			}
 			<!-- Owner Actions (Delete Room) - OWNER ONLY -->

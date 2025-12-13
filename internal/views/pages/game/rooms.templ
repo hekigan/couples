@@ -15,12 +15,22 @@ templ RoomsPage(data *viewmodels.TemplateData) {
 
 // RoomsContent renders the rooms list content
 templ RoomsContent(data *viewmodels.TemplateData) {
-	<div class="container">
+	<div
+		class="container"
+		hx-ext="sse"
+		sse-connect="/api/v1/stream/user/events"
+	>
 		<div class="page-header">
 			<h1>💕 My Rooms</h1>
 			<a href="/game/create-room" role="button">+ New Room</a>
 		</div>
-		<div id="rooms-container">
+		<div
+			id="rooms-container"
+			hx-get="/game/rooms"
+			hx-trigger="sse:my_request_accepted from:body"
+			hx-swap="innerHTML"
+			hx-select="#rooms-container"
+		>
 			if rooms, ok := data.Data.([]services.RoomWithUsername); ok && len(rooms) > 0 {
 				<div class="rooms-grid">
 					for _, room := range rooms {

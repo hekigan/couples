@@ -18,6 +18,7 @@ type TemplateData struct {
 	CategoriesGridHTML string // Categories grid fragment (rendered server-side)
 	FriendsListHTML    string // Friends list fragment (rendered server-side, owner only)
 	ActionButtonHTML   string // Start/ready button fragment (rendered server-side)
+	JoinRequestsHTML   string // Join requests fragment (rendered server-side, owner only)
 }
 
 // GameStartedData represents data for game_started SSE fragment

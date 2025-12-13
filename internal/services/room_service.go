@@ -135,10 +135,11 @@ func (s *RoomService) CreateRoom(ctx context.Context, room *models.Room) error {
 		"id":         room.ID.String(),
 		"owner_id":   room.OwnerID.String(),
 		"status":     room.Status,
+		"is_private": room.IsPrivate,
 		"created_at": room.CreatedAt,
 		"updated_at": room.UpdatedAt,
 	}
-	
+
 	// Add optional fields if present
 	if room.GuestID != nil {
 		data["guest_id"] = room.GuestID.String()
@@ -636,6 +637,9 @@ func (s *RoomService) RejectJoinRequest(ctx context.Context, requestID uuid.UUID
 }
 
 // BroadcastCategoriesUpdated broadcasts category selection updates via SSE
+// Deprecated: This method sends JSON instead of HTML. Use BroadcastHTMLFragment directly
+// from the handler layer where HTML rendering is available. See ToggleCategoryAPIHandler
+// for the correct pattern.
 func (s *RoomService) BroadcastCategoriesUpdated(roomID uuid.UUID, categoryIDs []uuid.UUID) {
 	if s.realtimeService != nil {
 		// Convert UUIDs to strings for JSON
