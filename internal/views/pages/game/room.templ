@@ -90,41 +90,45 @@ templ RoomContent(data *viewmodels.TemplateData) {
 					</div>
 				}
 			}
-			<!-- Players Section -->
+			<!-- Players Section - Show only the other player -->
 			<div class="room-players" id="player-list" data-testid="player-list">
-				<h2 data-testid="players-heading">Players</h2>
 				<div class="player-grid">
-					<div class="player-card" data-player="owner" data-testid="owner-card">
-						<span class="player-label">Owner</span>
-						<span class="player-name" data-testid="owner-name">
-							if data.OwnerUsername != "" {
-								{ data.OwnerUsername }
-							} else {
-								Unknown
-							}
-						</span>
-					</div>
-					<!-- Guest card - Updated via SSE when request accepted -->
-					<div
-						class={ templ.KV("player-card", true), templ.KV("empty", room.GuestID == nil) }
-						data-player="guest"
-						id="guest-info"
-						sse-swap="request_accepted"
-						data-testid="guest-card"
-					>
-						<span class="player-label">Guest</span>
-						if room.GuestID != nil {
-							<span class="player-name" id="guest-name" data-testid="guest-name">
-								if data.GuestUsername != "" {
-									{ data.GuestUsername }
+					<!-- Guest sees the Owner card -->
+					if !data.IsOwner {
+						<div class="player-card" data-player="owner" data-testid="owner-card">
+							<span class="player-label">Owner</span>
+							<span class="player-name" data-testid="owner-name">
+								if data.OwnerUsername != "" {
+									{ data.OwnerUsername }
 								} else {
 									Unknown
 								}
 							</span>
-						} else {
-							<span class="player-name" id="guest-waiting" data-testid="guest-waiting">Waiting for guest...</span>
-						}
-					</div>
+						</div>
+					}
+					<!-- Owner sees the Guest card - Updated via SSE when request accepted -->
+					if data.IsOwner {
+						<div
+							class={ templ.KV("player-card", true), templ.KV("empty", room.GuestID == nil) }
+							data-player="guest"
+							id="guest-info"
+							sse-swap="request_accepted"
+							data-testid="guest-card"
+						>
+							<span class="player-label">Guest</span>
+							if room.GuestID != nil {
+								<span class="player-name" id="guest-name" data-testid="guest-name">
+									if data.GuestUsername != "" {
+										{ data.GuestUsername }
+									} else {
+										Unknown
+									}
+								</span>
+							} else {
+								<span class="player-name" id="guest-waiting" data-testid="guest-waiting">Waiting for guest...</span>
+							}
+						</div>
+					}
 				</div>
 			</div>
 			<!-- Category Selection Section (shown when guest joined) -->

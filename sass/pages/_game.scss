@@ -138,7 +138,7 @@
 .player-card {
   background-color: $bg-primary;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
 
   .player-label,
   .player-name {
