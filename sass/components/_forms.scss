@@ -18,6 +18,10 @@ select {
     --pico-form-element-focus-color: var(--pico-success-hover);
   }
 
+  [type=checkbox] {
+    border-radius: 0;
+  }
+
   [role=group], [role=fieldset] {
     align-items: center;
   }

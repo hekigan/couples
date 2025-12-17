@@ -1,29 +1,96 @@
 @use '../base/variables' as *;
+@use 'sass:color';
 
 // ============================================================================
 // Rooms Page Styles
 // ============================================================================
 
+// ----------------------------------------------------------------------------
+// Accessibility
+// ----------------------------------------------------------------------------
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+// ----------------------------------------------------------------------------
+// HTMX Loading Indicators
+// ----------------------------------------------------------------------------
+.htmx-indicator {
+    display: none;
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+    display: inline;
+}
+
+// ----------------------------------------------------------------------------
+// Page Header
+// ----------------------------------------------------------------------------
 .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: $spacing-xl;
 }
 
+// ----------------------------------------------------------------------------
+// Room Header Section
+// ----------------------------------------------------------------------------
+.room-header-section {
+    margin-bottom: $spacing-xl;
+
+    h1 {
+        display: inline-flex;
+    }
+}
+
+.room-id-input {
+    font-family: monospace;
+    padding: $spacing-sm $spacing-md;
+    border: 2px solid $border-color;
+    border-radius: $border-radius-md;
+    background: $bg-secondary;
+    font-size: $font-size-sm;
+    color: $text-secondary;
+    width: 300px;
+    cursor: text;
+
+    &:focus {
+        outline: none;
+        border-color: $secondary-color;
+    }
+}
+
+.copy-btn {
+    white-space: nowrap;
+    transition: all $transition-fast;
+}
+
+// ----------------------------------------------------------------------------
+// Rooms Grid (listing page)
+// ----------------------------------------------------------------------------
 .rooms-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin-top: 2rem;
+    gap: $spacing-lg;
+    margin-top: $spacing-xl;
 }
 
 .room-card {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    padding: 1.5rem;
-    transition: transform 0.2s, opacity 0.3s;
+    background: $bg-primary;
+    border-radius: $border-radius-md;
+    box-shadow: $shadow-md;
+    padding: $spacing-lg;
+    transition: transform $transition-fast, opacity $transition-base;
 
     &.htmx-swapping {
         opacity: 0;
@@ -32,7 +99,7 @@
 
     &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        box-shadow: $shadow-lg;
     }
 }
 
@@ -40,36 +107,37 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #eee;
+    margin-bottom: $spacing-md;
+    padding-bottom: $spacing-md;
+    border-bottom: 1px solid $border-color;
 
     h3 {
         margin: 0;
-        font-size: 1.25rem;
+        font-size: $font-size-lg;
     }
 }
 
 .room-status {
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-size: 0.875rem;
-    font-weight: 500;
+    padding: $spacing-xs $spacing-md;
+    border-radius: $border-radius-lg;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
 }
 
 .room-id {
     font-size: 0.75rem;
-    color: #6b7280;
+    color: $text-secondary;
     font-family: monospace;
-    background: #f3f4f6;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
+    background: $bg-secondary;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $border-radius-sm;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     max-width: 200px;
 }
 
+// Status badge colors (for room cards)
 .room-status-waiting {
     background: #fef3c7;
     color: #92400e;
@@ -90,28 +158,44 @@
     color: #3730a3;
 }
 
+// Status badge colors (for room page inline badges)
+.status-ready {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-playing {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.status-waiting {
+    background: #fef3c7;
+    color: #92400e;
+}
+
 .room-card-body {
-    margin-bottom: 1rem;
+    margin-bottom: $spacing-md;
 }
 
 .room-info {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 0.5rem;
+    margin-bottom: $spacing-sm;
 }
 
 .room-info-label {
-    font-weight: 500;
-    color: #666;
+    font-weight: $font-weight-medium;
+    color: $text-secondary;
 }
 
 .room-info-value {
-    color: #333;
+    color: $text-primary;
 }
 
 .room-card-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: $spacing-sm;
     align-items: baseline;
 
     form {
@@ -119,39 +203,151 @@
     }
 }
 
+// ----------------------------------------------------------------------------
+// Empty State
+// ----------------------------------------------------------------------------
 .empty-state {
     text-align: center;
-    padding: 4rem 2rem;
+    padding: $spacing-xxl $spacing-xl;
 
     h2 {
-        color: #333;
-        margin-bottom: 0.5rem;
+        color: $text-primary;
+        margin-bottom: $spacing-sm;
     }
 
     p {
-        color: #666;
-        margin-bottom: 2rem;
+        color: $text-secondary;
+        margin-bottom: $spacing-xl;
     }
 }
 
 .empty-state-icon {
     font-size: 4rem;
-    margin-bottom: 1rem;
+    margin-bottom: $spacing-md;
+}
+
+// ----------------------------------------------------------------------------
+// Player Info
+// ----------------------------------------------------------------------------
+.player-label {
+    font-size: $font-size-sm;
+    color: $text-secondary;
+    font-weight: $font-weight-medium;
+}
+
+.player-name {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $text-primary;
+}
+
+// ----------------------------------------------------------------------------
+// Invite Section
+// ----------------------------------------------------------------------------
+.invite-section {
+    background: $bg-primary;
+    border-radius: $border-radius-md;
+    padding: $spacing-lg;
+    box-shadow: $shadow-sm;
+}
+
+.friends-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+    margin-top: $spacing-md;
+}
+
+.friend-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: $spacing-md;
+    background: $bg-secondary;
+    border-radius: $border-radius-md;
+    border: 1px solid $border-color;
+
+    button:disabled {
+        cursor: not-allowed;
+    }
+}
+
+.friend-info {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+}
+
+.friend-name {
+    font-weight: $font-weight-medium;
+    color: $text-primary;
+}
+
+// ----------------------------------------------------------------------------
+// Badge (notification count)
+// ----------------------------------------------------------------------------
+.badge {
+    display: inline-block;
+    padding: $spacing-xs $spacing-sm;
+    background: $danger-color;
+    color: $text-contrast;
+    border-radius: $border-radius-lg;
+    font-size: 0.75rem;
+    font-weight: $font-weight-bold;
+    margin-left: $spacing-sm;
+}
+
+// ----------------------------------------------------------------------------
+// Info Box
+// ----------------------------------------------------------------------------
+.info-box {
+    border-radius: $border-radius-md;
+    margin: $spacing-md 0;
+}
+
+// ----------------------------------------------------------------------------
+// Categories Section
+// ----------------------------------------------------------------------------
+.categories-section {
+    background: $bg-primary;
+    border-radius: $border-radius-lg;
+    padding: $spacing-xl;
+    margin: $spacing-xl 0;
+    box-shadow: $shadow-sm;
+
+    h2 {
+        margin-top: 0;
+        color: $text-primary;
+        margin-bottom: $spacing-sm;
+    }
+}
+
+.categories-hint {
+    color: $text-secondary;
+    font-size: $font-size-sm;
+    margin-bottom: $spacing-lg;
 }
 
 .categories-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: $spacing-md;
     position: relative;
+
+    @media (max-width: $breakpoint-md) {
+        grid-template-columns: 1fr;
+    }
 }
 
 .category-saving.htmx-indicator {
     text-align: center;
     margin-bottom: $spacing-lg;
     background: rgba(255, 255, 255, 0.7);
-    border-radius: 5px;
+    border-radius: $border-radius-sm;
     position: absolute;
     width: 100%;
     height: 100%;
-    z-index: 1000;
+    z-index: $z-dropdown;
 
     span {
         position: relative;
@@ -161,9 +357,152 @@
     }
 }
 
+.category-checkbox {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-md;
+    background: $bg-secondary;
+    border: 1px solid $border-color;
+    border-radius: $border-radius-md;
+    cursor: pointer;
+    transition: all $transition-fast;
+    user-select: none;
+    width: 100% !important;
+
+    &:hover {
+        background: color.adjust($bg-secondary, $lightness: -2%);
+        border-color: $secondary-color;
+    }
+
+    // Error state
+    &.error {
+        animation: shake 0.3s ease-in-out;
+        background-color: rgba($danger-color, 0.1);
+    }
+
+    // Saved state
+    &.saved {
+        animation: pulse 0.3s ease-in-out;
+        background-color: rgba($success-color, 0.1);
+    }
+
+    input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        accent-color: $secondary-color;
+
+        &:checked + .category-label {
+            color: $secondary-color;
+            font-weight: $font-weight-bold;
+        }
+
+        &:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+
+            + .category-label {
+                color: $text-muted;
+            }
+        }
+    }
+}
+
+.category-label {
+    flex: 1;
+    font-size: $font-size-base;
+    color: $text-primary;
+    text-transform: capitalize;
+}
+
+// ----------------------------------------------------------------------------
+// Start Game Section
+// ----------------------------------------------------------------------------
+.start-game-section {
+    margin-top: $spacing-xl;
+    margin-bottom: $spacing-xl;
+    text-align: center;
+}
+
+.start-game-btn {
+    font-size: $font-size-lg;
+    padding: $spacing-md $spacing-xxl;
+    background: var(--pico-success-background);
+    color: #666;
+    border: none;
+    border-radius: $border-radius-full;
+    font-weight: $font-weight-bold;
+    cursor: pointer;
+    transition: all $transition-base;
+    box-shadow: $shadow-md;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: $shadow-lg;
+        background: color.adjust($bg-primary, $lightness: -3%);
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
+}
+
+// ----------------------------------------------------------------------------
+// Guest Ready Section
+// ----------------------------------------------------------------------------
+.guest-ready-section {
+    text-align: center;
+    padding: $spacing-xl;
+    background: $bg-primary;
+    border-radius: $border-radius-lg;
+    margin: $spacing-md 0;
+}
+
+.ready-btn {
+    font-size: $font-size-lg;
+    padding: $spacing-md $spacing-xl;
+    background: $success-color;
+    border: none;
+    color: $text-contrast;
+    font-weight: $font-weight-bold;
+    transition: all $transition-base;
+
+    &:hover {
+        background: color.adjust($success-color, $lightness: -10%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba($success-color, 0.3);
+    }
+}
+
+.ready-hint {
+    color: $text-secondary;
+    font-size: $font-size-sm;
+    margin-top: $spacing-sm;
+}
+
+.ready-confirmed-message {
+    background: #dcfce7;
+    color: #166534;
+    padding: $spacing-lg;
+    border-radius: $border-radius-md;
+    font-weight: $font-weight-bold;
+    font-size: $font-size-lg;
+}
+
 // ============================================================================
 // Animations
 // ============================================================================
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
 
 @keyframes slideIn {
     from {
@@ -186,4 +525,3 @@
         opacity: 0;
     }
 }
-
