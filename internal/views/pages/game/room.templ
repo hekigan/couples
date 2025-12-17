@@ -25,46 +25,71 @@ templ RoomContent(data *viewmodels.TemplateData) {
 			sse-connect={ fmt.Sprintf("/api/v1/stream/rooms/%s/events", room.ID.String()) }
 		>
 			<!-- Room Header -->
-			<div class="room-header-section" data-testid="room-header">
-				<div>
-					<h1 data-testid="room-title">
-						Room ID
-						<span class="room-status">
-							<span
-								class={ fmt.Sprintf("status-badge status-%s", room.Status) }
-								id="room-status-badge"
-								data-testid="room-status-badge"
-								sse-swap="room_status_update"
-								hx-swap="outerHTML"
-							>
-								if room.Status == "ready" {
-									ready
-								} else if room.Status == "playing" {
-									playing
-								} else {
-									waiting
-								}
+			if room.Status == "waiting" {
+				<div class="room-header-section" data-testid="room-header">
+					<div>
+						<h1 data-testid="room-title">
+							Room ID
+							<span class="room-status">
+								<span
+									class={ fmt.Sprintf("status-badge status-%s", room.Status) }
+									id="room-status-badge"
+									data-testid="room-status-badge"
+									sse-swap="room_status_update"
+									hx-swap="outerHTML"
+								>
+									if room.Status == "ready" {
+										ready
+									} else if room.Status == "playing" {
+										playing
+									} else {
+										waiting
+									}
+								</span>
 							</span>
-						</span>
-					</h1>
-					<form onsubmit="return false;">
-						<fieldset role="group">
-							<input
-								type="text"
-								id="room-id-input"
-								value={ room.ID.String() }
-								readonly
-								class="room-id-input"
-								data-testid="room-id-input"
-							/>
-							<button class="no-wrap" onclick="copyRoomId()" title="Copy Room ID" data-testid="copy-room-id-button">
-								Copy
-							</button>
-						</fieldset>
-						<small class="text-muted">Copy the room ID to share with friend</small>
-					</form>
+						</h1>
+						<form onsubmit="return false;">
+							<fieldset role="group">
+								<input
+									type="text"
+									id="room-id-input"
+									value={ room.ID.String() }
+									readonly
+									class="room-id-input"
+									data-testid="room-id-input"
+								/>
+								<button class="no-wrap" onclick="copyRoomId()" title="Copy Room ID" data-testid="copy-room-id-button">
+									Copy
+								</button>
+							</fieldset>
+							<small class="text-muted">Copy the room ID to share with friend</small>
+						</form>
+					</div>
 				</div>
-			</div>
+				<!-- Invite Friends Section (hidden when guest joined) - OWNER ONLY -->
+				if data.IsOwner {
+					<div class="invite-section" id="invite-section" style={ fmt.Sprintf("margin-top: 2rem; %s", templ.KV("display: none;", room.GuestID != nil)) }>
+						<h2>👥 Invite Friends</h2>
+						<div
+							id="friends-list"
+							class="friends-list"
+						>
+							@templ.Raw(data.FriendsListHTML)
+						</div>
+					</div>
+					<!-- Pending Join Requests Section (hidden when guest joined) - OWNER ONLY -->
+					<div id="join-requests-section" style={ fmt.Sprintf("margin-top: 2rem; %s", templ.KV("display: none;", room.GuestID != nil)) }>
+						<h2>
+							📬 Join Requests
+							<span id="request-count" class="badge" sse-swap="badge_update">{ fmt.Sprintf("%d", data.JoinRequestsCount) }</span>
+						</h2>
+						<!-- Join requests: initial load + SSE appends new ones (beforeend) -->
+						<div id="join-requests" sse-swap="join_request" hx-swap="beforeend">
+							@templ.Raw(data.JoinRequestsHTML)
+						</div>
+					</div>
+				}
+			}
 			<!-- Players Section -->
 			<div class="room-players" id="player-list" data-testid="player-list">
 				<h2 data-testid="players-heading">Players</h2>
@@ -141,29 +166,6 @@ templ RoomContent(data *viewmodels.TemplateData) {
 						@templ.Raw(data.ActionButtonHTML)
 					</div>
 				}
-			}
-			<!-- Invite Friends Section (hidden when guest joined) - OWNER ONLY -->
-			if data.IsOwner {
-				<div class="invite-section" id="invite-section" style={ fmt.Sprintf("margin-top: 2rem; %s", templ.KV("display: none;", room.GuestID != nil)) }>
-					<h2>👥 Invite Friends</h2>
-					<div
-						id="friends-list"
-						class="friends-list"
-					>
-						@templ.Raw(data.FriendsListHTML)
-					</div>
-				</div>
-				<!-- Pending Join Requests Section (hidden when guest joined) - OWNER ONLY -->
-				<div id="join-requests-section" style={ fmt.Sprintf("margin-top: 2rem; %s", templ.KV("display: none;", room.GuestID != nil)) }>
-					<h2>
-						📬 Join Requests
-						<span id="request-count" class="badge" sse-swap="badge_update">{ fmt.Sprintf("%d", data.JoinRequestsCount) }</span>
-					</h2>
-					<!-- Join requests: initial load + SSE appends new ones (beforeend) -->
-					<div id="join-requests" sse-swap="join_request" hx-swap="beforeend">
-						@templ.Raw(data.JoinRequestsHTML)
-					</div>
-				</div>
 			}
 			<!-- Owner Actions (Delete Room) - OWNER ONLY -->
 			if data.IsOwner {
@@ -453,11 +455,8 @@ templ RoomStyles() {
 		/* Start Game Section */
 		.start-game-section {
 			margin-top: 2rem;
+			margin-bottom: 2rem;
 			text-align: center;
-			padding: 2rem;
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-			border-radius: 12px;
-			box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
 		}
 
 		.start-game-btn {
