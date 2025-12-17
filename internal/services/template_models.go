@@ -130,6 +130,7 @@ type CategoriesGridData struct {
 	Categories []CategoryInfo
 	RoomID     string
 	GuestReady bool
+	IsOwner    bool
 }
 
 // CategoryInfo represents a single category with selection state

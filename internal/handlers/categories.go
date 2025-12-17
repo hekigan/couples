@@ -31,6 +31,9 @@ func (h *Handler) UpdateCategoriesAPIHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden, err.Error())
 	}
 
+	// Determine if current user is owner
+	isOwner := room.OwnerID == userID
+
 	// Parse category IDs from request (multipart form data from FormData)
 	if err := c.Request().ParseMultipartForm(10 << 20); err != nil { // 10 MB max
 		return echo.NewHTTPError(http.StatusBadRequest, "Failed to parse form")
@@ -53,7 +56,7 @@ func (h *Handler) UpdateCategoriesAPIHandler(c echo.Context) error {
 	}
 
 	// Render the updated categories grid HTML
-	categoriesHTML, err := h.renderCategoriesGrid(c, ctx, room, roomID)
+	categoriesHTML, err := h.renderCategoriesGrid(c, ctx, room, roomID, isOwner)
 	if err != nil {
 		log.Printf("⚠️ Failed to render categories grid for SSE: %v", err)
 		// Continue without SSE broadcast (graceful degradation)
@@ -112,6 +115,13 @@ func (h *Handler) GetRoomCategoriesHTMLHandler(c echo.Context) error {
 
 	ctx := context.Background()
 
+	// Get current user ID to determine ownership
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
+	isOwner := room.OwnerID == userID
+
 	// Get all categories
 	allCategories, err := h.CategoryService.GetCategories(ctx)
 	if err != nil {
@@ -138,7 +148,7 @@ func (h *Handler) GetRoomCategoriesHTMLHandler(c echo.Context) error {
 		for _, selectedID := range room.SelectedCategories {
 			if selectedID == cat.ID {
 				isSelected = true
-				break
+					break
 			}
 		}
 
@@ -156,6 +166,7 @@ func (h *Handler) GetRoomCategoriesHTMLHandler(c echo.Context) error {
 		Categories: categoryInfos,
 		RoomID:     roomID.String(),
 		GuestReady: room.GuestReady,
+		IsOwner:    isOwner,
 	}))
 }
 
@@ -168,6 +179,13 @@ func (h *Handler) ToggleCategoryAPIHandler(c echo.Context) error {
 	}
 
 	ctx := context.Background()
+
+	// Get current user ID to determine ownership
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
+	isOwner := room.OwnerID == userID
 
 	// Get category ID from form
 	categoryIDStr := c.FormValue("category_id")
@@ -202,7 +220,7 @@ func (h *Handler) ToggleCategoryAPIHandler(c echo.Context) error {
 	}
 
 	// Render the updated categories grid HTML
-	categoriesHTML, err := h.renderCategoriesGrid(c, ctx, room, roomID)
+	categoriesHTML, err := h.renderCategoriesGrid(c, ctx, room, roomID, isOwner)
 	if err != nil {
 		log.Printf("⚠️ Failed to render categories grid for SSE: %v", err)
 		// Continue without SSE broadcast (graceful degradation)

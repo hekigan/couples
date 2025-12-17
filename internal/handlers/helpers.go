@@ -147,7 +147,7 @@ func (h *Handler) RenderRoomFragments(c echo.Context, room *models.Room, roomID 
 	ctx := context.Background()
 
 	// 1. Render categories grid (always shown)
-	categoriesHTML, err = h.renderCategoriesGrid(c, ctx, room, roomID)
+	categoriesHTML, err = h.renderCategoriesGrid(c, ctx, room, roomID, isOwner)
 	if err != nil {
 		log.Printf("⚠️ Failed to render categories grid: %v", err)
 		categoriesHTML = `<p style="color: #6b7280;">Failed to load categories</p>`
@@ -175,7 +175,7 @@ func (h *Handler) RenderRoomFragments(c echo.Context, room *models.Room, roomID 
 }
 
 // renderCategoriesGrid fetches and renders the categories grid fragment
-func (h *Handler) renderCategoriesGrid(c echo.Context, ctx context.Context, room *models.Room, roomID uuid.UUID) (string, error) {
+func (h *Handler) renderCategoriesGrid(c echo.Context, ctx context.Context, room *models.Room, roomID uuid.UUID, isOwner bool) (string, error) {
 	// Import needed at top of file
 	// roomFragments "github.com/hekigan/couples/internal/views/fragments/room"
 	// "github.com/hekigan/couples/internal/services"
@@ -219,6 +219,7 @@ func (h *Handler) renderCategoriesGrid(c echo.Context, ctx context.Context, room
 		Categories: categoryInfos,
 		RoomID:     roomID.String(),
 		GuestReady: room.GuestReady,
+		IsOwner:    isOwner,
 	}))
 }
 

@@ -137,8 +137,8 @@ templ RoomContent(data *viewmodels.TemplateData) {
 				data-testid="categories-section"
 				style={ templ.KV("display: none;", room.GuestID == nil) }
 			>
-				<h2 data-testid="categories-heading">Select Question Categories</h2>
-				<p class="categories-hint">Both players can select categories. Selections sync in real-time!</p>
+				<h4 data-testid="categories-heading">Select Question Categories</h4>
+				<p class="categories-hint">Both players select categories together in real-time!</p>
 				<div
 					id="categories-grid"
 					data-testid="categories-grid"
@@ -244,6 +244,25 @@ templ RoomScript() {
 
 			console.log('✅ HTMX SSE connection established via hx-ext="sse"');
 			console.log('✅ Phase A: Friends & Categories loading via HTMX hx-get');
+
+			// Listen for guest ready notification (owner only)
+			if (isOwner) {
+				document.body.addEventListener('sse:room_update', function(e) {
+					try {
+						const data = JSON.parse(e.detail.data);
+						if (data.guest_ready === true) {
+							Toast.show({
+								type: 'success',
+								title: 'Partner Ready!',
+								message: 'Your partner is ready. You can now start the game!',
+								duration: 0
+							});
+						}
+					} catch (error) {
+						console.error('Error parsing room_update:', error);
+					}
+				});
+			}
 		});
 
 		// ============================================================================
@@ -298,6 +317,45 @@ templ RoomScript() {
 		// - game_started → updates #game-start-redirect (triggers redirect)
 		// - room_update → handled by backend HTML fragments
 		// ============================================================================
+
+		// ============================================================================
+		// Fix categories disabled state after SSE swap
+		// SSE broadcasts same HTML to all users, but disabled state depends on role
+		// ============================================================================
+		function fixCategoriesDisabledState() {
+			const container = document.querySelector('.room-container');
+			const isOwner = container?.dataset.isOwner === 'true';
+			const categoriesFieldset = document.querySelector('#categories-grid fieldset[data-guest-ready]');
+			
+			if (!categoriesFieldset) return;
+			
+			const guestReady = categoriesFieldset.dataset.guestReady === 'true';
+			const checkboxes = categoriesFieldset.querySelectorAll('input[type="checkbox"]');
+			
+			// Guest should have disabled categories when guest is ready
+			// Owner should always be able to toggle categories
+			const shouldBeDisabled = !isOwner && guestReady;
+			
+			checkboxes.forEach(checkbox => {
+				if (shouldBeDisabled) {
+					checkbox.disabled = true;
+					checkbox.setAttribute('aria-disabled', 'true');
+					checkbox.title = 'Categories locked - guest is ready';
+				} else {
+					checkbox.disabled = false;
+					checkbox.removeAttribute('aria-disabled');
+					checkbox.title = '';
+				}
+			});
+		}
+
+		// Listen for HTMX swap events on categories grid
+		document.body.addEventListener('htmx:afterSwap', function(e) {
+			if (e.detail.target && e.detail.target.id === 'categories-grid') {
+				fixCategoriesDisabledState();
+			}
+		});
+
 		console.log('✅ HTMX SSE mode active - ~80% less JavaScript than original!');
 	</script>
 }

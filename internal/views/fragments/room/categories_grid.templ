@@ -8,7 +8,7 @@ import (
 // CategoriesGrid renders the category selection checkboxes
 templ CategoriesGrid(data *services.CategoriesGridData) {
 	if len(data.Categories) > 0 {
-		<fieldset style="border: none; padding: 0; margin: 0;">
+		<fieldset style="border: none; padding: 0; margin: 0;" data-guest-ready={ fmt.Sprintf("%t", data.GuestReady) }>
 			<div class="categories-grid">
 				<span class="category-saving htmx-indicator">
 					<span>updating...</span>
@@ -23,7 +23,7 @@ templ CategoriesGrid(data *services.CategoriesGridData) {
 							if cat.IsSelected {
 								checked
 							}
-							if data.GuestReady {
+							if !data.IsOwner && data.GuestReady {
 								disabled
 								aria-disabled="true"
 								title="Categories locked - guest is ready"
