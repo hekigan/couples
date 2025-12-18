@@ -368,10 +368,31 @@ const MobileMenu = {
     }
 };
 
+// Tabs Component
+function initTabs(container = document) {
+    container.querySelectorAll('.tabs[data-tabs]').forEach(tabs => {
+        if (tabs.dataset.tabsInit) return; // Already initialized
+        tabs.dataset.tabsInit = 'true';
+        tabs.querySelectorAll('.tabs-nav button[data-tab]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.dataset.tab;
+                tabs.querySelectorAll('.tabs-nav button').forEach(b => b.classList.remove('active'));
+                tabs.querySelectorAll('.tabs-panel').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                tabs.querySelector(`#${tabId}`)?.classList.add('active');
+            });
+        });
+    });
+}
+
+// Re-init tabs after HTMX swaps in new content
+document.addEventListener('htmx:afterSwap', (e) => initTabs(e.detail.target));
+
 // Initialize UI utilities on page load
 document.addEventListener('DOMContentLoaded', () => {
     Toast.init();
     MobileMenu.init();
+    initTabs();
 
     // Add fade-in animation to main content
     const mainContent = document.querySelector('main') || document.querySelector('.container');
@@ -394,3 +415,4 @@ window.confirmAction = confirmAction;
 window.copyToClipboard = copyToClipboard;
 window.fetchWithUI = fetchWithUI;
 window.validateField = validateField;
+window.initTabs = initTabs;

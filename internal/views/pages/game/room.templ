@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/viewmodels"
+	"github.com/hekigan/couples/internal/views/components"
 	"github.com/hekigan/couples/internal/views/layouts"
 )
 
@@ -99,29 +100,10 @@ templ RoomContent(data *viewmodels.TemplateData) {
 						</div>
 					</div>
 					if data.IsOwner {
-						<!-- Pending Join Requests Section (hidden when guest joined) - OWNER ONLY -->
-						<div id="join-requests-section" style={ templ.KV("margin-top: 2rem;", true), templ.KV("display: none;", room.GuestID != nil) }>
-							<h4>
-								Requests
-								<span id="request-count" class="badge" sse-swap="badge_update">{ fmt.Sprintf("%d", data.JoinRequestsCount) }</span>
-							</h4>
-							<!-- Join requests: initial load + SSE appends new ones (beforeend) -->
-							<div id="join-requests" sse-swap="join_request" hx-swap="beforeend">
-								@templ.Raw(data.JoinRequestsHTML)
-							</div>
-						</div>
-						<!-- Invite Friends Section (hidden when guest joined) - OWNER ONLY -->
-						<div class="invite-section" id="invite-section" style={ templ.KV("margin-top: 2rem;", true), templ.KV("display: none;", room.GuestID != nil) }>
-							<h4>
-								Invite Friends
-							</h4>
-							<div
-								id="friends-list"
-								class="friends-list"
-							>
-								@templ.Raw(data.FriendsListHTML)
-							</div>
-						</div>
+						@components.Tabs("owner-tabs", []components.Tab{
+							{ID: "tab-requests", Label: fmt.Sprintf("Requests (%d)", data.JoinRequestsCount), Content: requestsTabContent(data)},
+							{ID: "tab-invite", Label: "Invite Friends", Content: inviteTabContent(data)},
+						})
 					}
 				}
 			}
@@ -366,4 +348,16 @@ func getSelectedCategoriesJSON(categories []uuid.UUID) string {
 		result += fmt.Sprintf("\"%s\"", cat.String())
 	}
 	return result
+}
+
+templ requestsTabContent(data *viewmodels.TemplateData) {
+	<div id="join-requests" sse-swap="join_request" hx-swap="beforeend">
+		@templ.Raw(data.JoinRequestsHTML)
+	</div>
+}
+
+templ inviteTabContent(data *viewmodels.TemplateData) {
+	<div id="friends-list" class="friends-list">
+		@templ.Raw(data.FriendsListHTML)
+	</div>
 }
