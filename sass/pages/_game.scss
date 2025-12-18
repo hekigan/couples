@@ -63,9 +63,6 @@
   }
 }
 
-#game-content {
-}
-
 .question-card {
   background: linear-gradient(156deg, #fff, color.adjust($primary-color, $lightness: 10%));
   padding: $spacing-lg $spacing-md;
@@ -97,6 +94,7 @@
   max-width: 600px;
   margin: 0 auto;
   padding: $spacing-xl;
+  width: 100%;
 }
 
 .status-badge {
@@ -127,7 +125,15 @@
 }
 
 .room-players {
-  margin-bottom: $spacing-xl;
+  position: absolute;
+  top: 93px;
+  left: 0;
+  right: 0;
+
+  @media screen and (min-width: $breakpoint-md) {
+    position: static;
+    margin-bottom: $spacing-xl;
+  }
 }
 
 .player-grid {

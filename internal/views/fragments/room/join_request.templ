@@ -7,30 +7,30 @@ import (
 
 // JoinRequest renders a single join request item
 templ JoinRequest(data *services.JoinRequestData) {
-	<div class="join-request-item" id={ fmt.Sprintf("join-request-%s", data.ID) } data-request-id={ data.ID }>
-		<div class="join-request-content">
-			<div class="user-info">
+	<div class="join-requests" id={ fmt.Sprintf("join-request-%s", data.ID) } data-request-id={ data.ID }>
+		<p>
+			<span class="user-info d-flex justify-between items-center">
 				<span class="username">{ data.Username }</span>
-				<span class="timestamp">{ data.CreatedAt }</span>
-			</div>
-			<div class="actions">
-				<button
-					hx-post={ fmt.Sprintf("/api/v1/join-requests/%s/accept", data.ID) }
-					hx-swap="outerHTML"
-					hx-target={ fmt.Sprintf("#join-request-%s", data.ID) }
-					class="btn btn-accept"
-				>
-					Accept
-				</button>
-				<button
-					hx-post={ fmt.Sprintf("/api/v1/join-requests/%s/reject", data.ID) }
-					hx-swap="outerHTML"
-					hx-target={ fmt.Sprintf("#join-request-%s", data.ID) }
-					class="btn btn-reject"
-				>
-					Reject
-				</button>
-			</div>
-		</div>
+				<span class="actions">
+					<button
+						hx-post={ fmt.Sprintf("/api/v1/join-requests/%s/accept", data.ID) }
+						hx-swap="outerHTML"
+						hx-target={ fmt.Sprintf("#join-request-%s", data.ID) }
+						class="btn btn-accept"
+					>
+						Accept
+					</button>
+					<button
+						hx-post={ fmt.Sprintf("/api/v1/join-requests/%s/reject", data.ID) }
+						hx-swap="outerHTML"
+						hx-target={ fmt.Sprintf("#join-request-%s", data.ID) }
+						class="btn btn-reject"
+					>
+						Reject
+					</button>
+				</span>
+			</span>
+			<small class="timestamp text-muted">{ data.CreatedAt }</small>
+		</p>
 	</div>
 }

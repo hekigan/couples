@@ -25,112 +25,106 @@ templ RoomContent(data *viewmodels.TemplateData) {
 			sse-connect={ fmt.Sprintf("/api/v1/stream/rooms/%s/events", room.ID.String()) }
 		>
 			<!-- Room Header -->
-			if room.Status == "waiting" {
-				<div class="room-header-section" data-testid="room-header">
-					<div>
-						<h1 data-testid="room-title">
-							Room ID
-							<span class="room-status">
-								<span
-									class={ fmt.Sprintf("status-badge status-%s", room.Status) }
-									id="room-status-badge"
-									data-testid="room-status-badge"
-									sse-swap="room_status_update"
-									hx-swap="outerHTML"
-								>
-									if room.Status == "ready" {
-										ready
-									} else if room.Status == "playing" {
-										playing
-									} else {
-										waiting
-									}
-								</span>
-							</span>
-						</h1>
-						<form onsubmit="return false;">
-							<fieldset role="group">
-								<input
-									type="text"
-									id="room-id-input"
-									value={ room.ID.String() }
-									readonly
-									class="room-id-input"
-									data-testid="room-id-input"
-								/>
-								<button class="no-wrap" onclick="copyRoomId()" title="Copy Room ID" data-testid="copy-room-id-button">
-									Copy
-								</button>
-							</fieldset>
-							<small class="text-muted">Copy the room ID to share with friend</small>
-						</form>
-					</div>
-				</div>
-				<!-- Invite Friends Section (hidden when guest joined) - OWNER ONLY -->
-				if data.IsOwner {
-					<div class="invite-section" id="invite-section" style={ fmt.Sprintf("margin-top: 2rem; %s", templ.KV("display: none;", room.GuestID != nil)) }>
-						<h2>👥 Invite Friends</h2>
-						<div
-							id="friends-list"
-							class="friends-list"
-						>
-							@templ.Raw(data.FriendsListHTML)
-						</div>
-					</div>
-					<!-- Pending Join Requests Section (hidden when guest joined) - OWNER ONLY -->
-					<div id="join-requests-section" style={ fmt.Sprintf("margin-top: 2rem; %s", templ.KV("display: none;", room.GuestID != nil)) }>
-						<h2>
-							📬 Join Requests
-							<span id="request-count" class="badge" sse-swap="badge_update">{ fmt.Sprintf("%d", data.JoinRequestsCount) }</span>
-						</h2>
-						<!-- Join requests: initial load + SSE appends new ones (beforeend) -->
-						<div id="join-requests" sse-swap="join_request" hx-swap="beforeend">
-							@templ.Raw(data.JoinRequestsHTML)
-						</div>
-					</div>
-				}
-			}
-			<!-- Players Section - Show only the other player -->
-			<div class="room-players" id="player-list" data-testid="player-list">
-				<div class="player-grid">
-					<!-- Guest sees the Owner card -->
-					if !data.IsOwner {
-						<div class="player-card" data-player="owner" data-testid="owner-card">
-							<span class="player-label">Owner</span>
-							<span class="player-name" data-testid="owner-name">
-								if data.OwnerUsername != "" {
-									{ data.OwnerUsername }
-								} else {
-									Unknown
-								}
-							</span>
-						</div>
-					}
-					<!-- Owner sees the Guest card - Updated via SSE when request accepted -->
-					if data.IsOwner {
-						<div
-							class={ templ.KV("player-card", true), templ.KV("empty", room.GuestID == nil) }
-							data-player="guest"
-							id="guest-info"
-							sse-swap="request_accepted"
-							data-testid="guest-card"
-						>
-							<span class="player-label">Guest</span>
-							if room.GuestID != nil {
-								<span class="player-name" id="guest-name" data-testid="guest-name">
-									if data.GuestUsername != "" {
-										{ data.GuestUsername }
+			if room.GuestID == nil {
+				<!-- Players Section - Show only the other player -->
+				<div class="room-players" id="player-list" data-testid="player-list">
+					<div class="player-grid">
+						<!-- Guest sees the Owner card -->
+						if !data.IsOwner {
+							<div class="player-card" data-player="owner" data-testid="owner-card">
+								<span class="player-label">Owner</span>
+								<span class="player-name" data-testid="owner-name">
+									if data.OwnerUsername != "" {
+										{ data.OwnerUsername }
 									} else {
 										Unknown
 									}
 								</span>
-							} else {
-								<span class="player-name" id="guest-waiting" data-testid="guest-waiting">Waiting for guest...</span>
-							}
+							</div>
+						}
+						<!-- Owner sees the Guest card - Updated via SSE when request accepted -->
+						if data.IsOwner {
+							<div
+								class={ templ.KV("player-card", true), templ.KV("empty", room.GuestID == nil) }
+								data-player="guest"
+								id="guest-info"
+								sse-swap="request_accepted"
+								data-testid="guest-card"
+							>
+								<span class="player-label">Guest</span>
+								if room.GuestID != nil {
+									<span class="player-name" id="guest-name" data-testid="guest-name">
+										if data.GuestUsername != "" {
+											{ data.GuestUsername }
+											if room.GuestReady {
+												<span
+													class="status-badge status-ready"
+													data-testid="room-guest-status-badge"
+													sse-swap="room_guest-status_update"
+													hx-swap="outerHTML"
+												>
+													ready
+												</span>
+											}
+										} else {
+											Unknown
+										}
+									</span>
+								} else {
+									<span class="player-name" id="guest-waiting" data-testid="guest-waiting">Waiting for guest...</span>
+								}
+							</div>
+						}
+					</div>
+				</div>
+				if room.Status == "waiting" {
+					<div class="room-header-section" data-testid="room-header">
+						<div>
+							<h4 data-testid="room-title">Room ID</h4>
+							<form onsubmit="return false;">
+								<fieldset role="group" class="items-stretch">
+									<input
+										type="text"
+										id="room-id-input"
+										value={ room.ID.String() }
+										readonly
+										data-testid="room-id-input"
+									/>
+									<button class="no-wrap" onclick="copyRoomId()" title="Copy Room ID" data-testid="copy-room-id-button">
+										Copy
+									</button>
+								</fieldset>
+								<small class="text-muted">Copy the room ID to share with friend</small>
+							</form>
+						</div>
+					</div>
+					if data.IsOwner {
+						<!-- Pending Join Requests Section (hidden when guest joined) - OWNER ONLY -->
+						<div id="join-requests-section" style={ templ.KV("margin-top: 2rem;", true), templ.KV("display: none;", room.GuestID != nil) }>
+							<h4>
+								Requests
+								<span id="request-count" class="badge" sse-swap="badge_update">{ fmt.Sprintf("%d", data.JoinRequestsCount) }</span>
+							</h4>
+							<!-- Join requests: initial load + SSE appends new ones (beforeend) -->
+							<div id="join-requests" sse-swap="join_request" hx-swap="beforeend">
+								@templ.Raw(data.JoinRequestsHTML)
+							</div>
+						</div>
+						<!-- Invite Friends Section (hidden when guest joined) - OWNER ONLY -->
+						<div class="invite-section" id="invite-section" style={ templ.KV("margin-top: 2rem;", true), templ.KV("display: none;", room.GuestID != nil) }>
+							<h4>
+								Invite Friends
+							</h4>
+							<div
+								id="friends-list"
+								class="friends-list"
+							>
+								@templ.Raw(data.FriendsListHTML)
+							</div>
 						</div>
 					}
-				</div>
-			</div>
+				}
+			}
 			<!-- Category Selection Section (shown when guest joined) -->
 			<div
 				id="categories-section"
@@ -195,7 +189,6 @@ templ RoomScript() {
 		// ============================================================================
 		// MINIMAL JAVASCRIPT - Only for non-SSE features
 		// ============================================================================
-		// This is dramatically reduced from 800+ lines to ~200 lines
 		// All SSE event handling is now done by HTMX
 
 		// Copy room ID to clipboard

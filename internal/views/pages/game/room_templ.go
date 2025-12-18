@@ -125,235 +125,209 @@ func RoomContent(data *viewmodels.TemplateData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			if room.Status == "waiting" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"room-header-section\" data-testid=\"room-header\"><div><h1 data-testid=\"room-title\">Room ID <span class=\"room-status\">")
+			if room.GuestID == nil {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<!-- Players Section - Show only the other player --> <div class=\"room-players\" id=\"player-list\" data-testid=\"player-list\"><div class=\"player-grid\"><!-- Guest sees the Owner card -->")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var7 = []any{fmt.Sprintf("status-badge status-%s", room.Status)}
-				templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var7...)
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<span class=\"")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var8 string
-				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var7).String())
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 1, Col: 0}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" id=\"room-status-badge\" data-testid=\"room-status-badge\" sse-swap=\"room_status_update\" hx-swap=\"outerHTML\">")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				if room.Status == "ready" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "ready")
+				if !data.IsOwner {
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<div class=\"player-card\" data-player=\"owner\" data-testid=\"owner-card\"><span class=\"player-label\">Owner</span> <span class=\"player-name\" data-testid=\"owner-name\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-				} else if room.Status == "playing" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "playing")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
+					if data.OwnerUsername != "" {
+						var templ_7745c5c3_Var7 string
+						templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(data.OwnerUsername)
+						if templ_7745c5c3_Err != nil {
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 38, Col: 30}
+						}
+						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+					} else {
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "Unknown")
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
 					}
-				} else {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "waiting")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</span></div>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</span></span></h1><form onsubmit=\"return false;\"><fieldset role=\"group\"><input type=\"text\" id=\"room-id-input\" value=\"")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var9 string
-				templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(room.ID.String())
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 56, Col: 33}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\" readonly class=\"room-id-input\" data-testid=\"room-id-input\"> <button class=\"no-wrap\" onclick=\"copyRoomId()\" title=\"Copy Room ID\" data-testid=\"copy-room-id-button\">Copy</button></fieldset><small class=\"text-muted\">Copy the room ID to share with friend</small></form></div></div><!-- Invite Friends Section (hidden when guest joined) - OWNER ONLY --> ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<!-- Owner sees the Guest card - Updated via SSE when request accepted -->")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				if data.IsOwner {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<div class=\"invite-section\" id=\"invite-section\" style=\"")
+					var templ_7745c5c3_Var8 = []any{templ.KV("player-card", true), templ.KV("empty", room.GuestID == nil)}
+					templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var8...)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var10 string
-					templ_7745c5c3_Var10, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("margin-top: 2rem; %s", templ.KV("display: none;", room.GuestID != nil)))
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 71, Col: 145}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<div class=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\"><h2>👥 Invite Friends</h2><div id=\"friends-list\" class=\"friends-list\">")
+					var templ_7745c5c3_Var9 string
+					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var8).String())
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 1, Col: 0}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templ.Raw(data.FriendsListHTML).Render(ctx, templ_7745c5c3_Buffer)
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\" data-player=\"guest\" id=\"guest-info\" sse-swap=\"request_accepted\" data-testid=\"guest-card\"><span class=\"player-label\">Guest</span> ")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</div></div><!-- Pending Join Requests Section (hidden when guest joined) - OWNER ONLY --> <div id=\"join-requests-section\" style=\"")
+					if room.GuestID != nil {
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<span class=\"player-name\" id=\"guest-name\" data-testid=\"guest-name\">")
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+						if data.GuestUsername != "" {
+							var templ_7745c5c3_Var10 string
+							templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(data.GuestUsername)
+							if templ_7745c5c3_Err != nil {
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 58, Col: 31}
+							}
+							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
+							if templ_7745c5c3_Err != nil {
+								return templ_7745c5c3_Err
+							}
+							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, " ")
+							if templ_7745c5c3_Err != nil {
+								return templ_7745c5c3_Err
+							}
+							if room.GuestReady {
+								templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<span class=\"status-badge status-ready\" data-testid=\"room-guest-status-badge\" sse-swap=\"room_guest-status_update\" hx-swap=\"outerHTML\">ready</span>")
+								if templ_7745c5c3_Err != nil {
+									return templ_7745c5c3_Err
+								}
+							}
+						} else {
+							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "Unknown")
+							if templ_7745c5c3_Err != nil {
+								return templ_7745c5c3_Err
+							}
+						}
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</span>")
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+					} else {
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<span class=\"player-name\" id=\"guest-waiting\" data-testid=\"guest-waiting\">Waiting for guest...</span>")
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</div>")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</div></div>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				if room.Status == "waiting" {
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div class=\"room-header-section\" data-testid=\"room-header\"><div><h4 data-testid=\"room-title\">Room ID</h4><form onsubmit=\"return false;\"><fieldset role=\"group\" class=\"items-stretch\"><input type=\"text\" id=\"room-id-input\" value=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var11 string
-					templ_7745c5c3_Var11, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("margin-top: 2rem; %s", templ.KV("display: none;", room.GuestID != nil)))
+					templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(room.ID.String())
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 81, Col: 129}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 89, Col: 34}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\"><h2>📬 Join Requests <span id=\"request-count\" class=\"badge\" sse-swap=\"badge_update\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\" readonly data-testid=\"room-id-input\"> <button class=\"no-wrap\" onclick=\"copyRoomId()\" title=\"Copy Room ID\" data-testid=\"copy-room-id-button\">Copy</button></fieldset><small class=\"text-muted\">Copy the room ID to share with friend</small></form></div></div>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var12 string
-					templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", data.JoinRequestsCount))
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 84, Col: 113}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</span></h2><!-- Join requests: initial load + SSE appends new ones (beforeend) --><div id=\"join-requests\" sse-swap=\"join_request\" hx-swap=\"beforeend\">")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templ.Raw(data.JoinRequestsHTML).Render(ctx, templ_7745c5c3_Buffer)
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</div></div>")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-				}
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<!-- Players Section - Show only the other player --><div class=\"room-players\" id=\"player-list\" data-testid=\"player-list\"><div class=\"player-grid\"><!-- Guest sees the Owner card -->")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			if !data.IsOwner {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div class=\"player-card\" data-player=\"owner\" data-testid=\"owner-card\"><span class=\"player-label\">Owner</span> <span class=\"player-name\" data-testid=\"owner-name\">")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				if data.OwnerUsername != "" {
-					var templ_7745c5c3_Var13 string
-					templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(data.OwnerUsername)
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 102, Col: 29}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-				} else {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "Unknown")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</span></div>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<!-- Owner sees the Guest card - Updated via SSE when request accepted -->")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			if data.IsOwner {
-				var templ_7745c5c3_Var14 = []any{templ.KV("player-card", true), templ.KV("empty", room.GuestID == nil)}
-				templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var14...)
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<div class=\"")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var15 string
-				templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var14).String())
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 1, Col: 0}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\" data-player=\"guest\" id=\"guest-info\" sse-swap=\"request_accepted\" data-testid=\"guest-card\"><span class=\"player-label\">Guest</span> ")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				if room.GuestID != nil {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<span class=\"player-name\" id=\"guest-name\" data-testid=\"guest-name\">")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					if data.GuestUsername != "" {
-						var templ_7745c5c3_Var16 string
-						templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(data.GuestUsername)
-						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 122, Col: 30}
-						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
+					if data.IsOwner {
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<!-- Pending Join Requests Section (hidden when guest joined) - OWNER ONLY --> <div id=\"join-requests-section\" style=\"")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-					} else {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "Unknown")
+						var templ_7745c5c3_Var12 string
+						templ_7745c5c3_Var12, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(templ.KV("margin-top: 2rem;", true), templ.KV("display: none;", room.GuestID != nil))
+						if templ_7745c5c3_Err != nil {
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 103, Col: 130}
+						}
+						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "\"><h4>Requests <span id=\"request-count\" class=\"badge\" sse-swap=\"badge_update\">")
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+						var templ_7745c5c3_Var13 string
+						templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", data.JoinRequestsCount))
+						if templ_7745c5c3_Err != nil {
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 106, Col: 114}
+						}
+						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "</span></h4><!-- Join requests: initial load + SSE appends new ones (beforeend) --><div id=\"join-requests\" sse-swap=\"join_request\" hx-swap=\"beforeend\">")
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+						templ_7745c5c3_Err = templ.Raw(data.JoinRequestsHTML).Render(ctx, templ_7745c5c3_Buffer)
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "</div></div><!-- Invite Friends Section (hidden when guest joined) - OWNER ONLY --> <div class=\"invite-section\" id=\"invite-section\" style=\"")
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+						var templ_7745c5c3_Var14 string
+						templ_7745c5c3_Var14, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(templ.KV("margin-top: 2rem;", true), templ.KV("display: none;", room.GuestID != nil))
+						if templ_7745c5c3_Err != nil {
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 114, Col: 146}
+						}
+						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "\"><h4>Invite Friends</h4><div id=\"friends-list\" class=\"friends-list\">")
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+						templ_7745c5c3_Err = templ.Raw(data.FriendsListHTML).Render(ctx, templ_7745c5c3_Buffer)
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "</div></div>")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</span>")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-				} else {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<span class=\"player-name\" id=\"guest-waiting\" data-testid=\"guest-waiting\">Waiting for guest...</span>")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</div>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "</div></div><!-- Category Selection Section (shown when guest joined) --><div id=\"categories-section\" data-testid=\"categories-section\" style=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "<!-- Category Selection Section (shown when guest joined) --><div id=\"categories-section\" data-testid=\"categories-section\" style=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var17 string
-			templ_7745c5c3_Var17, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(templ.KV("display: none;", room.GuestID == nil))
+			var templ_7745c5c3_Var15 string
+			templ_7745c5c3_Var15, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(templ.KV("display: none;", room.GuestID == nil))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 138, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 132, Col: 59}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "\"><h4 data-testid=\"categories-heading\">Select Question Categories</h4><p class=\"categories-hint\">Both players select categories together in real-time!</p><div id=\"categories-grid\" data-testid=\"categories-grid\" sse-swap=\"categories_updated\" hx-swap=\"innerHTML\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "\"><h4 data-testid=\"categories-heading\">Select Question Categories</h4><p class=\"categories-hint\">Both players select categories together in real-time!</p><div id=\"categories-grid\" data-testid=\"categories-grid\" sse-swap=\"categories_updated\" hx-swap=\"innerHTML\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -361,38 +335,38 @@ func RoomContent(data *viewmodels.TemplateData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</div></div><!-- Start Game Button (shown when ready) - OWNER ONLY -->")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</div></div><!-- Start Game Button (shown when ready) - OWNER ONLY -->")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if data.IsOwner {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "<div class=\"start-game-section\" id=\"start-game-section\" style=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<div class=\"start-game-section\" id=\"start-game-section\" style=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var18 string
-				templ_7745c5c3_Var18, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(templ.KV("display: none;", room.Status != "ready"))
+				var templ_7745c5c3_Var16 string
+				templ_7745c5c3_Var16, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(templ.KV("display: none;", room.Status != "ready"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 156, Col: 63}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 150, Col: 63}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "\" hx-get=\"")
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var19 string
-				templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/api/v1/rooms/%s/start-button", room.ID.String()))
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 157, Col: 76}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "\" hx-get=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "\" hx-trigger=\"load, sse:room_update from:body\">")
+				var templ_7745c5c3_Var17 string
+				templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/api/v1/rooms/%s/start-button", room.ID.String()))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 151, Col: 76}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "\" hx-trigger=\"load, sse:room_update from:body\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -400,18 +374,18 @@ func RoomContent(data *viewmodels.TemplateData) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<!-- Ready Button - GUEST ONLY -->")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<!-- Ready Button - GUEST ONLY -->")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if !data.IsOwner {
 				if room.Status == "ready" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "<div class=\"guest-ready-section\" id=\"guest-ready-section\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "<div class=\"guest-ready-section\" id=\"guest-ready-section\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -419,59 +393,59 @@ func RoomContent(data *viewmodels.TemplateData) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "</div>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</div>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "<!-- Owner Actions (Delete Room) - OWNER ONLY -->")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<!-- Owner Actions (Delete Room) - OWNER ONLY -->")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if data.IsOwner {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "<div class=\"room-actions\" data-testid=\"room-actions\"><form action=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "<div class=\"room-actions\" data-testid=\"room-actions\"><form action=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var20 templ.SafeURL
-				templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(fmt.Sprintf("/game/room/%s/delete", room.ID.String())))
+				var templ_7745c5c3_Var18 templ.SafeURL
+				templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(fmt.Sprintf("/game/room/%s/delete", room.ID.String())))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 177, Col: 84}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 171, Col: 84}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "\" method=\"POST\" onsubmit=\"return confirm('Delete this room?');\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "\" method=\"POST\" onsubmit=\"return confirm('Delete this room?');\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				if data.CSRFToken != "" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<input type=\"hidden\" name=\"csrf\" value=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "<input type=\"hidden\" name=\"csrf\" value=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var21 string
-					templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(data.CSRFToken)
+					var templ_7745c5c3_Var19 string
+					templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(data.CSRFToken)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 179, Col: 62}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/room.templ`, Line: 173, Col: 62}
 					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "\"> ")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "\"> ")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "<button type=\"submit\" class=\"contrast\" data-testid=\"delete-room-button\">Delete Room</button></form></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "<button type=\"submit\" class=\"contrast\" data-testid=\"delete-room-button\">Delete Room</button></form></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "<!-- Game Started redirect - Hidden element that receives SSE redirect fragment --><div id=\"game-start-redirect\" sse-swap=\"game_started\" style=\"display:none;\"></div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<!-- Game Started redirect - Hidden element that receives SSE redirect fragment --><div id=\"game-start-redirect\" sse-swap=\"game_started\" style=\"display:none;\"></div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -501,12 +475,12 @@ func RoomScript() templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var22 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var22 == nil {
-			templ_7745c5c3_Var22 = templ.NopComponent
+		templ_7745c5c3_Var20 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var20 == nil {
+			templ_7745c5c3_Var20 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "<script>\n\t\t// ============================================================================\n\t\t// MINIMAL JAVASCRIPT - Only for non-SSE features\n\t\t// ============================================================================\n\t\t// This is dramatically reduced from 800+ lines to ~200 lines\n\t\t// All SSE event handling is now done by HTMX\n\n\t\t// Copy room ID to clipboard\n\t\tfunction copyRoomId() {\n\t\t\tconst input = document.getElementById('room-id-input');\n\t\t\tinput.select();\n\t\t\tdocument.execCommand('copy');\n\n\t\t\tconst btn = event.target;\n\t\t\tconst originalText = btn.textContent;\n\t\t\tbtn.textContent = '✅ Copied!';\n\t\t\tbtn.style.background = '#10b981';\n\n\t\t\tsetTimeout(() => {\n\t\t\t\tbtn.textContent = originalText;\n\t\t\t\tbtn.style.background = '';\n\t\t\t}, 2000);\n\t\t}\n\n\t\t// Load page state on DOM ready\n\t\tdocument.addEventListener('DOMContentLoaded', async () => {\n\t\t\tconst container = document.querySelector('.room-container');\n\t\t\tconst roomId = container?.dataset.roomId || '';\n\t\t\tconst isOwner = container?.dataset.isOwner === 'true';\n\n\t\t\tconsole.log('🔍 Room ID:', roomId, 'IsOwner:', isOwner);\n\n\t\t\t// Fetch fresh state from database to fix race conditions\n\t\t\ttry {\n\t\t\t\tconsole.log('📡 Fetching fresh room state...');\n\t\t\t\tconst response = await fetch(`/api/v1/stream/rooms/${roomId}/state`);\n\t\t\t\tif (response.ok) {\n\t\t\t\t\tconst state = await response.json();\n\t\t\t\t\tconsole.log('📊 Fresh state loaded:', state);\n\n\t\t\t\t\t// If game already started, redirect\n\t\t\t\t\tif (state.status === 'playing') {\n\t\t\t\t\t\tconsole.log('🎮 Game already started, redirecting...');\n\t\t\t\t\t\twindow.location.href = `/game/play/${roomId}`;\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t} catch (error) {\n\t\t\t\tconsole.error('❌ Failed to load initial state:', error);\n\t\t\t}\n\n\t\t\tconsole.log('✅ HTMX SSE connection established via hx-ext=\"sse\"');\n\t\t\tconsole.log('✅ Phase A: Friends & Categories loading via HTMX hx-get');\n\n\t\t\t// Listen for guest ready notification (owner only)\n\t\t\tif (isOwner) {\n\t\t\t\tdocument.body.addEventListener('sse:room_update', function(e) {\n\t\t\t\t\ttry {\n\t\t\t\t\t\tconst data = JSON.parse(e.detail.data);\n\t\t\t\t\t\tif (data.guest_ready === true) {\n\t\t\t\t\t\t\tToast.show({\n\t\t\t\t\t\t\t\ttype: 'success',\n\t\t\t\t\t\t\t\ttitle: 'Partner Ready!',\n\t\t\t\t\t\t\t\tmessage: 'Your partner is ready. You can now start the game!',\n\t\t\t\t\t\t\t\tduration: 0\n\t\t\t\t\t\t\t});\n\t\t\t\t\t\t}\n\t\t\t\t\t} catch (error) {\n\t\t\t\t\t\tconsole.error('Error parsing room_update:', error);\n\t\t\t\t\t}\n\t\t\t\t});\n\t\t\t}\n\t\t});\n\n\t\t// ============================================================================\n\t\t// HTMX now handles:\n\t\t// - Friends list loading via hx-get=\"/api/v1/friends/list-html\"\n\t\t// - Categories loading via hx-get=\"/api/v1/rooms/{id}/categories\"\n\t\t// - Category toggle via hx-post in template (optimistic UI)\n\t\t// - Friend invitation via hx-post in template (server-rendered state transitions)\n\t\t// ============================================================================\n\n\t\t// ============================================================================\n\t\t// HTMX now handles:\n\t\t// - Guest ready button via hx-post=\"/api/v1/rooms/{id}/guest-ready\"\n\t\t// - Start game button via hx-post=\"/api/v1/rooms/{id}/start\"\n\t\t// - Category validation via hx-on::before-request in templates\n\t\t// - Button state syncing via SSE (room_update event)\n\t\t// ============================================================================\n\n\t\t// ============================================================================\n\t\t// UI Utilities\n\t\t// ============================================================================\n\t\tfunction showNotification(message, type) {\n\t\t\tconst notification = document.createElement('div');\n\t\t\tnotification.className = `notification notification-${type}`;\n\t\t\tnotification.textContent = message;\n\t\t\tnotification.style.cssText = `\n\t\t\t\tposition: fixed;\n\t\t\t\ttop: 20px;\n\t\t\t\tright: 20px;\n\t\t\t\tpadding: 1rem 1.5rem;\n\t\t\t\tbackground: ${type === 'success' ? '#10b981' : '#ef4444'};\n\t\t\t\tcolor: white;\n\t\t\t\tborder-radius: 8px;\n\t\t\t\tbox-shadow: 0 4px 6px rgba(0,0,0,0.1);\n\t\t\t\tz-index: 10000;\n\t\t\t\tanimation: slideIn 0.3s ease-out;\n\t\t\t`;\n\n\t\t\tdocument.body.appendChild(notification);\n\n\t\t\tsetTimeout(() => {\n\t\t\t\tnotification.style.animation = 'slideOut 0.3s ease-out';\n\t\t\t\tsetTimeout(() => notification.remove(), 300);\n\t\t\t}, 3000);\n\t\t}\n\n\t\t// ============================================================================\n\t\t// HTMX will handle all SSE events automatically:\n\t\t// - join_request → appends to #join-requests\n\t\t// - request_accepted → replaces #guest-info\n\t\t// - categories_updated → updates #categories-section\n\t\t// - game_started → updates #game-start-redirect (triggers redirect)\n\t\t// - room_update → handled by backend HTML fragments\n\t\t// ============================================================================\n\n\t\t// ============================================================================\n\t\t// Fix categories disabled state after SSE swap\n\t\t// SSE broadcasts same HTML to all users, but disabled state depends on role\n\t\t// ============================================================================\n\t\tfunction fixCategoriesDisabledState() {\n\t\t\tconst container = document.querySelector('.room-container');\n\t\t\tconst isOwner = container?.dataset.isOwner === 'true';\n\t\t\tconst categoriesFieldset = document.querySelector('#categories-grid fieldset[data-guest-ready]');\n\t\t\t\n\t\t\tif (!categoriesFieldset) return;\n\t\t\t\n\t\t\tconst guestReady = categoriesFieldset.dataset.guestReady === 'true';\n\t\t\tconst checkboxes = categoriesFieldset.querySelectorAll('input[type=\"checkbox\"]');\n\t\t\t\n\t\t\t// Guest should have disabled categories when guest is ready\n\t\t\t// Owner should always be able to toggle categories\n\t\t\tconst shouldBeDisabled = !isOwner && guestReady;\n\t\t\t\n\t\t\tcheckboxes.forEach(checkbox => {\n\t\t\t\tif (shouldBeDisabled) {\n\t\t\t\t\tcheckbox.disabled = true;\n\t\t\t\t\tcheckbox.setAttribute('aria-disabled', 'true');\n\t\t\t\t\tcheckbox.title = 'Categories locked - guest is ready';\n\t\t\t\t} else {\n\t\t\t\t\tcheckbox.disabled = false;\n\t\t\t\t\tcheckbox.removeAttribute('aria-disabled');\n\t\t\t\t\tcheckbox.title = '';\n\t\t\t\t}\n\t\t\t});\n\t\t}\n\n\t\t// Listen for HTMX swap events on categories grid\n\t\tdocument.body.addEventListener('htmx:afterSwap', function(e) {\n\t\t\tif (e.detail.target && e.detail.target.id === 'categories-grid') {\n\t\t\t\tfixCategoriesDisabledState();\n\t\t\t}\n\t\t});\n\n\t\tconsole.log('✅ HTMX SSE mode active - ~80% less JavaScript than original!');\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "<script>\n\t\t// ============================================================================\n\t\t// MINIMAL JAVASCRIPT - Only for non-SSE features\n\t\t// ============================================================================\n\t\t// All SSE event handling is now done by HTMX\n\n\t\t// Copy room ID to clipboard\n\t\tfunction copyRoomId() {\n\t\t\tconst input = document.getElementById('room-id-input');\n\t\t\tinput.select();\n\t\t\tdocument.execCommand('copy');\n\n\t\t\tconst btn = event.target;\n\t\t\tconst originalText = btn.textContent;\n\t\t\tbtn.textContent = '✅ Copied!';\n\t\t\tbtn.style.background = '#10b981';\n\n\t\t\tsetTimeout(() => {\n\t\t\t\tbtn.textContent = originalText;\n\t\t\t\tbtn.style.background = '';\n\t\t\t}, 2000);\n\t\t}\n\n\t\t// Load page state on DOM ready\n\t\tdocument.addEventListener('DOMContentLoaded', async () => {\n\t\t\tconst container = document.querySelector('.room-container');\n\t\t\tconst roomId = container?.dataset.roomId || '';\n\t\t\tconst isOwner = container?.dataset.isOwner === 'true';\n\n\t\t\tconsole.log('🔍 Room ID:', roomId, 'IsOwner:', isOwner);\n\n\t\t\t// Fetch fresh state from database to fix race conditions\n\t\t\ttry {\n\t\t\t\tconsole.log('📡 Fetching fresh room state...');\n\t\t\t\tconst response = await fetch(`/api/v1/stream/rooms/${roomId}/state`);\n\t\t\t\tif (response.ok) {\n\t\t\t\t\tconst state = await response.json();\n\t\t\t\t\tconsole.log('📊 Fresh state loaded:', state);\n\n\t\t\t\t\t// If game already started, redirect\n\t\t\t\t\tif (state.status === 'playing') {\n\t\t\t\t\t\tconsole.log('🎮 Game already started, redirecting...');\n\t\t\t\t\t\twindow.location.href = `/game/play/${roomId}`;\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t} catch (error) {\n\t\t\t\tconsole.error('❌ Failed to load initial state:', error);\n\t\t\t}\n\n\t\t\tconsole.log('✅ HTMX SSE connection established via hx-ext=\"sse\"');\n\t\t\tconsole.log('✅ Phase A: Friends & Categories loading via HTMX hx-get');\n\n\t\t\t// Listen for guest ready notification (owner only)\n\t\t\tif (isOwner) {\n\t\t\t\tdocument.body.addEventListener('sse:room_update', function(e) {\n\t\t\t\t\ttry {\n\t\t\t\t\t\tconst data = JSON.parse(e.detail.data);\n\t\t\t\t\t\tif (data.guest_ready === true) {\n\t\t\t\t\t\t\tToast.show({\n\t\t\t\t\t\t\t\ttype: 'success',\n\t\t\t\t\t\t\t\ttitle: 'Partner Ready!',\n\t\t\t\t\t\t\t\tmessage: 'Your partner is ready. You can now start the game!',\n\t\t\t\t\t\t\t\tduration: 0\n\t\t\t\t\t\t\t});\n\t\t\t\t\t\t}\n\t\t\t\t\t} catch (error) {\n\t\t\t\t\t\tconsole.error('Error parsing room_update:', error);\n\t\t\t\t\t}\n\t\t\t\t});\n\t\t\t}\n\t\t});\n\n\t\t// ============================================================================\n\t\t// HTMX now handles:\n\t\t// - Friends list loading via hx-get=\"/api/v1/friends/list-html\"\n\t\t// - Categories loading via hx-get=\"/api/v1/rooms/{id}/categories\"\n\t\t// - Category toggle via hx-post in template (optimistic UI)\n\t\t// - Friend invitation via hx-post in template (server-rendered state transitions)\n\t\t// ============================================================================\n\n\t\t// ============================================================================\n\t\t// HTMX now handles:\n\t\t// - Guest ready button via hx-post=\"/api/v1/rooms/{id}/guest-ready\"\n\t\t// - Start game button via hx-post=\"/api/v1/rooms/{id}/start\"\n\t\t// - Category validation via hx-on::before-request in templates\n\t\t// - Button state syncing via SSE (room_update event)\n\t\t// ============================================================================\n\n\t\t// ============================================================================\n\t\t// UI Utilities\n\t\t// ============================================================================\n\t\tfunction showNotification(message, type) {\n\t\t\tconst notification = document.createElement('div');\n\t\t\tnotification.className = `notification notification-${type}`;\n\t\t\tnotification.textContent = message;\n\t\t\tnotification.style.cssText = `\n\t\t\t\tposition: fixed;\n\t\t\t\ttop: 20px;\n\t\t\t\tright: 20px;\n\t\t\t\tpadding: 1rem 1.5rem;\n\t\t\t\tbackground: ${type === 'success' ? '#10b981' : '#ef4444'};\n\t\t\t\tcolor: white;\n\t\t\t\tborder-radius: 8px;\n\t\t\t\tbox-shadow: 0 4px 6px rgba(0,0,0,0.1);\n\t\t\t\tz-index: 10000;\n\t\t\t\tanimation: slideIn 0.3s ease-out;\n\t\t\t`;\n\n\t\t\tdocument.body.appendChild(notification);\n\n\t\t\tsetTimeout(() => {\n\t\t\t\tnotification.style.animation = 'slideOut 0.3s ease-out';\n\t\t\t\tsetTimeout(() => notification.remove(), 300);\n\t\t\t}, 3000);\n\t\t}\n\n\t\t// ============================================================================\n\t\t// HTMX will handle all SSE events automatically:\n\t\t// - join_request → appends to #join-requests\n\t\t// - request_accepted → replaces #guest-info\n\t\t// - categories_updated → updates #categories-section\n\t\t// - game_started → updates #game-start-redirect (triggers redirect)\n\t\t// - room_update → handled by backend HTML fragments\n\t\t// ============================================================================\n\n\t\t// ============================================================================\n\t\t// Fix categories disabled state after SSE swap\n\t\t// SSE broadcasts same HTML to all users, but disabled state depends on role\n\t\t// ============================================================================\n\t\tfunction fixCategoriesDisabledState() {\n\t\t\tconst container = document.querySelector('.room-container');\n\t\t\tconst isOwner = container?.dataset.isOwner === 'true';\n\t\t\tconst categoriesFieldset = document.querySelector('#categories-grid fieldset[data-guest-ready]');\n\t\t\t\n\t\t\tif (!categoriesFieldset) return;\n\t\t\t\n\t\t\tconst guestReady = categoriesFieldset.dataset.guestReady === 'true';\n\t\t\tconst checkboxes = categoriesFieldset.querySelectorAll('input[type=\"checkbox\"]');\n\t\t\t\n\t\t\t// Guest should have disabled categories when guest is ready\n\t\t\t// Owner should always be able to toggle categories\n\t\t\tconst shouldBeDisabled = !isOwner && guestReady;\n\t\t\t\n\t\t\tcheckboxes.forEach(checkbox => {\n\t\t\t\tif (shouldBeDisabled) {\n\t\t\t\t\tcheckbox.disabled = true;\n\t\t\t\t\tcheckbox.setAttribute('aria-disabled', 'true');\n\t\t\t\t\tcheckbox.title = 'Categories locked - guest is ready';\n\t\t\t\t} else {\n\t\t\t\t\tcheckbox.disabled = false;\n\t\t\t\t\tcheckbox.removeAttribute('aria-disabled');\n\t\t\t\t\tcheckbox.title = '';\n\t\t\t\t}\n\t\t\t});\n\t\t}\n\n\t\t// Listen for HTMX swap events on categories grid\n\t\tdocument.body.addEventListener('htmx:afterSwap', function(e) {\n\t\t\tif (e.detail.target && e.detail.target.id === 'categories-grid') {\n\t\t\t\tfixCategoriesDisabledState();\n\t\t\t}\n\t\t});\n\n\t\tconsole.log('✅ HTMX SSE mode active - ~80% less JavaScript than original!');\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

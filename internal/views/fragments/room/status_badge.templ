@@ -8,12 +8,6 @@ import (
 // StatusBadge renders the room status badge
 templ StatusBadge(data *services.RoomStatusBadgeData) {
 	<span class={ fmt.Sprintf("status-badge status-%s", data.Status) } id="room-status-badge" data-testid="room-status-badge">
-		if data.Status == "ready" {
-			ready
-		} else if data.Status == "playing" {
-			playing
-		} else {
-			waiting
-		}
+		{ data.Status }
 	</span>
 }

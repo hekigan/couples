@@ -83,8 +83,9 @@
   gap: var(--pico-spacing);
   justify-content: center;
 
-  button {
+  button, [role=button] {
     flex: 1;
+    margin-bottom: var(--pico-spacing);
     max-width: 200px;
   }
 }

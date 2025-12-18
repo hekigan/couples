@@ -53,20 +53,43 @@
     }
 }
 
-.room-id-input {
+.join-requests {
+    p {
+        margin-bottom: $spacing-sm;
+    }
+    .username {
+        font-weight: $font-weight-bold;
+    }
+    .actions {
+        button {
+            font-size: $font-size-sm;
+            padding: $spacing-xs $spacing-sm;
+        }
+    }
+    small {
+        position: relative;
+        top: -5px;
+    }
+}
+
+#room-id-input {
     font-family: monospace;
     padding: $spacing-sm $spacing-md;
-    border: 2px solid $border-color;
-    border-radius: $border-radius-md;
+    border: 1px solid $border-color;
     background: $bg-secondary;
     font-size: $font-size-sm;
     color: $text-secondary;
-    width: 300px;
+    height: auto;
+    max-width: 300px;
     cursor: text;
 
     &:focus {
         outline: none;
         border-color: $secondary-color;
+    }
+
+    @media screen and (min-width: $breakpoint-md) {
+        max-width: none;
     }
 }
 
@@ -247,7 +270,6 @@
 .invite-section {
     background: $bg-primary;
     border-radius: $border-radius-md;
-    padding: $spacing-lg;
     box-shadow: $shadow-sm;
 }
 

@@ -148,7 +148,7 @@ func (h *Handler) GetRoomCategoriesHTMLHandler(c echo.Context) error {
 		for _, selectedID := range room.SelectedCategories {
 			if selectedID == cat.ID {
 				isSelected = true
-					break
+				break
 			}
 		}
 
