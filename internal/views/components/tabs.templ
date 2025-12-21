@@ -17,15 +17,15 @@ templ Tabs(id string, tabs []Tab) {
 	<div class="tabs" data-tabs={ id }>
 		<nav class="tabs-nav" role="tablist">
 			for i, tab := range tabs {
-				<button
-					type="button"
+				<a
+					href="#"
 					role="tab"
 					class={ templ.KV("active", i == 0) }
 					data-tab={ tab.ID }
 					aria-selected={ boolStr(i == 0) }
 				>
 					{ tab.Label }
-				</button>
+				</a>
 			}
 		</nav>
 		<div class="tabs-panels">

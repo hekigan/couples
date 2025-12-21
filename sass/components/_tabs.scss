@@ -6,7 +6,7 @@
 		border-bottom: 2px solid var(--pico-muted-border-color);
 		margin-bottom: 1rem;
 
-		button {
+		a {
 			background: none;
 			border: none;
 			padding: 0.5rem 1rem;
@@ -14,6 +14,7 @@
 			color: var(--pico-muted-color);
 			border-bottom: 2px solid transparent;
 			margin-bottom: -2px;
+            text-decoration: none;
 			transition: color 0.2s, border-color 0.2s;
 
 			&:hover {

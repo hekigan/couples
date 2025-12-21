@@ -79,9 +79,10 @@ templ RoomContent(data *viewmodels.TemplateData) {
 					</div>
 				</div>
 				if room.Status == "waiting" {
+					<h3>Invite someone</h3>
 					<div class="room-header-section" data-testid="room-header">
 						<div>
-							<h4 data-testid="room-title">Room ID</h4>
+							<h5 data-testid="room-title">Room ID</h5>
 							<form onsubmit="return false;">
 								<fieldset role="group" class="items-stretch">
 									<input

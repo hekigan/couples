@@ -373,10 +373,10 @@ function initTabs(container = document) {
     container.querySelectorAll('.tabs[data-tabs]').forEach(tabs => {
         if (tabs.dataset.tabsInit) return; // Already initialized
         tabs.dataset.tabsInit = 'true';
-        tabs.querySelectorAll('.tabs-nav button[data-tab]').forEach(btn => {
+        tabs.querySelectorAll('.tabs-nav a[data-tab]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tabId = btn.dataset.tab;
-                tabs.querySelectorAll('.tabs-nav button').forEach(b => b.classList.remove('active'));
+                tabs.querySelectorAll('.tabs-nav a').forEach(b => b.classList.remove('active'));
                 tabs.querySelectorAll('.tabs-panel').forEach(p => p.classList.remove('active'));
                 btn.classList.add('active');
                 tabs.querySelector(`#${tabId}`)?.classList.add('active');
