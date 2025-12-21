@@ -54,7 +54,7 @@ templ StartGameButton(data *services.StartGameButtonData) {
 	</button>
 	if !data.GuestReady {
 		<p class="waiting-hint" role="status" aria-live="polite" style="margin-top: 1rem; color: #6b7280; text-align: center;">
-			⏳ Waiting for guest to be ready...
+			⏳ Waiting for <b>{ data.GuestUsername }</b> to be ready...
 		</p>
 	}
 }

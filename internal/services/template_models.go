@@ -150,8 +150,9 @@ type GuestReadyButtonData struct {
 
 // StartGameButtonData represents data for start game button partial
 type StartGameButtonData struct {
-	RoomID     string
-	GuestReady bool
+	RoomID        string
+	GuestReady    bool
+	GuestUsername string
 }
 
 // AcceptedRequestData represents data for accepted request SSE updates

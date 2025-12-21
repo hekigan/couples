@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/services"
 	roomFragments "github.com/hekigan/couples/internal/views/fragments/room"
@@ -100,16 +101,29 @@ func (h *Handler) RoomStatusBadgeAPIHandler(c echo.Context) error {
 
 // GetStartGameButtonHTMLHandler returns start game button as HTML fragment (for HTMX)
 func (h *Handler) GetStartGameButtonHTMLHandler(c echo.Context) error {
-	// Use helper to get room
-	room, roomID, err := h.GetRoomFromRequest(c)
+	// Parse room ID
+	roomID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		return echo.NewHTTPError(http.StatusNotFound, "invalid room ID")
+	}
+
+	// Use GetRoomWithPlayers to get guest username
+	ctx := context.Background()
+	room, err := h.RoomService.GetRoomWithPlayers(ctx, roomID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "room not found")
+	}
+
+	guestUsername := ""
+	if room.GuestUsername != nil {
+		guestUsername = *room.GuestUsername
 	}
 
 	// Use helper to render HTML fragment
 	return h.RenderTemplComponent(c, roomFragments.StartGameButton(&services.StartGameButtonData{
-		RoomID:     roomID.String(),
-		GuestReady: room.GuestReady,
+		RoomID:        roomID.String(),
+		GuestReady:    room.GuestReady,
+		GuestUsername: guestUsername,
 	}))
 }
 

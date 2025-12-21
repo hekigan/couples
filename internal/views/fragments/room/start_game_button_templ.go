@@ -63,7 +63,20 @@ func StartGameButton(data *services.StartGameButtonData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if !data.GuestReady {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<p class=\"waiting-hint\" role=\"status\" aria-live=\"polite\" style=\"margin-top: 1rem; color: #6b7280; text-align: center;\">⏳ Waiting for guest to be ready...</p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<p class=\"waiting-hint\" role=\"status\" aria-live=\"polite\" style=\"margin-top: 1rem; color: #6b7280; text-align: center;\">⏳ Waiting for <b>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var3 string
+			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(data.GuestUsername)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/fragments/room/start_game_button.templ`, Line: 57, Col: 42}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</b> to be ready...</p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

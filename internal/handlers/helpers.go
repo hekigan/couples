@@ -259,10 +259,18 @@ func (h *Handler) renderActionButton(c echo.Context, ctx context.Context, room *
 	// Import needed: roomFragments "github.com/hekigan/couples/internal/views/fragments/room"
 
 	if isOwner {
+		// Get guest username if there's a guest
+		guestUsername := ""
+		if room.GuestID != nil {
+			if guest, err := h.UserService.GetUserByID(ctx, *room.GuestID); err == nil && guest != nil {
+				guestUsername = guest.Username
+			}
+		}
 		// Render start game button
 		return h.RenderTemplFragment(c, roomFragments.StartGameButton(&services.StartGameButtonData{
-			RoomID:     roomID.String(),
-			GuestReady: room.GuestReady,
+			RoomID:        roomID.String(),
+			GuestReady:    room.GuestReady,
+			GuestUsername: guestUsername,
 		}))
 	} else {
 		// Render guest ready button
