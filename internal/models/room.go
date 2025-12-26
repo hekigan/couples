@@ -73,3 +73,17 @@ type ActiveGame struct {
 	QuestionCategoryKey   *string    `json:"question_category_key"`
 	QuestionCategoryLabel *string    `json:"question_category_label"`
 }
+
+// GetRoomStep calculates the current step in the room flow based on room state
+// Step 1: Waiting for guest to join (GuestID is nil)
+// Step 2: Configuring categories (GuestID is set, but GuestReady is false)
+// Step 3: Ready to start (GuestReady is true)
+func GetRoomStep(room *Room) int {
+	if room.GuestID == nil {
+		return 1 // Step 1: Invite/add guest
+	} else if !room.GuestReady {
+		return 2 // Step 2: Select categories
+	} else {
+		return 3 // Step 3: Start game
+	}
+}

@@ -148,7 +148,10 @@ func (h *Handler) RoomHandler(c echo.Context) error {
 	data := NewTemplateData(c)
 	data.Title = "Room - " + roomWithPlayers.Name
 	data.User = currentUser
-	data.Data = &roomWithPlayers.Room // Pass the embedded Room struct
+	// Pass room as map for step-based template
+	data.Data = map[string]interface{}{
+		"room": &roomWithPlayers.Room,
+	}
 	data.OwnerUsername = ownerUsername
 	data.GuestUsername = guestUsername
 	data.IsOwner = isOwner

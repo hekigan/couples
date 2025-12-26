@@ -4,8 +4,11 @@ import "github.com/hekigan/couples/internal/viewmodels"
 
 // GameStarted renders a redirect script when the game starts
 templ GameStarted(data *viewmodels.GameStartedData) {
-	<script>
-		// Redirect to game play page
-		window.location.href = '/game/play/{ data.RoomID }';
+	<div data-room-id={ data.RoomID }></div>
+	<script type="text/javascript">
+		(function() {
+			const roomId = document.currentScript.previousElementSibling.dataset.roomId;
+			window.location.href = '/game/play/' + roomId;
+		})();
 	</script>
 }

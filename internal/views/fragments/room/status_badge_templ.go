@@ -35,7 +35,7 @@ func StatusBadge(data *services.RoomStatusBadgeData) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var templ_7745c5c3_Var2 = []any{fmt.Sprintf("status-badge status-%s", data.Status)}
+		var templ_7745c5c3_Var2 = []any{fmt.Sprintf("badge badge-%s", data.Status)}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var2...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -53,7 +53,7 @@ func StatusBadge(data *services.RoomStatusBadgeData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" id=\"room-status-badge\" data-testid=\"room-status-badge\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" id=\"room-status-badge\" data-testid=\"room-badge-status\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

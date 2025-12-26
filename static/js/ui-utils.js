@@ -401,6 +401,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// Start Game Button Handlers
+function startButtonBeforeRequest(event) {
+    const btn = event.target;
+    const checked = document.querySelectorAll('#categories-grid input[type=checkbox]:checked').length;
+    if (checked === 0) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message';
+        errorDiv.textContent = '⚠️ Please select at least one category';
+        errorDiv.style.cssText = 'color: #ef4444; margin-top: 0.5rem; font-size: 0.875rem; text-align: center;';
+        btn.parentElement.appendChild(errorDiv);
+        setTimeout(() => errorDiv.remove(), 3000);
+        event.preventDefault();
+    }
+}
+
+function startButtonAfterRequest(event) {
+    const btn = event.target;
+    if (!event.detail.successful) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message';
+        errorDiv.textContent = '❌ Failed to start game. Please try again.';
+        errorDiv.style.cssText = 'color: #ef4444; margin-top: 0.5rem; font-size: 0.875rem; text-align: center;';
+        btn.parentElement.appendChild(errorDiv);
+        setTimeout(() => errorDiv.remove(), 5000);
+    }
+}
+
 // Export utilities
 window.Toast = Toast;
 window.Loading = Loading;

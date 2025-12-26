@@ -227,6 +227,35 @@
 }
 
 // ----------------------------------------------------------------------------
+// Step Indicator
+// ----------------------------------------------------------------------------
+
+.step-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    list-style: none;
+    margin-bottom: $spacing-md;
+    padding-left: 0;
+
+    .step-item {
+        color: $text-muted;
+        flex: 1;
+        text-align: center;
+        white-space: nowrap;
+
+        &[aria-current="true"] {
+            color: $text-primary;
+            border-bottom: 2px solid $secondary-color;
+        }
+    }
+}
+
+.room-container h3 {
+    margin-top: 0;
+}
+
+// ----------------------------------------------------------------------------
 // Empty State
 // ----------------------------------------------------------------------------
 .empty-state {
@@ -253,14 +282,13 @@
 // Player Info
 // ----------------------------------------------------------------------------
 .player-label {
-    font-size: $font-size-sm;
-    color: $text-secondary;
-    font-weight: $font-weight-medium;
+    // font-size: $font-size-sm;
+    // color: $text-secondary;
+    // font-weight: $font-weight-medium;
 }
 
 .player-name {
     font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
     color: $text-primary;
 }
 

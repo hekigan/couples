@@ -30,6 +30,7 @@
 
 	.tabs-panel {
 		display: none;
+        min-height: 50px;
 
 		&.active {
 			display: block;

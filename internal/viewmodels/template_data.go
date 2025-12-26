@@ -14,6 +14,7 @@ type TemplateData struct {
 	JoinRequestsCount int    // Number of pending join requests (for badge)
 	Env               string // Environment (development/production) for conditional JS loading
 	CSRFToken         string // CSRF token for forms and HTMX requests
+	CurrentStep       int    // Current room step (1=invite, 2=categories, 3=start) - derived from room state
 	// Pre-rendered fragment HTML for SSR (to avoid hx-trigger="load")
 	CategoriesGridHTML string // Categories grid fragment (rendered server-side)
 	FriendsListHTML    string // Friends list fragment (rendered server-side, owner only)

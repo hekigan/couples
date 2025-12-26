@@ -1,4 +1,15 @@
+@use 'sass:list';
 @use '../base/variables' as *;
+
+// Badge size map (padding-y, padding-x, font-size)
+$badge-sizes: (
+  'xs': ($spacing-xs * 0.5, $spacing-xs, 12px),
+  'sm': ($spacing-xs, $spacing-sm, $font-size-sm),
+  'md': ($spacing-sm, $spacing-md, $font-size-base),
+  'lg': ($spacing-sm, $spacing-lg, $font-size-lg),
+  'xl': ($spacing-md, $spacing-xl, $font-size-xl),
+  'xxl': ($spacing-md, $spacing-xxl, $font-size-xxl)
+);
 
 // Badges
 .badge {
@@ -10,6 +21,14 @@
   font-weight: $font-weight-medium;
   line-height: 1;
   border-radius: $border-radius-full;
+
+  // Generate size variants
+  @each $size, $values in $badge-sizes {
+    &.badge-#{$size} {
+      padding: list.nth($values, 1) list.nth($values, 2);
+      font-size: list.nth($values, 3);
+    }
+  }
   
   &.badge-primary {
     background-color: $primary-color;
@@ -31,7 +50,8 @@
     color: white;
   }
   
-  &.badge-warning {
+  &.badge-warning,
+  &.badge-waiting {
     background-color: $warning-color;
     color: white;
   }

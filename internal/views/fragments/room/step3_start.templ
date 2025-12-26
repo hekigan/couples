@@ -1,0 +1,29 @@
+package room
+
+import (
+	"fmt"
+	"github.com/hekigan/couples/internal/models"
+	"github.com/hekigan/couples/internal/viewmodels"
+)
+
+// Step3Start renders the start game section (Step 3 of room creation flow)
+// Shows start game button for owner
+// Only visible at step 3 (when both players are ready)
+templ Step3Start(data *viewmodels.TemplateData) {
+	if roomData, ok := data.Data.(map[string]interface{}); ok {
+		if room, ok := roomData["room"].(*models.Room); ok {
+			<!-- Start Game Button - OWNER ONLY -->
+			if data.IsOwner {
+				<div
+					class="start-game-section"
+					id="start-game-section"
+					hx-get={ fmt.Sprintf("/api/v1/rooms/%s/start-button", room.ID.String()) }
+					hx-trigger="load, sse:room_update from:body"
+					hx-swap="innerHTML"
+				>
+					@templ.Raw(data.ActionButtonHTML)
+				</div>
+			}
+		}
+	}
+}

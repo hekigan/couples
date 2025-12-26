@@ -48,7 +48,7 @@ func StartGameButton(data *services.StartGameButtonData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" hx-disabled-elt=\"this\" hx-indicator=\"#start-loading\" hx-on::before-request=\"\n\t\t\tconst checked = document.querySelectorAll('#categories-grid input[type=checkbox]:checked').length;\n\t\t\tif(checked === 0) {\n\t\t\t\tconst errorDiv = document.createElement('div');\n\t\t\t\terrorDiv.className = 'error-message';\n\t\t\t\terrorDiv.textContent = '⚠️ Please select at least one category';\n\t\t\t\terrorDiv.style.cssText = 'color: #ef4444; margin-top: 0.5rem; font-size: 0.875rem; text-align: center;';\n\t\t\t\tthis.parentElement.appendChild(errorDiv);\n\t\t\t\tsetTimeout(() => errorDiv.remove(), 3000);\n\t\t\t\treturn false;\n\t\t\t}\n\t\t\" hx-on::after-request=\"\n\t\t\tif(!event.detail.successful) {\n\t\t\t\tconst errorDiv = document.createElement('div');\n\t\t\t\terrorDiv.className = 'error-message';\n\t\t\t\terrorDiv.textContent = '❌ Failed to start game. Please try again.';\n\t\t\t\terrorDiv.style.cssText = 'color: #ef4444; margin-top: 0.5rem; font-size: 0.875rem; text-align: center;';\n\t\t\t\tthis.parentElement.appendChild(errorDiv);\n\t\t\t\tsetTimeout(() => errorDiv.remove(), 5000);\n\t\t\t}\n\t\t\" aria-label=\"Start the game with your guest\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" hx-disabled-elt=\"this\" hx-indicator=\"#start-loading\" hx-on::before-request=\"startButtonBeforeRequest(event)\" hx-on::after-request=\"startButtonAfterRequest(event)\" aria-label=\"Start the game with your guest\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -70,7 +70,7 @@ func StartGameButton(data *services.StartGameButtonData) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(data.GuestUsername)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/fragments/room/start_game_button.templ`, Line: 57, Col: 42}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/fragments/room/start_game_button.templ`, Line: 37, Col: 42}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {

@@ -1,0 +1,34 @@
+package room
+
+import "github.com/hekigan/couples/internal/viewmodels"
+
+// Step2Categories renders the category selection section (Step 2 of room creation flow)
+// Shows category grid and guest ready button (for guest)
+// Visible in steps 2 and 3
+templ Step2Categories(data *viewmodels.TemplateData, currentStep int) {
+	<!-- Category Selection Section -->
+	<div
+		id="categories-section"
+		data-testid="categories-section"
+	>
+		<h4 data-testid="categories-heading">Select Question Categories</h4>
+		<p class="categories-hint">Both players select categories together in real-time!</p>
+		<div
+			id="categories-grid"
+			data-testid="categories-grid"
+			sse-swap="categories_updated"
+			hx-swap="innerHTML"
+		>
+			@templ.Raw(data.CategoriesGridHTML)
+		</div>
+	</div>
+	<!-- Ready Button - GUEST ONLY (shown at step 2 and 3) -->
+	if !data.IsOwner && currentStep >= 2 {
+		<div
+			class="guest-ready-section"
+			id="guest-ready-section"
+		>
+			@templ.Raw(data.ActionButtonHTML)
+		</div>
+	}
+}

@@ -10,7 +10,8 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import "github.com/hekigan/couples/internal/services"
 
-// RequestAccepted renders the updated guest info and UI changes when request is accepted
+// RequestAccepted renders the updated guest info when request is accepted
+// Step transitions are now handled by the step-based structure in room.templ
 func RequestAccepted(data *services.RequestAcceptedData) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -39,13 +40,13 @@ func RequestAccepted(data *services.RequestAcceptedData) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(data.GuestUsername)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/fragments/room/request_accepted.templ`, Line: 8, Col: 63}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/fragments/room/request_accepted.templ`, Line: 9, Col: 63}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</span><script>\n\t\t// Update UI when guest joins\n\t\t(function() {\n\t\t\t// Show categories section\n\t\t\tconst categoriesSection = document.getElementById('categories-section');\n\t\t\tif (categoriesSection) {\n\t\t\t\tcategoriesSection.style.display = '';\n\t\t\t}\n\n\t\t\t// Show start game section (owner only)\n\t\t\tconst startGameSection = document.getElementById('start-game-section');\n\t\t\tif (startGameSection) {\n\t\t\t\tstartGameSection.style.display = '';\n\t\t\t}\n\n\t\t\t// Hide invite friends section\n\t\t\tconst inviteSection = document.getElementById('invite-section');\n\t\t\tif (inviteSection) {\n\t\t\t\tinviteSection.style.display = 'none';\n\t\t\t}\n\n\t\t\t// Hide join requests section\n\t\t\tconst joinRequestsSection = document.getElementById('join-requests-section');\n\t\t\tif (joinRequestsSection) {\n\t\t\t\tjoinRequestsSection.style.display = 'none';\n\t\t\t}\n\n\t\t\t// Remove 'empty' class from guest card\n\t\t\tconst guestCard = document.getElementById('guest-info');\n\t\t\tif (guestCard) {\n\t\t\t\tguestCard.classList.remove('empty');\n\t\t\t}\n\n\t\t\tconsole.log('✅ Guest joined - UI updated');\n\t\t})();\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</span>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

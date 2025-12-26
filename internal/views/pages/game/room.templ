@@ -5,7 +5,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/viewmodels"
-	"github.com/hekigan/couples/internal/views/components"
+	"github.com/hekigan/couples/internal/views/fragments/room"
 	"github.com/hekigan/couples/internal/views/layouts"
 )
 
@@ -14,155 +14,122 @@ templ RoomPage(data *viewmodels.TemplateData) {
 	@layouts.Base(data, RoomContent(data))
 }
 
-// RoomContent renders the room lobby content with SSE integration
-templ RoomContent(data *viewmodels.TemplateData) {
-	if room, ok := data.Data.(*models.Room); ok {
-		<div
-			class="room-container"
-			data-room-id={ room.ID.String() }
-			data-is-owner={ fmt.Sprintf("%t", data.IsOwner) }
-			data-selected-categories={ getSelectedCategoriesJSON(room.SelectedCategories) }
-			hx-ext="sse"
-			sse-connect={ fmt.Sprintf("/api/v1/stream/rooms/%s/events", room.ID.String()) }
-		>
-			<!-- Room Header -->
-			if room.GuestID == nil {
+// RoomContainer renders just the room container (for SSE swaps)
+templ RoomContainer(data *viewmodels.TemplateData) {
+	if roomData, ok := data.Data.(map[string]interface{}); ok {
+		if roomModel, ok := roomData["room"].(*models.Room); ok {
+			<div
+				class="room-container"
+				data-room-id={ roomModel.ID.String() }
+				data-is-owner={ fmt.Sprintf("%t", data.IsOwner) }
+				data-selected-categories={ getSelectedCategoriesJSON(roomModel.SelectedCategories) }
+				sse-swap="step_transition"
+				hx-swap="outerHTML"
+			>
+				<!-- Step Indicator - Always visible -->
+				@room.StepIndicator(models.GetRoomStep(roomModel))
 				<!-- Players Section - Show only the other player -->
 				<div class="room-players" id="player-list" data-testid="player-list">
-					<div class="player-grid">
-						<!-- Guest sees the Owner card -->
-						if !data.IsOwner {
-							<div class="player-card" data-player="owner" data-testid="owner-card">
-								<span class="player-label">Owner</span>
-								<span class="player-name" data-testid="owner-name">
-									if data.OwnerUsername != "" {
-										{ data.OwnerUsername }
+					<!-- Guest sees the Owner card -->
+					if !data.IsOwner {
+						<div class="player-card" data-player="owner" data-testid="owner-card">
+							<h4 class="player-label">Room Owner</h4>
+							<span class="player-name" data-testid="owner-name">
+								if data.OwnerUsername != "" {
+									{ data.OwnerUsername }
+								} else {
+									Unknown
+								}
+							</span>
+						</div>
+					}
+					<!-- Owner sees the Guest card - Updated via SSE when request accepted -->
+					if data.IsOwner {
+						<div
+							class={ templ.KV("player-card", true), templ.KV("empty", roomModel.GuestID == nil) }
+							data-player="guest"
+							id="guest-info"
+							sse-swap="request_accepted"
+							data-testid="guest-card"
+						>
+							<h4 class="player-label">Playing with</h4>
+							if roomModel.GuestID != nil {
+								<span class="player-name" id="guest-name" data-testid="guest-name">
+									if data.GuestUsername != "" {
+										{ data.GuestUsername }
+										if roomModel.GuestReady {
+											<span
+												class="badge badge-success"
+												data-testid="room-guest-badge-status"
+												sse-swap="room_guest-status_update"
+												hx-swap="outerHTML"
+											>
+												ready
+											</span>
+										} else {
+											<span
+												class="badge badge-waiting"
+												data-testid="room-guest-badge-status"
+												sse-swap="room_guest-status_update"
+												hx-swap="outerHTML"
+											>
+												not ready
+											</span>
+										}
 									} else {
 										Unknown
 									}
 								</span>
-							</div>
-						}
-						<!-- Owner sees the Guest card - Updated via SSE when request accepted -->
-						if data.IsOwner {
-							<div
-								class={ templ.KV("player-card", true), templ.KV("empty", room.GuestID == nil) }
-								data-player="guest"
-								id="guest-info"
-								sse-swap="request_accepted"
-								data-testid="guest-card"
-							>
-								<span class="player-label">Guest</span>
-								if room.GuestID != nil {
-									<span class="player-name" id="guest-name" data-testid="guest-name">
-										if data.GuestUsername != "" {
-											{ data.GuestUsername }
-											if room.GuestReady {
-												<span
-													class="status-badge status-ready"
-													data-testid="room-guest-status-badge"
-													sse-swap="room_guest-status_update"
-													hx-swap="outerHTML"
-												>
-													ready
-												</span>
-											}
-										} else {
-											Unknown
-										}
-									</span>
-								} else {
-									<span class="player-name" id="guest-waiting" data-testid="guest-waiting">Waiting for guest...</span>
-								}
-							</div>
-						}
-					</div>
-				</div>
-				if room.Status == "waiting" {
-					<h3>Invite someone</h3>
-					<div class="room-header-section" data-testid="room-header">
-						<div>
-							<h5 data-testid="room-title">Room ID</h5>
-							<form onsubmit="return false;">
-								<fieldset role="group" class="items-stretch">
-									<input
-										type="text"
-										id="room-id-input"
-										value={ room.ID.String() }
-										readonly
-										data-testid="room-id-input"
-									/>
-									<button class="no-wrap" onclick="copyRoomId()" title="Copy Room ID" data-testid="copy-room-id-button">
-										Copy
-									</button>
-								</fieldset>
-								<small class="text-muted">Copy the room ID to share with friend</small>
-							</form>
+							} else {
+								<span class="player-name" id="guest-waiting" data-testid="guest-waiting">Waiting for guest...</span>
+							}
 						</div>
-					</div>
-					if data.IsOwner {
-						@components.Tabs("owner-tabs", []components.Tab{
-							{ID: "tab-requests", Label: fmt.Sprintf("Requests (%d)", data.JoinRequestsCount), Content: requestsTabContent(data)},
-							{ID: "tab-invite", Label: "Invite Friends", Content: inviteTabContent(data)},
-						})
 					}
+				</div>
+				<!-- Step 1: Invite (owner only, step 1) -->
+				if models.GetRoomStep(roomModel) == 1 && data.IsOwner {
+					@room.Step1Invite(data)
 				}
-			}
-			<!-- Category Selection Section (shown when guest joined) -->
-			<div
-				id="categories-section"
-				data-testid="categories-section"
-				style={ templ.KV("display: none;", room.GuestID == nil) }
-			>
-				<h4 data-testid="categories-heading">Select Question Categories</h4>
-				<p class="categories-hint">Both players select categories together in real-time!</p>
-				<div
-					id="categories-grid"
-					data-testid="categories-grid"
-					sse-swap="categories_updated"
-					hx-swap="innerHTML"
-				>
-					@templ.Raw(data.CategoriesGridHTML)
-				</div>
-			</div>
-			<!-- Start Game Button (shown when ready) - OWNER ONLY -->
-			if data.IsOwner {
-				<div
-					class="start-game-section"
-					id="start-game-section"
-					style={ templ.KV("display: none;", room.Status != "ready") }
-					hx-get={ fmt.Sprintf("/api/v1/rooms/%s/start-button", room.ID.String()) }
-					hx-trigger="load, sse:room_update from:body"
-				>
-					@templ.Raw(data.ActionButtonHTML)
-				</div>
-			}
-			<!-- Ready Button - GUEST ONLY -->
-			if !data.IsOwner {
-				if room.Status == "ready" {
-					<div
-						class="guest-ready-section"
-						id="guest-ready-section"
-					>
-						@templ.Raw(data.ActionButtonHTML)
+				<!-- Step 2: Categories (both players, steps 2-3) -->
+				if models.GetRoomStep(roomModel) >= 2 {
+					@room.Step2Categories(data, models.GetRoomStep(roomModel))
+				}
+				<!-- Step 3: Start (owner only, step 3) -->
+				if models.GetRoomStep(roomModel) == 3 {
+					@room.Step3Start(data)
+				}
+				<!-- Owner Actions (Delete Room) - OWNER ONLY -->
+				if data.IsOwner {
+					<div class="room-actions" data-testid="room-actions">
+						<form action={ templ.URL(fmt.Sprintf("/game/room/%s/delete", roomModel.ID.String())) } method="POST" onsubmit="return confirm('Delete this room?');">
+							if data.CSRFToken != "" {
+								<input type="hidden" name="csrf" value={ data.CSRFToken }/>
+							}
+							<button type="submit" class="contrast" data-testid="delete-room-button">Delete Room</button>
+						</form>
 					</div>
 				}
-			}
-			<!-- Owner Actions (Delete Room) - OWNER ONLY -->
-			if data.IsOwner {
-				<div class="room-actions" data-testid="room-actions">
-					<form action={ templ.URL(fmt.Sprintf("/game/room/%s/delete", room.ID.String())) } method="POST" onsubmit="return confirm('Delete this room?');">
-						if data.CSRFToken != "" {
-							<input type="hidden" name="csrf" value={ data.CSRFToken }/>
-						}
-						<button type="submit" class="contrast" data-testid="delete-room-button">Delete Room</button>
-					</form>
-				</div>
-			}
-			<!-- Game Started redirect - Hidden element that receives SSE redirect fragment -->
-			<div id="game-start-redirect" sse-swap="game_started" style="display:none;"></div>
-		</div>
-		@RoomScript()
+				<!-- Game Started redirect - Hidden element that receives SSE redirect fragment -->
+				<div id="game-start-redirect" sse-swap="game_started" style="display:none;"></div>
+			</div>
+		}
+	}
+}
+
+// RoomContent wraps RoomContainer with SSE connection
+templ RoomContent(data *viewmodels.TemplateData) {
+	if roomData, ok := data.Data.(map[string]interface{}); ok {
+		if roomModel, ok := roomData["room"].(*models.Room); ok {
+			<!-- SSE wrapper - maintains connection across swaps -->
+			<div
+				id="room-sse-wrapper"
+				hx-ext="sse"
+				sse-connect={ fmt.Sprintf("/api/v1/stream/rooms/%s/events", roomModel.ID.String()) }
+			>
+				@RoomContainer(data)
+			</div>
+			@RoomScript()
+		}
 	}
 }
 
@@ -332,7 +299,7 @@ templ RoomScript() {
 			}
 		});
 
-		console.log('✅ HTMX SSE mode active - ~80% less JavaScript than original!');
+		console.log('✅ HTMX SSE mode active');
 	</script>
 }
 
@@ -349,16 +316,4 @@ func getSelectedCategoriesJSON(categories []uuid.UUID) string {
 		result += fmt.Sprintf("\"%s\"", cat.String())
 	}
 	return result
-}
-
-templ requestsTabContent(data *viewmodels.TemplateData) {
-	<div id="join-requests" sse-swap="join_request" hx-swap="beforeend">
-		@templ.Raw(data.JoinRequestsHTML)
-	</div>
-}
-
-templ inviteTabContent(data *viewmodels.TemplateData) {
-	<div id="friends-list" class="friends-list">
-		@templ.Raw(data.FriendsListHTML)
-	</div>
 }

@@ -2,44 +2,9 @@ package room
 
 import "github.com/hekigan/couples/internal/services"
 
-// RequestAccepted renders the updated guest info and UI changes when request is accepted
+// RequestAccepted renders the updated guest info when request is accepted
+// Step transitions are now handled by the step-based structure in room.templ
 templ RequestAccepted(data *services.RequestAcceptedData) {
 	<span class="player-label">Guest</span>
 	<span class="player-name" id="guest-name">{ data.GuestUsername }</span>
-	<script>
-		// Update UI when guest joins
-		(function() {
-			// Show categories section
-			const categoriesSection = document.getElementById('categories-section');
-			if (categoriesSection) {
-				categoriesSection.style.display = '';
-			}
-
-			// Show start game section (owner only)
-			const startGameSection = document.getElementById('start-game-section');
-			if (startGameSection) {
-				startGameSection.style.display = '';
-			}
-
-			// Hide invite friends section
-			const inviteSection = document.getElementById('invite-section');
-			if (inviteSection) {
-				inviteSection.style.display = 'none';
-			}
-
-			// Hide join requests section
-			const joinRequestsSection = document.getElementById('join-requests-section');
-			if (joinRequestsSection) {
-				joinRequestsSection.style.display = 'none';
-			}
-
-			// Remove 'empty' class from guest card
-			const guestCard = document.getElementById('guest-info');
-			if (guestCard) {
-				guestCard.classList.remove('empty');
-			}
-
-			console.log('✅ Guest joined - UI updated');
-		})();
-	</script>
 }

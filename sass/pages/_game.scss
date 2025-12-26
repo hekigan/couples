@@ -93,42 +93,11 @@
 .room-container {
   max-width: 600px;
   margin: 0 auto;
-  padding: $spacing-xl;
+  padding: $spacing-md;
   width: 100%;
 }
 
-.status-badge {
-  display: inline-block;
-  padding: $spacing-sm $spacing-lg;
-  border-radius: $border-radius-full;
-  font-weight: $font-weight-medium;
-  
-  &.status-waiting {
-    background-color: $warning-color;
-    color: white;
-  }
-  
-  &.status-ready {
-    background-color: $success-color;
-    color: white;
-  }
-  
-  &.status-playing {
-    background-color: $info-color;
-    color: white;
-  }
-  
-  &.status-finished {
-    background-color: $text-muted;
-    color: white;
-  }
-}
-
 .room-players {
-  position: absolute;
-  top: 93px;
-  left: 0;
-  right: 0;
 
   @media screen and (min-width: $breakpoint-md) {
     position: static;
@@ -136,34 +105,16 @@
   }
 }
 
-.player-grid {
+.player-card {
+  background-color: color.adjust($secondary-color, $lightness: 52%);
+  border-radius: $border-radius-md;
   display: flex;
   flex-direction: column;
-}
+  margin-bottom: $spacing-lg;
+  padding: $spacing-md $spacing-lg;
 
-.player-card {
-  background-color: $bg-primary;
-  display: flex;
-  flex-direction: row;
-
-  .player-label,
-  .player-name {
-    padding: $spacing-sm $spacing-md;
-  }
-
-  &[data-player="owner"] {
-    .player-label {
-      background-color: var(--pico-secondary-background);
-    }
-  }
-
-  &[data-player="guest"] {
-    border-top-left-radius: $border-radius-md;
-    border-top-right-radius: $border-radius-md;
-    
-    .player-label {
-      background-color: color.adjust($warning-color, $lightness: 30%);
-    }
+  .player-label {
+    margin-bottom: $spacing-xs;
   }
   
   &.empty {

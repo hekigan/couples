@@ -16,7 +16,7 @@ templ JoinRequest(data *services.JoinRequestData) {
 						hx-post={ fmt.Sprintf("/api/v1/join-requests/%s/accept", data.ID) }
 						hx-swap="outerHTML"
 						hx-target={ fmt.Sprintf("#join-request-%s", data.ID) }
-						class="btn btn-accept"
+						class="btn btn-accept success"
 					>
 						Accept
 					</button>
@@ -24,7 +24,7 @@ templ JoinRequest(data *services.JoinRequestData) {
 						hx-post={ fmt.Sprintf("/api/v1/join-requests/%s/reject", data.ID) }
 						hx-swap="outerHTML"
 						hx-target={ fmt.Sprintf("#join-request-%s", data.ID) }
-						class="btn btn-reject"
+						class="btn btn-reject danger"
 					>
 						Reject
 					</button>
