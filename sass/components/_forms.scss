@@ -25,4 +25,11 @@ select {
   [role=group], [role=fieldset] {
     align-items: center;
   }
+  
+  [role=group] {
+    label {
+      background-color: var(--pico-info-background);
+      border: 1px solid var(--pico-info-border);
+    }
+  }
 }

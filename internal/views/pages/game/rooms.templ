@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/hekigan/couples/internal/services"
 	"github.com/hekigan/couples/internal/viewmodels"
-	"github.com/hekigan/couples/internal/views/layouts"
 	gameFragments "github.com/hekigan/couples/internal/views/fragments/game"
+	"github.com/hekigan/couples/internal/views/layouts"
 )
 
 // RoomsPage renders the rooms list page with layout
@@ -21,8 +21,11 @@ templ RoomsContent(data *viewmodels.TemplateData) {
 		sse-connect="/api/v1/stream/user/events"
 	>
 		<div class="page-header">
-			<h1>💕 My Rooms</h1>
-			<a href="/game/create-room" role="button">+ New Room</a>
+			<h1>My Rooms</h1>
+			<span class="button-group flex">
+				<a href="/game/join-room" role="button">Join Room</a>
+				<a href="/game/create-room" role="button">New Room</a>
+			</span>
 		</div>
 		<div
 			id="rooms-container"
@@ -36,7 +39,7 @@ templ RoomsContent(data *viewmodels.TemplateData) {
 					for _, room := range rooms {
 						<div class="room-card" id={ fmt.Sprintf("room-%s", room.ID.String()) }>
 							<div class="room-card-header">
-								<span class="room-id">🆔 { room.ID.String() }</span>
+								<span class="room-id">🆔 { room.Name }</span>
 								<span class={ fmt.Sprintf("room-status room-status-%s", room.Status) }>{ room.Status }</span>
 							</div>
 							<div class="room-card-body">
@@ -61,31 +64,19 @@ templ RoomsContent(data *viewmodels.TemplateData) {
 									</span>
 								</p>
 								<p class="room-info">
-									<span class="room-info-label">Status:</span>
-									<span class="room-info-value">
-										if room.Status == "ready" {
-											✅ Ready to play
-										} else if room.Status == "playing" {
-											🎮 Playing
-										} else {
-											⏳ Waiting for guest
-										}
-									</span>
-								</p>
-								<p class="room-info">
 									<span class="room-info-label">Created:</span>
 									<span class="room-info-value">{ room.CreatedAt.Format("Jan 2, 2006") }</span>
 								</p>
 							</div>
-							<div class="room-card-actions">
+							<div class="button-group justify-between">
 								if room.Status == "waiting" {
-									<a href={ templ.URL(fmt.Sprintf("/game/room/%s", room.ID.String())) } role="button">Enter Room</a>
+									<a href={ templ.URL(fmt.Sprintf("/game/room/%s", room.ID.String())) } role="button">Start</a>
 								} else if room.Status == "ready" {
-									<a href={ templ.URL(fmt.Sprintf("/game/room/%s", room.ID.String())) } role="button" class="success">Enter Room</a>
+									<a href={ templ.URL(fmt.Sprintf("/game/room/%s", room.ID.String())) } role="button" class="success">Play</a>
 								} else if room.Status == "playing" {
-									<a href={ templ.URL(fmt.Sprintf("/game/play/%s", room.ID.String())) } role="button" class="success">Continue Game</a>
+									<a href={ templ.URL(fmt.Sprintf("/game/play/%s", room.ID.String())) } role="button" class="success">Continue</a>
 								} else if room.Status == "finished" {
-									<a href={ templ.URL(fmt.Sprintf("/game/finished/%s", room.ID.String())) } role="button" class="secondary">View Results</a>
+									<a href={ templ.URL(fmt.Sprintf("/game/finished/%s", room.ID.String())) } role="button" class="secondary">Results</a>
 								}
 								if room.IsOwner {
 									<button

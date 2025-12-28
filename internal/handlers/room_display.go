@@ -48,8 +48,8 @@ func (h *Handler) ListRoomsHandler(c echo.Context) error {
 	// Convert to RoomWithUsername format for template
 	enrichedRooms := make([]services.RoomWithUsername, 0, len(roomsWithPlayers))
 	for _, roomWithPlayers := range roomsWithPlayers {
-		log.Printf("DEBUG ListRooms: Room %s - OwnerID: %s, GuestID: %v, Status: %s",
-			roomWithPlayers.ID, roomWithPlayers.OwnerID, roomWithPlayers.GuestID, roomWithPlayers.Status)
+		log.Printf("DEBUG ListRooms: Room %s -  RoomName %s - OwnerID: %s, GuestID: %v, Status: %s",
+			roomWithPlayers.ID, roomWithPlayers.Name, roomWithPlayers.OwnerID, roomWithPlayers.GuestID, roomWithPlayers.Status)
 
 		isOwner := roomWithPlayers.OwnerID == userID
 		enrichedRoom := services.RoomWithUsername{

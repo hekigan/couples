@@ -111,7 +111,7 @@ func JoinRoomContent(data *viewmodels.TemplateData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<div class=\"form-group\"><label for=\"room_id\">Room ID</label> <input type=\"text\" id=\"room_id\" name=\"room_id\" placeholder=\"e.g., 123e4567-e89b-12d3-a456-426614174000\" required aria-describedby=\"room-id-help\"> <small id=\"room-id-help\" style=\"color: #6b7280;\">Ask the room owner to share their Room ID with you.</small></div><div class=\"form-actions\"><button type=\"submit\" class=\"btn-primary\">Join Room</button> <a href=\"/game/rooms\" role=\"button\" class=\"secondary\">Cancel</a></div></form></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<div class=\"form-group\"><label for=\"room_id\">Room ID</label> <input type=\"text\" id=\"room_id\" name=\"room_id\" placeholder=\"e.g., 123e4567-e89b-12d3-a456-426614174000\" required aria-describedby=\"room-id-help\"> <small id=\"room-id-help\" style=\"color: #6b7280;\">Ask the room owner to share their Room ID with you.</small></div><div class=\"button-group\"><a href=\"/game/rooms\" role=\"button\" class=\"secondary\">Cancel</a> <button type=\"submit\" class=\"success\">Join Room</button></div></form></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

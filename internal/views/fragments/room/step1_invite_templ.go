@@ -40,7 +40,7 @@ func Step1Invite(data *viewmodels.TemplateData) templ.Component {
 		ctx = templ.ClearChildren(ctx)
 		if roomData, ok := data.Data.(map[string]interface{}); ok {
 			if room, ok := roomData["room"].(*models.Room); ok {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<h3>Invite someone</h3><div class=\"room-header-section\" data-testid=\"room-header\"><div><h5 data-testid=\"room-title\">Room ID</h5><form onsubmit=\"return false;\"><fieldset role=\"group\" class=\"items-stretch\"><input type=\"text\" id=\"room-id-input\" value=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<h3>Invite someone</h3><div class=\"room-header-section\" data-testid=\"room-header\"><div><form onsubmit=\"return false;\"><fieldset role=\"group\" class=\"items-stretch\"><label for=\"room-id-input\" class=\"p-sm\">ID</label> <input type=\"text\" id=\"room-id-input\" value=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

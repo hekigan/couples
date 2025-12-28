@@ -239,57 +239,8 @@ func (h *Handler) AcceptJoinRequestHandler(c echo.Context) error {
 		}
 
 		// Broadcast step transition: Re-render room container to show step 2
-		// Fetch room with player info for complete template data
-		roomWithPlayers, err := h.RoomService.GetRoomWithPlayers(ctx, joinRequest.RoomID)
-		if err == nil {
-			// Get current user for template rendering
-			userID, _ := middleware.GetUserID(c)
-			currentUser, err := h.FetchCurrentUser(c)
-			if err == nil {
-				// Determine usernames
-				ownerUsername := ""
-				if roomWithPlayers.OwnerUsername != nil {
-					ownerUsername = *roomWithPlayers.OwnerUsername
-				}
-				guestUsername := ""
-				if roomWithPlayers.GuestUsername != nil {
-					guestUsername = *roomWithPlayers.GuestUsername
-				}
-				isOwner := userID == roomWithPlayers.OwnerID
-
-				// Render fragments
-				categoriesHTML, friendsHTML, actionButtonHTML, _ := h.RenderRoomFragments(c, &roomWithPlayers.Room, joinRequest.RoomID, userID, isOwner)
-				joinRequestsHTML, joinRequestsCount, _ := h.renderJoinRequests(c, ctx, joinRequest.RoomID)
-
-				// Build template data
-				data := NewTemplateData(c)
-				data.Title = "Room - " + roomWithPlayers.Name
-				data.User = currentUser
-				data.Data = map[string]interface{}{
-					"room": &roomWithPlayers.Room,
-				}
-				data.OwnerUsername = ownerUsername
-				data.GuestUsername = guestUsername
-				data.IsOwner = isOwner
-				data.JoinRequestsCount = joinRequestsCount
-				data.CategoriesGridHTML = categoriesHTML
-				data.FriendsListHTML = friendsHTML
-				data.ActionButtonHTML = actionButtonHTML
-				data.JoinRequestsHTML = joinRequestsHTML
-
-				// Render just the room container (without SSE wrapper)
-				roomHTML, err := h.RenderTemplFragment(c, gamePages.RoomContainer(data))
-				if err == nil {
-					// Broadcast the re-rendered room container
-					h.RoomService.GetRealtimeService().BroadcastHTMLFragment(joinRequest.RoomID, services.HTMLFragmentEvent{
-						Type:       "step_transition",
-						Target:     ".room-container",
-						SwapMethod: "outerHTML",
-						HTML:       roomHTML,
-					})
-					log.Printf("📡 Broadcasted step_transition event (step 1 → 2) - swapped room container")
-				}
-			}
+		if err := h.BroadcastRoleSpecificRoomContainer(c, ctx, joinRequest.RoomID); err != nil {
+			log.Printf("⚠️ Failed to broadcast room container: %v", err)
 		}
 	}
 

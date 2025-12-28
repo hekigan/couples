@@ -9,7 +9,6 @@ import (
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/services"
 	roomFragments "github.com/hekigan/couples/internal/views/fragments/room"
-	gamePages "github.com/hekigan/couples/internal/views/pages/game"
 	"github.com/labstack/echo/v4"
 )
 
@@ -80,56 +79,9 @@ func (h *Handler) SetGuestReadyAPIHandler(c echo.Context) error {
 
 	log.Printf("📡 Broadcasting guest_ready=true to room %s", roomID)
 
-	// Broadcast step transition: Re-render room container to show step 3
-	// Fetch room with player info for complete template data
-	roomWithPlayers, err := h.RoomService.GetRoomWithPlayers(ctx, roomID)
-	if err == nil {
-		currentUser, err := h.FetchCurrentUser(c)
-		if err == nil {
-			// Determine usernames
-			ownerUsername := ""
-			if roomWithPlayers.OwnerUsername != nil {
-				ownerUsername = *roomWithPlayers.OwnerUsername
-			}
-			guestUsername := ""
-			if roomWithPlayers.GuestUsername != nil {
-				guestUsername = *roomWithPlayers.GuestUsername
-			}
-			isOwner := userID == roomWithPlayers.OwnerID
-
-			// Render fragments
-			categoriesHTML, friendsHTML, actionButtonHTML, _ := h.RenderRoomFragments(c, &roomWithPlayers.Room, roomID, userID, isOwner)
-			joinRequestsHTML, joinRequestsCount, _ := h.renderJoinRequests(c, ctx, roomID)
-
-			// Build template data
-			data := NewTemplateData(c)
-			data.Title = "Room - " + roomWithPlayers.Name
-			data.User = currentUser
-			data.Data = map[string]interface{}{
-				"room": &roomWithPlayers.Room,
-			}
-			data.OwnerUsername = ownerUsername
-			data.GuestUsername = guestUsername
-			data.IsOwner = isOwner
-			data.JoinRequestsCount = joinRequestsCount
-			data.CategoriesGridHTML = categoriesHTML
-			data.FriendsListHTML = friendsHTML
-			data.ActionButtonHTML = actionButtonHTML
-			data.JoinRequestsHTML = joinRequestsHTML
-
-			// Render just the room container (without SSE wrapper)
-			roomHTML, err := h.RenderTemplFragment(c, gamePages.RoomContainer(data))
-			if err == nil {
-				// Broadcast the re-rendered room container
-				h.RoomService.GetRealtimeService().BroadcastHTMLFragment(roomID, services.HTMLFragmentEvent{
-					Type:       "step_transition",
-					Target:     ".room-container",
-					SwapMethod: "outerHTML",
-					HTML:       roomHTML,
-				})
-				log.Printf("📡 Broadcasted step_transition event (step 2 → 3) - swapped room container")
-			}
-		}
+	// Step 7: Broadcast step transition with role-specific HTML
+	if err := h.BroadcastRoleSpecificRoomContainer(c, ctx, roomID); err != nil {
+		log.Printf("⚠️ Failed to broadcast room container: %v", err)
 	}
 
 	// Return HTML fragment for HTMX

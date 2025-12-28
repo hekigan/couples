@@ -33,6 +33,9 @@ templ CreateRoomContent(data *viewmodels.TemplateData) {
 					name="name"
 					placeholder="Enter a name for your room"
 					required
+					minlength="3"
+					maxlength="16"
+					title="Room name must be 3-16 characters (letters, numbers, underscore)"
 					aria-describedby="room-name-help"
 				/>
 				<small id="room-name-help" style="color: #6b7280;">

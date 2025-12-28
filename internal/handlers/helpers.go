@@ -14,6 +14,7 @@ import (
 	"github.com/hekigan/couples/internal/services"
 	friendsFragments "github.com/hekigan/couples/internal/views/fragments/friends"
 	roomFragments "github.com/hekigan/couples/internal/views/fragments/room"
+	gamePages "github.com/hekigan/couples/internal/views/pages/game"
 	"github.com/labstack/echo/v4"
 )
 
@@ -314,4 +315,92 @@ func (h *Handler) renderJoinRequests(c echo.Context, ctx context.Context, roomID
 	}
 
 	return strings.Join(htmlParts, "\n"), count, nil
+}
+
+// BroadcastRoleSpecificRoomContainer renders and broadcasts room container
+// with correct IsOwner context for both owner and guest.
+// This eliminates code duplication between SetGuestReadyAPIHandler and AcceptJoinRequestHandler.
+func (h *Handler) BroadcastRoleSpecificRoomContainer(
+	c echo.Context,
+	ctx context.Context,
+	roomID uuid.UUID,
+) error {
+	// Fetch room with player info
+	roomWithPlayers, err := h.RoomService.GetRoomWithPlayers(ctx, roomID)
+	if err != nil {
+		return fmt.Errorf("failed to get room with players: %w", err)
+	}
+
+	// Get usernames
+	ownerUsername := ""
+	if roomWithPlayers.OwnerUsername != nil {
+		ownerUsername = *roomWithPlayers.OwnerUsername
+	}
+	guestUsername := ""
+	if roomWithPlayers.GuestUsername != nil {
+		guestUsername = *roomWithPlayers.GuestUsername
+	}
+
+	// Helper to render for a specific user
+	renderForUser := func(userID uuid.UUID, isOwner bool) (string, error) {
+		categoriesHTML, friendsHTML, actionButtonHTML, _ :=
+			h.RenderRoomFragments(c, &roomWithPlayers.Room, roomID, userID, isOwner)
+		joinRequestsHTML, joinRequestsCount, _ := h.renderJoinRequests(c, ctx, roomID)
+
+		currentUser, err := h.FetchCurrentUser(c)
+		if err != nil {
+			return "", err
+		}
+
+		data := NewTemplateData(c)
+		data.Title = "Room - " + roomWithPlayers.Name
+		data.User = currentUser
+		data.Data = map[string]interface{}{"room": &roomWithPlayers.Room}
+		data.OwnerUsername = ownerUsername
+		data.GuestUsername = guestUsername
+		data.IsOwner = isOwner
+		data.JoinRequestsCount = joinRequestsCount
+		data.CategoriesGridHTML = categoriesHTML
+		data.FriendsListHTML = friendsHTML
+		data.ActionButtonHTML = actionButtonHTML
+		data.JoinRequestsHTML = joinRequestsHTML
+
+		return h.RenderTemplFragment(c, gamePages.RoomContainer(data))
+	}
+
+	// Render and broadcast OWNER version
+	ownerHTML, err := renderForUser(roomWithPlayers.OwnerID, true)
+	if err == nil {
+		h.RoomService.GetRealtimeService().BroadcastHTMLFragmentToUser(
+			roomID,
+			roomWithPlayers.OwnerID,
+			services.HTMLFragmentEvent{
+				Type:       "step_transition",
+				Target:     ".room-container",
+				SwapMethod: "outerHTML",
+				HTML:       ownerHTML,
+			},
+		)
+		log.Printf("📡 Sent owner-specific step_transition to owner %s", roomWithPlayers.OwnerID)
+	}
+
+	// Render and broadcast GUEST version (if guest exists)
+	if roomWithPlayers.GuestID != nil {
+		guestHTML, err := renderForUser(*roomWithPlayers.GuestID, false)
+		if err == nil {
+			h.RoomService.GetRealtimeService().BroadcastHTMLFragmentToUser(
+				roomID,
+				*roomWithPlayers.GuestID,
+				services.HTMLFragmentEvent{
+					Type:       "step_transition",
+					Target:     ".room-container",
+					SwapMethod: "outerHTML",
+					HTML:       guestHTML,
+				},
+			)
+			log.Printf("📡 Sent guest-specific step_transition to guest %s", *roomWithPlayers.GuestID)
+		}
+	}
+
+	return nil
 }

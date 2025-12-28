@@ -1,16 +1,63 @@
 package room
 
-import "github.com/hekigan/couples/internal/viewmodels"
+import (
+	"fmt"
+	"github.com/hekigan/couples/internal/models"
+	"github.com/hekigan/couples/internal/services"
+	"github.com/hekigan/couples/internal/viewmodels"
+)
 
 // Step2Categories renders the category selection section (Step 2 of room creation flow)
 // Shows category grid and guest ready button (for guest)
 // Visible in steps 2 and 3
-templ Step2Categories(data *viewmodels.TemplateData, currentStep int) {
+templ Step2Categories(data *viewmodels.TemplateData, roomModel *models.Room, currentStep int) {
 	<!-- Category Selection Section -->
 	<div
 		id="categories-section"
 		data-testid="categories-section"
 	>
+		<!-- Owner sees the Guest card - Updated via SSE when request accepted -->
+		if data.IsOwner {
+			<div
+				class="player-card"
+				data-player="guest"
+				id="guest-info"
+				sse-swap="request_accepted"
+				data-testid="guest-card"
+			>
+				<h4 class="player-label">Playing with</h4>
+				if roomModel.GuestID != nil {
+					<span class="player-name" id="guest-name" data-testid="guest-name">
+						if data.GuestUsername != "" {
+							{ data.GuestUsername }
+							if roomModel.GuestReady {
+								<span
+									class="badge badge-success"
+									data-testid="room-guest-badge-status"
+									sse-swap="room_guest-status_update"
+									hx-swap="outerHTML"
+								>
+									ready
+								</span>
+							} else {
+								<span
+									class="badge badge-waiting"
+									data-testid="room-guest-badge-status"
+									sse-swap="room_guest-status_update"
+									hx-swap="outerHTML"
+								>
+									not ready
+								</span>
+							}
+						} else {
+							Unknown
+						}
+					</span>
+				} else {
+					<span class="player-name" id="guest-waiting" data-testid="guest-waiting">Waiting for guest...</span>
+				}
+			</div>
+		}
 		<h4 data-testid="categories-heading">Select Question Categories</h4>
 		<p class="categories-hint">Both players select categories together in real-time!</p>
 		<div
@@ -22,6 +69,22 @@ templ Step2Categories(data *viewmodels.TemplateData, currentStep int) {
 			@templ.Raw(data.CategoriesGridHTML)
 		</div>
 	</div>
+	// Start Game Button - OWNER ONLY
+	if data.IsOwner {
+		<div
+			class="start-game-section"
+			id="start-game-section"
+			hx-get={ fmt.Sprintf("/api/v1/rooms/%s/start-button", roomModel.ID.String()) }
+			hx-trigger="load, sse:room_update from:body"
+			hx-swap="innerHTML"
+		>
+			@StartGameButton(&services.StartGameButtonData{
+				RoomID:        roomModel.ID.String(),
+				GuestReady:    roomModel.GuestReady,
+				GuestUsername: data.GuestUsername,
+			})
+		</div>
+	}
 	<!-- Ready Button - GUEST ONLY (shown at step 2 and 3) -->
 	if !data.IsOwner && currentStep >= 2 {
 		<div

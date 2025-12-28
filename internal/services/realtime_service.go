@@ -309,6 +309,35 @@ func (s *RealtimeService) BroadcastHTMLFragment(roomID uuid.UUID, fragment HTMLF
 	}
 }
 
+// BroadcastHTMLFragmentToUser sends HTML fragment to a specific user in a room
+// Only clients matching both roomID AND userID will receive the fragment
+func (s *RealtimeService) BroadcastHTMLFragmentToUser(roomID uuid.UUID, userID uuid.UUID, fragment HTMLFragmentEvent) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	broadcastCount := 0
+	for _, client := range s.clients {
+		// Filter by BOTH roomID and userID
+		if client.RoomID == roomID && client.UserID == userID {
+			event := RealtimeEvent{
+				Type: fragment.Type,
+				Data: fragment.HTML,
+			}
+
+			select {
+			case client.Channel <- event:
+				broadcastCount++
+			default:
+				fmt.Printf("⚠️ Client channel full, skipping\n")
+			}
+		}
+	}
+	if broadcastCount > 0 {
+		fmt.Printf("📡 Broadcasted HTML fragment (%s) to %d clients for user %s in room %s\n",
+			fragment.Type, broadcastCount, userID, roomID)
+	}
+}
+
 // HTMLFragmentToSSE converts an HTML fragment event to SSE format
 // Format compatible with HTMX SSE extension
 func HTMLFragmentToSSE(fragment HTMLFragmentEvent) string {
