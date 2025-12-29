@@ -15,30 +15,179 @@ templ RoomsList(data *services.RoomsListData) {
 				<p>Loading rooms...</p>
 			</div>
 		</div>
+		<!-- Filter Bar -->
+		<div class="rooms-filter-bar">
+			<input
+				type="search"
+				id="rooms-search"
+				name="search"
+				placeholder="Search by room name, owner, or guest..."
+				class="rooms-search-input"
+				value={ data.SearchTerm }
+				hx-get="/admin/api/v1/rooms/list"
+				hx-target="#rooms-list"
+				hx-swap="outerHTML"
+				hx-trigger="input changed delay:500ms, search"
+				hx-include=".filter-controls input[type=checkbox]:checked, [name='per_page']"
+				hx-indicator="#rooms-list-loading"
+			/>
+			<div class="filter-controls">
+				<div class="filter-group">
+					<label>Status:</label>
+					<label>
+						<input
+							type="checkbox"
+							name="status"
+							value="waiting"
+							checked?={ contains(data.SelectedStatuses, "waiting") }
+							hx-get="/admin/api/v1/rooms/list"
+							hx-target="#rooms-list"
+							hx-swap="outerHTML"
+							hx-include="#rooms-search, .filter-controls input[type=checkbox]:checked, [name='per_page']"
+							hx-indicator="#rooms-list-loading"
+						/> Waiting
+					</label>
+					<label>
+						<input
+							type="checkbox"
+							name="status"
+							value="ready"
+							checked?={ contains(data.SelectedStatuses, "ready") }
+							hx-get="/admin/api/v1/rooms/list"
+							hx-target="#rooms-list"
+							hx-swap="outerHTML"
+							hx-include="#rooms-search, .filter-controls input[type=checkbox]:checked, [name='per_page']"
+							hx-indicator="#rooms-list-loading"
+						/> Ready
+					</label>
+					<label>
+						<input
+							type="checkbox"
+							name="status"
+							value="playing"
+							checked?={ contains(data.SelectedStatuses, "playing") }
+							hx-get="/admin/api/v1/rooms/list"
+							hx-target="#rooms-list"
+							hx-swap="outerHTML"
+							hx-include="#rooms-search, .filter-controls input[type=checkbox]:checked, [name='per_page']"
+							hx-indicator="#rooms-list-loading"
+						/> Playing
+					</label>
+					<label>
+						<input
+							type="checkbox"
+							name="status"
+							value="finished"
+							checked?={ contains(data.SelectedStatuses, "finished") }
+							hx-get="/admin/api/v1/rooms/list"
+							hx-target="#rooms-list"
+							hx-swap="outerHTML"
+							hx-include="#rooms-search, .filter-controls input[type=checkbox]:checked, [name='per_page']"
+							hx-indicator="#rooms-list-loading"
+						/> Finished
+					</label>
+				</div>
+			</div>
+			<div class="rooms-count">
+				Showing { fmt.Sprintf("%d", len(data.Rooms)) } of { fmt.Sprintf("%d", data.TotalCount) } rooms
+			</div>
+		</div>
 		<ul class="rooms-status table-legend">
 			<li data-legend-type="waiting">Waiting</li>
 			<li data-legend-type="ready">Ready</li>
 			<li data-legend-type="playing">Playing</li>
 			<li data-legend-type="finished">Finished</li>
 		</ul>
-		<table>
+		<table id="rooms-table">
 			<thead>
 				<tr>
-					<th>Room ID</th>
-					<th>Owner</th>
-					<th>Guest</th>
-					<th>Status</th>
-					<th>Created</th>
+					<th>Room Name</th>
+					<th class="sortable">
+						<a
+							href="#"
+							hx-get={ buildSortURL("/admin/api/v1/rooms/list", "owner", data.SortBy, data.SortOrder) }
+							hx-target="#rooms-list"
+							hx-swap="outerHTML"
+							hx-include="#rooms-search, .filter-controls input[type=checkbox]:checked, [name='per_page']"
+							hx-indicator="#rooms-list-loading"
+						>
+							Owner
+							@renderSortIndicator("owner", data.SortBy, data.SortOrder)
+						</a>
+					</th>
+					<th class="sortable">
+						<a
+							href="#"
+							hx-get={ buildSortURL("/admin/api/v1/rooms/list", "guest", data.SortBy, data.SortOrder) }
+							hx-target="#rooms-list"
+							hx-swap="outerHTML"
+							hx-include="#rooms-search, .filter-controls input[type=checkbox]:checked, [name='per_page']"
+							hx-indicator="#rooms-list-loading"
+						>
+							Guest
+							@renderSortIndicator("guest", data.SortBy, data.SortOrder)
+						</a>
+					</th>
+					<th class="sortable">
+						<a
+							href="#"
+							hx-get={ buildSortURL("/admin/api/v1/rooms/list", "status", data.SortBy, data.SortOrder) }
+							hx-target="#rooms-list"
+							hx-swap="outerHTML"
+							hx-include="#rooms-search, .filter-controls input[type=checkbox]:checked, [name='per_page']"
+							hx-indicator="#rooms-list-loading"
+						>
+							Status
+							@renderSortIndicator("status", data.SortBy, data.SortOrder)
+						</a>
+					</th>
+					<th>Categories</th>
+					<th class="sortable">
+						<a
+							href="#"
+							hx-get={ buildSortURL("/admin/api/v1/rooms/list", "created_at", data.SortBy, data.SortOrder) }
+							hx-target="#rooms-list"
+							hx-swap="outerHTML"
+							hx-include="#rooms-search, .filter-controls input[type=checkbox]:checked, [name='per_page']"
+							hx-indicator="#rooms-list-loading"
+						>
+							Created
+							@renderSortIndicator("created_at", data.SortBy, data.SortOrder)
+						</a>
+					</th>
 					<th>Actions</th>
 				</tr>
 			</thead>
 			<tbody>
 				for _, room := range data.Rooms {
-					<tr data-legend-type={ room.Status }>
-						<td><code>{ room.ShortID }</code></td>
+					<tr
+						class="room-row"
+						data-legend-type={ room.Status }
+					>
+						<td>
+							if room.Name != "" {
+								{ room.Name }
+							} else {
+								<em>Unnamed Room</em>
+							}
+						</td>
 						<td>{ room.Owner }</td>
 						<td>{ room.Guest }</td>
 						<td>{ room.Status }</td>
+						<td>
+							if len(room.CategoryNames) > 0 {
+								<small>
+									for i, cat := range room.CategoryNames {
+										if i > 0 {
+											{ ", " }
+										}
+										{ cat }
+									}
+								</small>
+							} else {
+								<em>None</em>
+							}
+						</td>
 						<td>{ room.CreatedAt }</td>
 						<td>
 							<button
@@ -49,17 +198,7 @@ templ RoomsList(data *services.RoomsListData) {
 								onclick="toggleModal(event)"
 								class="btn btn-sm"
 							>
-								View
-							</button>
-							<button
-								hx-post={ fmt.Sprintf("/admin/api/v1/rooms/%s/close", room.ID) }
-								hx-target="#rooms-list"
-								hx-swap="outerHTML"
-								hx-confirm="Are you sure you want to force close this room?"
-								hx-indicator="#rooms-list-loading"
-								class="btn btn-sm btn-danger"
-							>
-								Force Close
+								Details
 							</button>
 						</td>
 					</tr>
@@ -68,4 +207,36 @@ templ RoomsList(data *services.RoomsListData) {
 		</table>
 		@Pagination(data)
 	</div>
+}
+
+// Helper functions
+
+// contains checks if a slice contains a value
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
+// buildSortURL builds the sort URL with toggle logic
+func buildSortURL(baseURL, column, currentSortBy, currentSortOrder string) string {
+	order := "asc"
+	if currentSortBy == column && currentSortOrder == "asc" {
+		order = "desc"
+	}
+	return fmt.Sprintf("%s?sort=%s&order=%s", baseURL, column, order)
+}
+
+// renderSortIndicator renders the sort indicator arrow
+templ renderSortIndicator(column, currentSortBy, currentSortOrder string) {
+	if currentSortBy == column {
+		if currentSortOrder == "asc" {
+			<span class="sort-indicator asc">▲</span>
+		} else {
+			<span class="sort-indicator desc">▼</span>
+		}
+	}
 }

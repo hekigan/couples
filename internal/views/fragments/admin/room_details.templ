@@ -11,8 +11,6 @@ templ RoomDetails(data *services.RoomDetailsData) {
 		<div class="detail-section">
 			<h4>Room Information</h4>
 			<dl>
-				<dt>Room ID:</dt>
-				<dd><code>{ data.ShortID }</code></dd>
 				<dt>Full ID:</dt>
 				<dd><small><code>{ data.ID }</code></small></dd>
 				<dt>Name:</dt>
@@ -34,7 +32,8 @@ templ RoomDetails(data *services.RoomDetailsData) {
 				<dd>
 					{ data.OwnerUsername }
 					if data.OwnerEmail != "" {
-						<br/><small>{ data.OwnerEmail }</small>
+						<br/>
+						<small>{ data.OwnerEmail }</small>
 					}
 				</dd>
 				<dt>Guest:</dt>
@@ -42,7 +41,8 @@ templ RoomDetails(data *services.RoomDetailsData) {
 					if data.GuestUsername != "" {
 						{ data.GuestUsername }
 						if data.GuestEmail != "" {
-							<br/><small>{ data.GuestEmail }</small>
+							<br/>
+							<small>{ data.GuestEmail }</small>
 						}
 					} else {
 						<em>No guest yet</em>
@@ -55,13 +55,41 @@ templ RoomDetails(data *services.RoomDetailsData) {
 			<dl>
 				<dt>Selected Categories:</dt>
 				<dd>
-					if data.CategoryCount > 0 {
-						{ fmt.Sprintf("%d", data.CategoryCount) } categories
+					if len(data.CategoryNames) > 0 {
+						<ul class="category-list">
+							for _, categoryName := range data.CategoryNames {
+								<li>{ categoryName }</li>
+							}
+						</ul>
 					} else {
-						None selected
+						<em>None selected</em>
 					}
 				</dd>
 			</dl>
+		</div>
+		<div class="detail-actions">
+			<button
+				hx-post={ fmt.Sprintf("/admin/api/v1/rooms/%s/close", data.ID) }
+				hx-target="#rooms-list"
+				hx-swap="outerHTML"
+				hx-confirm="Are you sure you want to force close this room?"
+				hx-indicator="#rooms-list-loading"
+				data-close-modal="view-modal"
+				class="btn btn-danger"
+			>
+				Force Close Room
+			</button>
+			<button
+				hx-delete={ fmt.Sprintf("/admin/api/v1/rooms/%s", data.ID) }
+				hx-target="#rooms-list"
+				hx-swap="outerHTML"
+				hx-confirm="Are you sure you want to DELETE this room? This action cannot be undone!"
+				hx-indicator="#rooms-list-loading"
+				data-close-modal="view-modal"
+				class="btn btn-danger"
+			>
+				Delete Room
+			</button>
 		</div>
 	</div>
 	@RoomDetailsStyles()
@@ -93,7 +121,7 @@ templ RoomDetailsStyles() {
 
 	.detail-section dt {
 		font-weight: 600;
-		color: var(--pico-secondary);
+		color: var(--pico-primary);
 	}
 
 	.detail-section dd {
@@ -102,6 +130,27 @@ templ RoomDetailsStyles() {
 
 	.detail-section code {
 		font-size: 0.875rem;
+	}
+
+	.category-list {
+		margin: 0;
+		padding-left: 1.25rem;
+		list-style-type: disc;
+	}
+
+	.category-list li {
+		margin-bottom: 0.25rem;
+	}
+
+	.detail-actions {
+		margin-top: 1.5rem;
+		padding-top: 1rem;
+		border-top: 1px solid var(--pico-muted-border-color);
+		text-align: right;
+	}
+
+	.detail-actions .btn {
+		margin-left: 0.5rem;
 	}
 	</style>
 }

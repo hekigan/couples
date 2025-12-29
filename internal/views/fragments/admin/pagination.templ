@@ -16,6 +16,12 @@ type PaginationData interface {
 	GetItemName() string
 }
 
+// getIndicatorID derives the loading indicator ID from the target selector
+// Example: "#rooms-list" becomes "#rooms-list-loading"
+func getIndicatorID(target string) string {
+	return target + "-loading"
+}
+
 // Pagination renders generic pagination controls for admin tables
 templ Pagination(data PaginationData) {
 	<div class="pagination">
@@ -35,21 +41,38 @@ templ Pagination(data PaginationData) {
 		</span>
 		<div class="pagination-controls">
 			<label for="per-page-select">Items per page:</label>
-			<select
-				id="per-page-select"
-				name="per_page"
-				hx-get={ data.GetBaseURL() }
-				hx-target={ data.GetTarget() }
-				hx-swap="outerHTML"
-				hx-push-url={ data.GetPageURL() }
-				hx-include={ data.GetIncludeSelector() }
-				hx-indicator="#questions-list-loading"
-				onchange="savePerPagePref(this.value)"
-			>
-				<option value="25" selected?={ data.GetItemsPerPage() == 25 }>25</option>
-				<option value="50" selected?={ data.GetItemsPerPage() == 50 }>50</option>
-				<option value="100" selected?={ data.GetItemsPerPage() == 100 }>100</option>
-			</select>
+			if data.GetIncludeSelector() != "" {
+				<select
+					id="per-page-select"
+					name="per_page"
+					hx-get={ fmt.Sprintf("%s?page=1%s", data.GetBaseURL(), data.GetExtraParams()) }
+					hx-target={ data.GetTarget() }
+					hx-swap="outerHTML"
+					hx-push-url={ fmt.Sprintf("%s?page=1%s", data.GetPageURL(), data.GetExtraParams()) }
+					hx-include={ data.GetIncludeSelector() }
+					hx-indicator={ getIndicatorID(data.GetTarget()) }
+					onchange="savePerPagePref(this.value)"
+				>
+					<option value="25" selected?={ data.GetItemsPerPage() == 25 }>25</option>
+					<option value="50" selected?={ data.GetItemsPerPage() == 50 }>50</option>
+					<option value="100" selected?={ data.GetItemsPerPage() == 100 }>100</option>
+				</select>
+			} else {
+				<select
+					id="per-page-select"
+					name="per_page"
+					hx-get={ fmt.Sprintf("%s?page=1%s", data.GetBaseURL(), data.GetExtraParams()) }
+					hx-target={ data.GetTarget() }
+					hx-swap="outerHTML"
+					hx-push-url={ fmt.Sprintf("%s?page=1%s", data.GetPageURL(), data.GetExtraParams()) }
+					hx-indicator={ getIndicatorID(data.GetTarget()) }
+					onchange="savePerPagePref(this.value)"
+				>
+					<option value="25" selected?={ data.GetItemsPerPage() == 25 }>25</option>
+					<option value="50" selected?={ data.GetItemsPerPage() == 50 }>50</option>
+					<option value="100" selected?={ data.GetItemsPerPage() == 100 }>100</option>
+				</select>
+			}
 			<div class="pagination-buttons">
 				if data.GetCurrentPage() > 1 {
 					<button
@@ -57,7 +80,7 @@ templ Pagination(data PaginationData) {
 						hx-target={ data.GetTarget() }
 						hx-swap="outerHTML"
 						hx-push-url={ fmt.Sprintf("%s?page=%d&per_page=%d%s", data.GetPageURL(), data.GetCurrentPage()-1, data.GetItemsPerPage(), data.GetExtraParams()) }
-						hx-indicator="#questions-list-loading"
+						hx-indicator={ getIndicatorID(data.GetTarget()) }
 						class="btn btn-sm"
 					>◄ Prev</button>
 				}
@@ -68,7 +91,7 @@ templ Pagination(data PaginationData) {
 							hx-target={ data.GetTarget() }
 							hx-swap="outerHTML"
 							hx-push-url={ fmt.Sprintf("%s?page=%d&per_page=%d%s", data.GetPageURL(), i+1, data.GetItemsPerPage(), data.GetExtraParams()) }
-							hx-indicator="#questions-list-loading"
+							hx-indicator={ getIndicatorID(data.GetTarget()) }
 							class={ templ.KV("btn btn-sm", true), templ.KV("active", i+1 == data.GetCurrentPage()) }
 						>
 							{ fmt.Sprintf("%d", i+1) }
@@ -83,7 +106,7 @@ templ Pagination(data PaginationData) {
 						hx-target={ data.GetTarget() }
 						hx-swap="outerHTML"
 						hx-push-url={ fmt.Sprintf("%s?page=%d&per_page=%d%s", data.GetPageURL(), data.GetCurrentPage()+1, data.GetItemsPerPage(), data.GetExtraParams()) }
-						hx-indicator="#questions-list-loading"
+						hx-indicator={ getIndicatorID(data.GetTarget()) }
 						class="btn btn-sm"
 					>Next ►</button>
 				}

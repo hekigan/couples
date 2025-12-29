@@ -248,13 +248,39 @@ func (s *AdminService) UpdateUser(ctx context.Context, userID uuid.UUID, usernam
 	return s.BaseService.UpdateRecord(ctx, "users", userID, updateData)
 }
 
-// ListAllRooms retrieves all rooms with player information
-func (s *AdminService) ListAllRooms(ctx context.Context, limit, offset int) ([]*models.RoomWithPlayers, error) {
-	// Custom query - uses database view and Order, not a perfect fit for BaseService
+// ListAllRooms retrieves rooms with filtering and sorting
+func (s *AdminService) ListAllRooms(ctx context.Context, limit, offset int, search string, statuses []string, sortBy, sortOrder string) ([]*models.RoomWithPlayers, error) {
 	query := s.client.From("rooms_with_players").
-		Select("*", "", false).
-		Order("created_at", &postgrest.OrderOpts{Ascending: false})
+		Select("*", "", false)
 
+	// Apply search filter (case-insensitive across name, owner, guest)
+	if search != "" {
+		searchPattern := fmt.Sprintf("%%%s%%", search)
+		query = query.Or(fmt.Sprintf("name.ilike.%s,owner_username.ilike.%s,guest_username.ilike.%s",
+			searchPattern, searchPattern, searchPattern), "")
+	}
+
+	// Apply status filter
+	if len(statuses) > 0 {
+		query = query.In("status", statuses)
+	}
+
+	// Apply sorting (default: created_at DESC)
+	ascending := sortOrder == "asc"
+	switch sortBy {
+	case "owner":
+		query = query.Order("owner_username", &postgrest.OrderOpts{Ascending: ascending, NullsFirst: !ascending})
+	case "guest":
+		query = query.Order("guest_username", &postgrest.OrderOpts{Ascending: ascending, NullsFirst: !ascending})
+	case "status":
+		query = query.Order("status", &postgrest.OrderOpts{Ascending: ascending})
+	case "created_at":
+		query = query.Order("created_at", &postgrest.OrderOpts{Ascending: ascending})
+	default:
+		query = query.Order("created_at", &postgrest.OrderOpts{Ascending: false})
+	}
+
+	// Apply pagination
 	if limit > 0 {
 		query = query.Range(offset, offset+limit-1, "")
 	}
@@ -289,4 +315,27 @@ func (s *AdminService) GetUserCount(ctx context.Context) (int, error) {
 // GetRoomCount returns the total number of rooms
 func (s *AdminService) GetRoomCount(ctx context.Context) (int, error) {
 	return s.BaseService.CountRecords(ctx, "rooms", map[string]interface{}{})
+}
+
+// GetFilteredRoomCount returns count of rooms matching filters
+func (s *AdminService) GetFilteredRoomCount(ctx context.Context, search string, statuses []string) (int, error) {
+	query := s.client.From("rooms_with_players").
+		Select("*", "exact", true) // Count query
+
+	if search != "" {
+		searchPattern := fmt.Sprintf("%%%s%%", search)
+		query = query.Or(fmt.Sprintf("name.ilike.%s,owner_username.ilike.%s,guest_username.ilike.%s",
+			searchPattern, searchPattern, searchPattern), "")
+	}
+
+	if len(statuses) > 0 {
+		query = query.In("status", statuses)
+	}
+
+	_, count, err := query.Execute()
+	if err != nil {
+		return 0, fmt.Errorf("failed to count rooms: %w", err)
+	}
+
+	return int(count), nil
 }

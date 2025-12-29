@@ -407,19 +407,32 @@ func (h *Handler) AdminRoomsHandler(c echo.Context) error {
 	// Calculate offset
 	offset := (page - 1) * perPage
 
-	// Fetch rooms list for SSR
-	rooms, err := h.AdminService.ListAllRooms(ctx, perPage, offset)
+	// Fetch rooms list for SSR with default filters (all statuses, no search, sort by created_at desc)
+	defaultStatuses := []string{"waiting", "ready", "playing", "finished"}
+	rooms, err := h.AdminService.ListAllRooms(ctx, perPage, offset, "", defaultStatuses, "created_at", "desc")
 	if err != nil {
 		log.Printf("⚠️ Failed to fetch rooms: %v", err)
 		rooms = nil
 	}
 
-	totalCount, _ := h.AdminService.GetRoomCount(ctx)
+	totalCount, _ := h.AdminService.GetFilteredRoomCount(ctx, "", defaultStatuses)
 
 	// Calculate pagination
 	totalPages := (totalCount + perPage - 1) / perPage
 	if totalPages == 0 {
 		totalPages = 1
+	}
+
+	// Fetch all categories once for mapping
+	allCategories, err := h.CategoryService.GetCategories(ctx)
+	if err != nil {
+		log.Printf("Error fetching categories: %v", err)
+	}
+
+	// Build category map for quick lookup
+	categoryMap := make(map[string]string) // ID -> Label
+	for _, cat := range allCategories {
+		categoryMap[cat.ID.String()] = cat.Label
 	}
 
 	// Build rooms list data
@@ -437,13 +450,23 @@ func (h *Handler) AdminRoomsHandler(c echo.Context) error {
 				guest = *room.GuestUsername
 			}
 
+			// Get category names for this room
+			categoryNames := []string{}
+			for _, selectedID := range room.SelectedCategories {
+				if label, ok := categoryMap[selectedID.String()]; ok {
+					categoryNames = append(categoryNames, label)
+				}
+			}
+
 			roomInfos[i] = services.AdminRoomInfo{
-				ID:        room.ID.String(),
-				ShortID:   room.ID.String()[:8],
-				Owner:     owner,
-				Guest:     guest,
-				Status:    room.Status,
-				CreatedAt: room.CreatedAt.Format("2006-01-02 15:04"),
+				ID:            room.ID.String(),
+				ShortID:       room.ID.String()[:8],
+				Name:          room.Name,
+				Owner:         owner,
+				Guest:         guest,
+				Status:        room.Status,
+				CreatedAt:     room.CreatedAt.Format("2006-01-02 15:04"),
+				CategoryNames: categoryNames,
 			}
 		}
 
@@ -454,12 +477,17 @@ func (h *Handler) AdminRoomsHandler(c echo.Context) error {
 			CurrentPage:     page,
 			TotalPages:      totalPages,
 			ItemsPerPage:    perPage,
-			BaseURL:         "/admin/api/rooms/list",
+			BaseURL:         "/admin/api/v1/rooms/list",
 			PageURL:         "/admin/rooms",
 			Target:          "#rooms-list",
 			IncludeSelector: "",
 			ExtraParams:     "",
 			ItemName:        "rooms",
+			// Filter/sort state (default values for initial page load)
+			SearchTerm:       "",
+			SelectedStatuses: defaultStatuses,
+			SortBy:           "created_at",
+			SortOrder:        "desc",
 		}
 	}
 

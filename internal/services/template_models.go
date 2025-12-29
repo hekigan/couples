@@ -360,28 +360,31 @@ type QuestionFormData struct {
 
 // RoomDetailsData represents data for room details view (read-only)
 type RoomDetailsData struct {
-	ID            string
-	ShortID       string
-	Name          string
-	Status        string
-	Language      string
-	MaxQuestions  int
-	CreatedAt     string
-	OwnerUsername string
-	OwnerEmail    string
-	GuestUsername string
-	GuestEmail    string
-	CategoryCount int
+	ID             string
+	ShortID        string
+	Name           string
+	Status         string
+	Language       string
+	MaxQuestions   int
+	CreatedAt      string
+	OwnerUsername  string
+	OwnerEmail     string
+	GuestUsername  string
+	GuestEmail     string
+	CategoryCount  int
+	CategoryNames  []string // Category labels (e.g., "Romance", "Dreams")
 }
 
 // AdminRoomInfo represents a room in the admin list
 type AdminRoomInfo struct {
-	ID        string
-	ShortID   string // First 8 chars of ID
-	Owner     string
-	Guest     string
-	Status    string
-	CreatedAt string
+	ID            string
+	ShortID       string   // First 8 chars of ID
+	Name          string   // Room name
+	Owner         string
+	Guest         string
+	Status        string
+	CreatedAt     string
+	CategoryNames []string // Selected category labels
 }
 
 // RoomsListData represents data for admin rooms list partial
@@ -398,6 +401,11 @@ type RoomsListData struct {
 	IncludeSelector string // Selector for additional params
 	ExtraParams     string // Additional query parameters
 	ItemName        string // Name of items for display
+	// Filter/sort state
+	SearchTerm       string   // Search term for filtering
+	SelectedStatuses []string // Selected status filters
+	SortBy           string   // Column to sort by
+	SortOrder        string   // Sort order (asc/desc)
 }
 
 // DashboardStatsData represents data for dashboard stats partial
