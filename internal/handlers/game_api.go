@@ -325,11 +325,9 @@ func (h *Handler) FinishGameAPIHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to end game: "+err.Error())
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"status":   "success",
-		"message":  "Game ended",
-		"redirect": "/game/finished/" + roomID.String(),
-	})
+	// Use HTMX redirect header for client-side redirect
+	c.Response().Header().Set("HX-Redirect", "/game/finished/"+roomID.String())
+	return c.NoContent(http.StatusOK)
 }
 
 // PlayerTypingAPIHandler broadcasts typing status to other players in the room

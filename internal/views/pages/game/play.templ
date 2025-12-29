@@ -67,7 +67,7 @@ templ PlayContent(templateData *viewmodels.TemplateData) {
 					id="game-forms"
 					class="answer-review"
 					hx-get={ fmt.Sprintf("/api/v1/rooms/%s/game-forms", playData.Room.ID.String()) }
-					hx-trigger="sse:turn_changed from:body, sse:question_drawn from:body, sse:answer_submitted from:body, sse:player_typing from:body"
+					hx-trigger="sse:turn_changed from:body, sse:question_drawn from:body, sse:answer_submitted from:body"
 					hx-swap="innerHTML"
 				>
 					if playData.HasAnswer {
@@ -154,6 +154,7 @@ templ PlayContent(templateData *viewmodels.TemplateData) {
 						hx-post={ fmt.Sprintf("/api/v1/rooms/%s/finish", playData.Room.ID.String()) }
 						hx-confirm="⚠️ Are you sure you want to finish the game?"
 						hx-disabled-elt="this"
+						hx-swap="none"
 						aria-label="Finish game"
 					>
 						End Game
@@ -241,41 +242,29 @@ templ PlayStyles() {
 
 // PlayScript contains the JavaScript for SSE event handling
 templ PlayScript(roomID string, currentUserID string) {
-	<script>
-		// Minimal JavaScript for SSE fallback and connection monitoring
+	@templ.Raw(fmt.Sprintf(`<script type="text/javascript">
 		(function() {
-			const roomId = { roomID };
+			const roomId = "%s";
+			const currentUserId = "%s";
 
-			// Listen for game_finished event to redirect
-			document.body.addEventListener('sse:game_finished', function(e) {
-				console.log('Game finished, redirecting...');
-				setTimeout(() => {
-					window.location.href = `/game/finished/${roomId}`;
-				}, 500);
-			});
-
-			// Listen for room_update with finished status
-			document.body.addEventListener('sse:room_update', function(e) {
-				try {
-					const data = JSON.parse(e.detail.data);
-					if (data.status === 'finished') {
-						console.log('Room finished, redirecting...');
-						window.location.href = `/game/finished/${roomId}`;
-					}
-				} catch (error) {
-					console.error('Error parsing room_update:', error);
+			// Handle SSE connection and game events
+			document.body.addEventListener('htmx:sseOpen', function(e) {
+				const eventSource = e.detail.source;
+				if (eventSource) {
+					// Listen for game_finished event and redirect
+					eventSource.addEventListener('game_finished', function(evt) {
+						showToast('🎮 Game has ended!', 'info');
+						setTimeout(() => {
+							window.location.href = '/game/finished/' + roomId;
+						}, 1500);
+					});
 				}
 			});
-
-			// Progress counter is now updated via HTMX (see hx-trigger on #progress-counter)
 
 			// Handle typing status updates
 			document.body.addEventListener('sse:player_typing', function(e) {
 				try {
 					const data = JSON.parse(e.detail.data);
-					const currentUserId = { currentUserID };
-
-					// Only show typing indicator if it's not the current user typing
 					if (data.user_id !== currentUserId) {
 						const typingIndicator = document.getElementById('typing-indicator');
 						if (typingIndicator) {
@@ -286,8 +275,6 @@ templ PlayScript(roomID string, currentUserID string) {
 					console.error('Error handling typing status:', error);
 				}
 			});
-
-			console.log('🎮 Play page initialized with HTMX for room:', roomId);
 		})();
-	</script>
+	</script>`, roomID, currentUserID))
 }

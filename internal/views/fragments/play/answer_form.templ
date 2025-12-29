@@ -19,7 +19,7 @@ templ AnswerForm(data *services.AnswerFormData) {
 				}
 			"
 			hx-on::after-request="
-				if (event.detail.successful) {
+				if (event.detail.successful && event.detail.pathInfo.requestPath.includes('/answer')) {
 					this.reset();
 				}
 			"

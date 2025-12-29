@@ -239,7 +239,7 @@ func PlayContent(templateData *viewmodels.TemplateData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\" hx-trigger=\"sse:turn_changed from:body, sse:question_drawn from:body, sse:answer_submitted from:body, sse:player_typing from:body\" hx-swap=\"innerHTML\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\" hx-trigger=\"sse:turn_changed from:body, sse:question_drawn from:body, sse:answer_submitted from:body\" hx-swap=\"innerHTML\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -412,7 +412,7 @@ func PlayContent(templateData *viewmodels.TemplateData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "\" hx-confirm=\"⚠️ Are you sure you want to finish the game?\" hx-disabled-elt=\"this\" aria-label=\"Finish game\">End Game</button></div></div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "\" hx-confirm=\"⚠️ Are you sure you want to finish the game?\" hx-disabled-elt=\"this\" hx-swap=\"none\" aria-label=\"Finish game\">End Game</button></div></div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -477,7 +477,41 @@ func PlayScript(roomID string, currentUserID string) templ.Component {
 			templ_7745c5c3_Var25 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "<script>\n\t\t// Minimal JavaScript for SSE fallback and connection monitoring\n\t\t(function() {\n\t\t\tconst roomId = { roomID };\n\n\t\t\t// Listen for game_finished event to redirect\n\t\t\tdocument.body.addEventListener('sse:game_finished', function(e) {\n\t\t\t\tconsole.log('Game finished, redirecting...');\n\t\t\t\tsetTimeout(() => {\n\t\t\t\t\twindow.location.href = `/game/finished/${roomId}`;\n\t\t\t\t}, 500);\n\t\t\t});\n\n\t\t\t// Listen for room_update with finished status\n\t\t\tdocument.body.addEventListener('sse:room_update', function(e) {\n\t\t\t\ttry {\n\t\t\t\t\tconst data = JSON.parse(e.detail.data);\n\t\t\t\t\tif (data.status === 'finished') {\n\t\t\t\t\t\tconsole.log('Room finished, redirecting...');\n\t\t\t\t\t\twindow.location.href = `/game/finished/${roomId}`;\n\t\t\t\t\t}\n\t\t\t\t} catch (error) {\n\t\t\t\t\tconsole.error('Error parsing room_update:', error);\n\t\t\t\t}\n\t\t\t});\n\n\t\t\t// Progress counter is now updated via HTMX (see hx-trigger on #progress-counter)\n\n\t\t\t// Handle typing status updates\n\t\t\tdocument.body.addEventListener('sse:player_typing', function(e) {\n\t\t\t\ttry {\n\t\t\t\t\tconst data = JSON.parse(e.detail.data);\n\t\t\t\t\tconst currentUserId = { currentUserID };\n\n\t\t\t\t\t// Only show typing indicator if it's not the current user typing\n\t\t\t\t\tif (data.user_id !== currentUserId) {\n\t\t\t\t\t\tconst typingIndicator = document.getElementById('typing-indicator');\n\t\t\t\t\t\tif (typingIndicator) {\n\t\t\t\t\t\t\ttypingIndicator.style.display = data.is_typing ? 'block' : 'none';\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t} catch (error) {\n\t\t\t\t\tconsole.error('Error handling typing status:', error);\n\t\t\t\t}\n\t\t\t});\n\n\t\t\tconsole.log('🎮 Play page initialized with HTMX for room:', roomId);\n\t\t})();\n\t</script>")
+		templ_7745c5c3_Err = templ.Raw(fmt.Sprintf(`<script type="text/javascript">
+		(function() {
+			const roomId = "%s";
+			const currentUserId = "%s";
+
+			// Handle SSE connection and game events
+			document.body.addEventListener('htmx:sseOpen', function(e) {
+				const eventSource = e.detail.source;
+				if (eventSource) {
+					// Listen for game_finished event and redirect
+					eventSource.addEventListener('game_finished', function(evt) {
+						showToast('🎮 Game has ended!', 'info');
+						setTimeout(() => {
+							window.location.href = '/game/finished/' + roomId;
+						}, 1500);
+					});
+				}
+			});
+
+			// Handle typing status updates
+			document.body.addEventListener('sse:player_typing', function(e) {
+				try {
+					const data = JSON.parse(e.detail.data);
+					if (data.user_id !== currentUserId) {
+						const typingIndicator = document.getElementById('typing-indicator');
+						if (typingIndicator) {
+							typingIndicator.style.display = data.is_typing ? 'block' : 'none';
+						}
+					}
+				} catch (error) {
+					console.error('Error handling typing status:', error);
+				}
+			});
+		})();
+	</script>`, roomID, currentUserID)).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -45,7 +45,7 @@ func AnswerForm(data *services.AnswerFormData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" hx-target=\"#game-forms\" hx-swap=\"innerHTML\" hx-disabled-elt=\"button\" hx-indicator=\"#answer-loading\" hx-on::before-request=\"\n\t\t\t\tconst questionId = this.querySelector('input[name=question_id]').value;\n\t\t\t\tif (!questionId) {\n\t\t\t\t\talert('⚠️ No question loaded. Please wait...');\n\t\t\t\t\treturn false;\n\t\t\t\t}\n\t\t\t\" hx-on::after-request=\"\n\t\t\t\tif (event.detail.successful) {\n\t\t\t\t\tthis.reset();\n\t\t\t\t}\n\t\t\t\"><input type=\"hidden\" name=\"question_id\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" hx-target=\"#game-forms\" hx-swap=\"innerHTML\" hx-disabled-elt=\"button\" hx-indicator=\"#answer-loading\" hx-on::before-request=\"\n\t\t\t\tconst questionId = this.querySelector('input[name=question_id]').value;\n\t\t\t\tif (!questionId) {\n\t\t\t\t\talert('⚠️ No question loaded. Please wait...');\n\t\t\t\t\treturn false;\n\t\t\t\t}\n\t\t\t\" hx-on::after-request=\"\n\t\t\t\tif (event.detail.successful && event.detail.pathInfo.requestPath.includes('/answer')) {\n\t\t\t\t\tthis.reset();\n\t\t\t\t}\n\t\t\t\"><input type=\"hidden\" name=\"question_id\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
