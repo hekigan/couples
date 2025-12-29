@@ -31,7 +31,7 @@ type GameFinishedData struct {
 	Room           *models.Room
 	Answers        []AnswerWithDetails
 	TotalQuestions int
-	PassedCount    int
+	SkippedCount   int
 	AnsweredCount  int
 }
 

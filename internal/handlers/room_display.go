@@ -340,11 +340,11 @@ func (h *Handler) GameFinishedHandler(c echo.Context) error {
 
 	// Calculate statistics
 	totalQuestions := len(answerDetails)
-	passedCount := 0
+	skippedCount := 0
 	answeredCount := 0
 	for _, ad := range answerDetails {
-		if ad.ActionType == "passed" {
-			passedCount++
+		if ad.ActionType == "skipped" {
+			skippedCount++
 		} else {
 			answeredCount++
 		}
@@ -354,7 +354,7 @@ func (h *Handler) GameFinishedHandler(c echo.Context) error {
 		Room:           room,
 		Answers:        answerDetails,
 		TotalQuestions: totalQuestions,
-		PassedCount:    passedCount,
+		SkippedCount:   skippedCount,
 		AnsweredCount:  answeredCount,
 	}
 

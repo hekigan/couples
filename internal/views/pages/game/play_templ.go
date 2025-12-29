@@ -261,8 +261,8 @@ func PlayContent(templateData *viewmodels.TemplateData) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				if playData.ActionType == "passed" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<p class=\"answer-text\">Passed</p>")
+				if playData.ActionType == "skipped" {
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<p class=\"answer-text\">Skipped</p>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -376,7 +376,7 @@ func PlayContent(templateData *viewmodels.TemplateData) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "\"> <label for=\"answer-text\" class=\"sr-only\">Your answer (optional)</label> <textarea id=\"answer-text\" name=\"answer_text\" placeholder=\"Write your answer here (optional)...\" rows=\"4\" aria-label=\"Your answer\"></textarea><div class=\"button-group\"><button type=\"submit\" name=\"action_type\" value=\"answered\" class=\"success\">✅ Answer</button> <button type=\"submit\" name=\"action_type\" value=\"passed\" class=\"btn btn-secondary\">⏭️ Skip</button></div></form></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "\"> <label for=\"answer-text\" class=\"sr-only\">Your answer (optional)</label> <textarea id=\"answer-text\" name=\"answer_text\" placeholder=\"Write your answer here (optional)...\" rows=\"4\" aria-label=\"Your answer\"></textarea><div class=\"button-group\"><button type=\"submit\" name=\"action_type\" value=\"answered\" class=\"success\">✅ Answer</button> <button type=\"submit\" name=\"action_type\" value=\"skipped\" class=\"btn btn-secondary\">⏭️ Skip</button></div></form></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

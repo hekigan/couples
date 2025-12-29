@@ -141,13 +141,13 @@ func TestSubmitAnswer(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "passed action",
+			name: "skipped action",
 			answer: &models.Answer{
 				RoomID:     uuid.New(),
 				QuestionID: uuid.New(),
 				UserID:     uuid.New(),
 				AnswerText: "",
-				ActionType: "passed",
+				ActionType: "skipped",
 			},
 			wantErr: false,
 		},

@@ -31,15 +31,15 @@ templ FinishedContent(data *viewmodels.TemplateData) {
 					<div class="stat-label">Answered</div>
 				</div>
 				<div class="stat-card">
-					<div class="stat-number">{ fmt.Sprintf("%d", finishedData.PassedCount) }</div>
-					<div class="stat-label">Passed</div>
+					<div class="stat-number">{ fmt.Sprintf("%d", finishedData.SkippedCount) }</div>
+					<div class="stat-label">Skipped</div>
 				</div>
 			</div>
 			if len(finishedData.Answers) > 0 {
 				<div class="qa-history">
 					<h2>📝 Question & Answer History</h2>
 					for index, item := range finishedData.Answers {
-						<div class={ "qa-item", templ.KV("passed", item.ActionType == "passed") }>
+						<div class={ "qa-item", templ.KV("skipped", item.ActionType == "skipped") }>
 							<div class="question-text">
 								Q{ fmt.Sprintf("%d", index+1) }: { item.Question.Text }
 							</div>
@@ -47,9 +47,9 @@ templ FinishedContent(data *viewmodels.TemplateData) {
 								<div class="user-badge">
 									{ item.Username }
 								</div>
-								<div class={ "answer-text", templ.KV("passed", item.ActionType == "passed") }>
-									if item.ActionType == "passed" {
-										<em>Passed this question</em>
+								<div class={ "answer-text", templ.KV("skipped", item.ActionType == "skipped") }>
+									if item.ActionType == "skipped" {
+										<em>Skipped this question</em>
 									} else {
 										if item.Answer.AnswerText != "" {
 											{ item.Answer.AnswerText }
@@ -167,7 +167,7 @@ templ FinishedStyles() {
 			transform: translateY(-2px);
 		}
 
-		.qa-item.passed {
+		.qa-item.skipped {
 			border-left-color: #ffc107;
 			background: #fff3cd;
 		}
@@ -206,7 +206,7 @@ templ FinishedStyles() {
 			line-height: 1.6;
 		}
 
-		.answer-text.passed {
+		.answer-text.skipped {
 			font-style: italic;
 			color: #856404;
 			background: #fff;

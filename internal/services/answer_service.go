@@ -28,8 +28,8 @@ func NewAnswerService(client *supabase.Client) *AnswerService {
 // CreateAnswer creates a new answer
 func (s *AnswerService) CreateAnswer(ctx context.Context, answer *models.Answer) error {
 	// Validate action type
-	if answer.ActionType != "answered" && answer.ActionType != "passed" {
-		return fmt.Errorf("invalid action type: must be 'answered' or 'passed'")
+	if answer.ActionType != "answered" && answer.ActionType != "skipped" {
+		return fmt.Errorf("invalid action type: must be 'answered' or 'skipped'")
 	}
 
 	answerMap := map[string]interface{}{

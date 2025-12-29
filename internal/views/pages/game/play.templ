@@ -74,8 +74,8 @@ templ PlayContent(templateData *viewmodels.TemplateData) {
 						<!-- Answer exists - show answer review -->
 						<div class="answer-display">
 							<h3>{ playData.AnsweredByPlayerName }'s answer:</h3>
-							if playData.ActionType == "passed" {
-								<p class="answer-text">Passed</p>
+							if playData.ActionType == "skipped" {
+								<p class="answer-text">Skipped</p>
 							} else {
 								<p class="answer-text">{ playData.AnswerText }</p>
 							}
@@ -132,7 +132,7 @@ templ PlayContent(templateData *viewmodels.TemplateData) {
 									<button
 										type="submit"
 										name="action_type"
-										value="passed"
+										value="skipped"
 										class="btn btn-secondary"
 									>
 										⏭️ Skip

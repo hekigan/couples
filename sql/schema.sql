@@ -182,7 +182,7 @@ CREATE TABLE IF NOT EXISTS answers (
     question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     answer_text TEXT,
-    action_type VARCHAR(50) NOT NULL CHECK (action_type IN ('answered', 'passed')),
+    action_type VARCHAR(50) NOT NULL CHECK (action_type IN ('answered', 'skipped')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -190,7 +190,7 @@ CREATE INDEX IF NOT EXISTS idx_answers_room_id ON answers(room_id);
 CREATE INDEX IF NOT EXISTS idx_answers_user_id ON answers(user_id);
 CREATE INDEX IF NOT EXISTS idx_answers_question_id ON answers(question_id);
 
-COMMENT ON TABLE answers IS 'User answers or passes to game questions';
+COMMENT ON TABLE answers IS 'User answers or skips to game questions';
 
 -- Question history table (prevents repeating questions in a room)
 CREATE TABLE IF NOT EXISTS question_history (

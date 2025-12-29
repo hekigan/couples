@@ -7,9 +7,9 @@ templ AnswerReview(data *services.AnswerReviewData) {
 	<div class="answer-review">
 		<div class="answer-display">
 			<h3>{ data.AnsweredByPlayerName }'s answer:</h3>
-			if data.ActionType == "passed" {
+			if data.ActionType == "skipped" {
 				<p>
-					(Question was passed)
+					(Question was skipped)
 				</p>
 			} else {
 				<p>

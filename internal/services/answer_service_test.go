@@ -27,13 +27,13 @@ func TestCreateAnswer_Validation(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "valid passed action",
+			name: "valid skipped action",
 			answer: &models.Answer{
 				RoomID:     uuid.New(),
 				QuestionID: uuid.New(),
 				UserID:     uuid.New(),
 				AnswerText: "",
-				ActionType: "passed",
+				ActionType: "skipped",
 			},
 			wantErr: false,
 		},
@@ -188,13 +188,13 @@ func TestGetAnswersByQuestion(t *testing.T) {
 	}
 }
 
-// TestCreateAnswer_PassedWithEmptyText tests that passed answers can have empty text
-func TestCreateAnswer_PassedWithEmptyText(t *testing.T) {
+// TestCreateAnswer_SkippedWithEmptyText tests that skipped answers can have empty text
+func TestCreateAnswer_SkippedWithEmptyText(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	t.Run("passed action allows empty answer text", func(t *testing.T) {
+	t.Run("skipped action allows empty answer text", func(t *testing.T) {
 		t.Skip("Requires test database setup")
 
 		// Test would create answer with empty text:
@@ -203,7 +203,7 @@ func TestCreateAnswer_PassedWithEmptyText(t *testing.T) {
 		//     QuestionID: uuid.New(),
 		//     UserID:     uuid.New(),
 		//     AnswerText: "",
-		//     ActionType: "passed",
+		//     ActionType: "skipped",
 		// }
 		// service.CreateAnswer(context.Background(), answer)
 	})

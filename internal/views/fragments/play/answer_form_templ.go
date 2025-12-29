@@ -71,7 +71,7 @@ func AnswerForm(data *services.AnswerFormData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" hx-trigger=\"keyup changed delay:300ms\" hx-swap=\"none\" hx-vals='{\"is_typing\": true}'></textarea><div class=\"button-group\" style=\"display: flex; gap: 10px; justify-content: center;\"><button type=\"submit\" name=\"action_type\" value=\"answered\" class=\"\" aria-label=\"Mark as answered\" style=\"flex: 1; max-width: 200px;\"><span>✅ Answered</span> <span id=\"answer-loading\" class=\"htmx-indicator\">⏳</span></button> <button type=\"submit\" name=\"action_type\" value=\"passed\" class=\"secondary\" aria-label=\"Pass this question\" style=\"flex: 1; max-width: 200px;\">⏭️ Pass</button></div></form></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" hx-trigger=\"keyup changed delay:300ms\" hx-swap=\"none\" hx-vals='{\"is_typing\": true}'></textarea><div class=\"button-group\" style=\"display: flex; gap: 10px; justify-content: center;\"><button type=\"submit\" name=\"action_type\" value=\"answered\" class=\"\" aria-label=\"Mark as answered\" style=\"flex: 1; max-width: 200px;\"><span>✅ Answered</span> <span id=\"answer-loading\" class=\"htmx-indicator\">⏳</span></button> <button type=\"submit\" name=\"action_type\" value=\"skipped\" class=\"secondary\" aria-label=\"Skip this question\" style=\"flex: 1; max-width: 200px;\">⏭️ Skip</button></div></form></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

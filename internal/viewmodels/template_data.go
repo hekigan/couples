@@ -44,7 +44,7 @@ type AnswerSubmittedData struct {
 	RoomID                string
 	Username              string
 	AnswerText            string
-	ActionType            string // "answered" or "passed"
+	ActionType            string // "answered" or "skipped"
 	IsMyTurn              bool   // Is it now my turn to draw next question?
 	CurrentPlayerUsername string
 }

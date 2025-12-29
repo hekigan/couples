@@ -74,20 +74,20 @@ func TestCompleteGameFlow_HappyPath(t *testing.T) {
 	})
 }
 
-// TestCompleteGameFlow_WithPass tests game flow with passed questions
-func TestCompleteGameFlow_WithPass(t *testing.T) {
+// TestCompleteGameFlow_WithSkip tests game flow with skipped questions
+func TestCompleteGameFlow_WithSkip(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	t.Run("game flow with answered and passed actions", func(t *testing.T) {
+	t.Run("game flow with answered and skipped actions", func(t *testing.T) {
 		t.Skip("Requires test database")
 
 		// Test logic:
 		// 1. Create room and start game
 		// 2. Draw question
-		// 3. Active player passes (ActionType = "passed", AnswerText = "")
-		// 4. Verify answer is created with ActionType = "passed"
+		// 3. Active player skips (ActionType = "skipped", AnswerText = "")
+		// 4. Verify answer is created with ActionType = "skipped"
 		// 5. Continue game flow normally
 	})
 }

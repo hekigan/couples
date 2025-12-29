@@ -139,7 +139,7 @@ func (h *Handler) SubmitAnswerAPIHandler(c echo.Context) error {
 	questionIDStr := c.FormValue("question_id")
 	log.Printf("🔍 Received question_id from form: '%s' (length: %d)", questionIDStr, len(questionIDStr))
 	answerText := c.FormValue("answer_text")
-	passed := c.FormValue("passed") == "true"
+	skipped := c.FormValue("skipped") == "true"
 
 	questionID, err := uuid.Parse(questionIDStr)
 	if err != nil {
@@ -175,13 +175,13 @@ func (h *Handler) SubmitAnswerAPIHandler(c echo.Context) error {
 	}
 	log.Printf("✅ Question matches room's current question")
 
-	// Get action type from form (either "answered" or "passed")
+	// Get action type from form (either "answered" or "skipped")
 	actionType := c.FormValue("action_type")
 	if actionType == "" {
 		// Default to "answered" for backwards compatibility
 		actionType = "answered"
-		if passed {
-			actionType = "passed"
+		if skipped {
+			actionType = "skipped"
 		}
 	}
 
@@ -214,7 +214,7 @@ func (h *Handler) SubmitAnswerAPIHandler(c echo.Context) error {
 		}
 		log.Printf("✅ Turn switched. New active player will draw next question.")
 	}
-	// Note: For "passed" action, turn doesn't change but question drawing is deferred to next question click
+	// Note: For "skipped" action, turn doesn't change but question drawing is deferred to next question click
 
 	// FIXED: Instead of calling GetGameFormsHandler (handler-to-handler call),
 	// render the answer review HTML fragment directly
