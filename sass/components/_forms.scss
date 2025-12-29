@@ -22,6 +22,10 @@ select {
     border-radius: 0;
   }
 
+  [type=search] {
+    border: 1px solid $secondary-color;
+  }
+
   [role=group], [role=fieldset] {
     align-items: center;
   }
