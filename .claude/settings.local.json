@@ -46,7 +46,8 @@
       "Bash(/Users/blanes.laurent/go/bin/templ generate:*)",
       "Bash(make clean:*)",
       "Bash(make js-build:*)",
-      "Bash(ENV=development ./server:*)"
+      "Bash(ENV=development ./server:*)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []

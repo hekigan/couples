@@ -493,4 +493,167 @@ table [data-legend-type=playing] td:first-child {
   font-weight: 500;
 }
 
+.route-stats-summary {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+}
+.route-stats-summary h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+.route-stats-summary .stat-detail {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+.route-stats-summary .htmx-card {
+  background: #ede9fe;
+  border: 2px solid #c4b5fd;
+}
+.route-stats-summary .htmx-card h4 {
+  color: #5b21b6;
+}
+.route-stats-summary .htmx-card .stat-value {
+  color: #5b21b6;
+}
+
+.routes-filter-bar {
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+.routes-filter-bar .route-search-input {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 1rem;
+}
+.routes-filter-bar .filter-controls {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.routes-filter-bar .filter-controls label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+.routes-filter-bar .routes-count {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-align: right;
+}
+.routes-filter-bar .routes-count #visible-count {
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.route-group {
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.route-group .route-group-header {
+  margin: 0;
+}
+.route-group .route-group-header button {
+  width: 100%;
+  padding: 1rem;
+  background: var(--bg-accent);
+  border: none;
+  text-align: left;
+  font-size: 1.125rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.route-group .route-group-header button:hover {
+  background: var(--bg-hover);
+}
+.route-group .route-group-header button .toggle-icon {
+  width: 20px;
+  flex-shrink: 0;
+}
+.route-group .route-group-header button .route-group-count {
+  margin-left: auto;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+.route-group .route-group-content {
+  padding: 0;
+}
+
+.routes-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.routes-table th {
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-bottom: 2px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+.routes-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+.routes-table tr:hover {
+  background: var(--bg-hover);
+}
+.routes-table .route-path code {
+  font-family: monospace;
+  font-size: 0.875rem;
+  background: var(--bg-secondary);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.method-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  font-family: monospace;
+}
+.method-badge.method-get {
+  background: #d1fae5;
+  color: #065f46;
+}
+.method-badge.method-post {
+  background: #dbeafe;
+  color: #1e40af;
+}
+.method-badge.method-put {
+  background: #fef3c7;
+  color: #92400e;
+}
+.method-badge.method-delete {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-htmx {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  background: #ede9fe;
+  color: #5b21b6;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
 /*# sourceMappingURL=admin.css.map */

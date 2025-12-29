@@ -536,3 +536,29 @@ func (d *RoomsListData) GetExtraParams() string { return d.ExtraParams }
 
 // GetItemName returns item name for RoomsListData
 func (d *RoomsListData) GetItemName() string { return d.ItemName }
+
+// RouteStats provides statistics about route versioning
+type RouteStats struct {
+	TotalRoutes       int
+	V1Routes          int
+	AdminV1Routes     int
+	UnversionedRoutes int
+}
+
+// RouteDisplayInfo extends route info with display-friendly formatting
+type RouteDisplayInfo struct {
+	Method      string // GET, POST, PUT, DELETE
+	Path        string // /api/v1/rooms/:id
+	Version     string // v1, admin-v1, unversioned
+	IsHTMX      bool   // True if HTMX fragment endpoint
+	MethodClass string // CSS class: method-get, method-post, etc.
+}
+
+// RoutesPageData represents route registry data for admin routes page
+type RoutesPageData struct {
+	Stats             RouteStats
+	APIv1Routes       []RouteDisplayInfo
+	AdminAPIv1Routes  []RouteDisplayInfo
+	UnversionedRoutes []RouteDisplayInfo
+	HTMXFragmentCount int
+}

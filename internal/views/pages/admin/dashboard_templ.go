@@ -189,7 +189,7 @@ func DashboardContent(templateData *viewmodels.TemplateData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</p></div><div class=\"stat-card\"><h4><a href=\"/admin/translations\">Translations</a></h4><p>Manage multi-language</p></div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</p></div><div class=\"stat-card\"><h4><a href=\"/admin/translations\">Translations</a></h4><p>Manage multi-language</p></div><div class=\"stat-card\"><h4><a href=\"/admin/routes\">Routes</a></h4><p>View application routes</p></div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

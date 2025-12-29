@@ -1,0 +1,133 @@
+package admin
+
+import (
+	"fmt"
+	"github.com/hekigan/couples/internal/services"
+	"github.com/hekigan/couples/internal/viewmodels"
+	"github.com/hekigan/couples/internal/views/layouts"
+)
+
+// RoutesPage renders the admin routes page with layout
+templ RoutesPage(templateData *viewmodels.TemplateData) {
+	@layouts.Admin(templateData, RoutesContent(templateData))
+}
+
+// RoutesContent renders the routes registry content
+templ RoutesContent(templateData *viewmodels.TemplateData) {
+	<div class="admin-container">
+		<h1>Route Registry</h1>
+		if data, ok := templateData.Data.(*services.RoutesPageData); ok {
+			<!-- Summary Statistics (matching startup format) -->
+			<div class="route-stats-summary">
+				<h3>Route Statistics</h3>
+				<div class="stats-grid">
+					<div class="stat-card">
+						<h4>Total Routes</h4>
+						<p class="stat-value">{ fmt.Sprintf("%d", data.Stats.TotalRoutes) }</p>
+					</div>
+					<div class="stat-card">
+						<h4>API v1 Routes</h4>
+						<p class="stat-value">{ fmt.Sprintf("%d", data.Stats.V1Routes) }</p>
+					</div>
+					<div class="stat-card">
+						<h4>Admin API v1 Routes</h4>
+						<p class="stat-value">{ fmt.Sprintf("%d", data.Stats.AdminV1Routes) }</p>
+					</div>
+					<div class="stat-card">
+						<h4>Unversioned Routes</h4>
+						<p class="stat-value">{ fmt.Sprintf("%d", data.Stats.UnversionedRoutes) }</p>
+						<p class="stat-detail">(UI pages)</p>
+					</div>
+					<div class="stat-card htmx-card">
+						<h4>HTMX Fragments</h4>
+						<p class="stat-value">{ fmt.Sprintf("%d", data.HTMXFragmentCount) }</p>
+						<p class="stat-detail">(all versions)</p>
+					</div>
+				</div>
+			</div>
+			<!-- Search/Filter Controls -->
+			<div class="routes-filter-bar">
+				<input
+					type="search"
+					id="route-search"
+					placeholder="Search routes by path or method..."
+					class="route-search-input"
+					oninput="filterRoutes()"
+				/>
+				<div class="filter-controls">
+					<label>
+						<input type="checkbox" id="filter-get" checked onchange="filterRoutes()"/> GET
+					</label>
+					<label>
+						<input type="checkbox" id="filter-post" checked onchange="filterRoutes()"/> POST
+					</label>
+					<label>
+						<input type="checkbox" id="filter-put" checked onchange="filterRoutes()"/> PUT
+					</label>
+					<label>
+						<input type="checkbox" id="filter-delete" checked onchange="filterRoutes()"/> DELETE
+					</label>
+					<label>
+						<input type="checkbox" id="filter-htmx" onchange="filterRoutes()"/> HTMX Only
+					</label>
+				</div>
+				<div class="routes-count">
+					Showing <span id="visible-count">{ fmt.Sprintf("%d", data.Stats.TotalRoutes) }</span>
+					of { fmt.Sprintf("%d", data.Stats.TotalRoutes) } routes
+				</div>
+			</div>
+			<!-- Route Groups -->
+			@RouteGroup("API v1", data.APIv1Routes)
+			@RouteGroup("Admin API v1", data.AdminAPIv1Routes)
+			@RouteGroup("Unversioned (UI Pages)", data.UnversionedRoutes)
+		}
+	</div>
+}
+
+// RouteGroup renders a collapsible group of routes
+templ RouteGroup(title string, routes []services.RouteDisplayInfo) {
+	<div class="route-group" data-group={ title }>
+		<h2 class="route-group-header">
+			<button class="route-group-toggle" onclick="toggleRouteGroup(this)" aria-expanded="true">
+				<span class="toggle-icon">▼</span>
+				{ title }
+				<span class="route-group-count">({ fmt.Sprintf("%d", len(routes)) })</span>
+			</button>
+		</h2>
+		<div class="route-group-content">
+			<table class="routes-table">
+				<thead>
+					<tr>
+						<th>Method</th>
+						<th>Path</th>
+						<th>Type</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, route := range routes {
+						<tr
+							class="route-row"
+							data-method={ route.Method }
+							data-path={ route.Path }
+							data-is-htmx={ fmt.Sprintf("%t", route.IsHTMX) }
+						>
+							<td>
+								<span class={ "method-badge", route.MethodClass }>
+									{ route.Method }
+								</span>
+							</td>
+							<td class="route-path">
+								<code>{ route.Path }</code>
+							</td>
+							<td>
+								if route.IsHTMX {
+									<span class="badge-htmx">HTMX</span>
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	</div>
+}

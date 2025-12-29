@@ -111,3 +111,69 @@ document.addEventListener('DOMContentLoaded', function() {
 // Note: showToast() is now available from ui-utils.js
 // It uses the shared Toast notification system
 // Example usage: showToast('Operation successful', 'success')
+
+// ============================================================================
+// Routes Page - Client-Side Filtering
+// ============================================================================
+
+function filterRoutes() {
+	const searchTerm = document.getElementById('route-search').value.toLowerCase();
+	const filterGET = document.getElementById('filter-get').checked;
+	const filterPOST = document.getElementById('filter-post').checked;
+	const filterPUT = document.getElementById('filter-put').checked;
+	const filterDELETE = document.getElementById('filter-delete').checked;
+	const htmxOnly = document.getElementById('filter-htmx').checked;
+
+	const rows = document.querySelectorAll('.route-row');
+	let visibleCount = 0;
+
+	rows.forEach(row => {
+		const method = row.dataset.method;
+		const path = row.dataset.path.toLowerCase();
+		const isHTMX = row.dataset.isHtmx === 'true';
+
+		// Method filter
+		let methodMatch = false;
+		if (method === 'GET' && filterGET) methodMatch = true;
+		if (method === 'POST' && filterPOST) methodMatch = true;
+		if (method === 'PUT' && filterPUT) methodMatch = true;
+		if (method === 'DELETE' && filterDELETE) methodMatch = true;
+
+		// HTMX filter
+		const htmxMatch = !htmxOnly || isHTMX;
+
+		// Search term (matches path or method)
+		const searchMatch = !searchTerm || path.includes(searchTerm) || method.toLowerCase().includes(searchTerm);
+
+		// Show/hide row
+		const visible = methodMatch && htmxMatch && searchMatch;
+		row.style.display = visible ? '' : 'none';
+
+		if (visible) visibleCount++;
+	});
+
+	// Update count
+	document.getElementById('visible-count').textContent = visibleCount;
+
+	// Hide empty groups
+	document.querySelectorAll('.route-group').forEach(group => {
+		const visibleRows = group.querySelectorAll('.route-row:not([style*="display: none"])').length;
+		const groupCount = group.querySelector('.route-group-count');
+
+		group.style.display = visibleRows === 0 ? 'none' : '';
+		if (visibleRows > 0) {
+			groupCount.textContent = `(${visibleRows})`;
+		}
+	});
+}
+
+function toggleRouteGroup(button) {
+	const group = button.closest('.route-group');
+	const content = group.querySelector('.route-group-content');
+	const icon = button.querySelector('.toggle-icon');
+	const isExpanded = button.getAttribute('aria-expanded') === 'true';
+
+	content.style.display = isExpanded ? 'none' : '';
+	button.setAttribute('aria-expanded', !isExpanded);
+	icon.textContent = isExpanded ? '▶' : '▼';
+}
