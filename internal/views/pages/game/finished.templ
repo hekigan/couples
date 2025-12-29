@@ -21,11 +21,8 @@ templ FinishedContent(data *viewmodels.TemplateData) {
 				<h1>🎉 Game Finished!</h1>
 				<p>{ finishedData.Room.Name }</p>
 			</div>
+			<h3>Questions: { fmt.Sprintf("%d", finishedData.TotalQuestions) }</h3>
 			<div class="stats-grid">
-				<div class="stat-card">
-					<div class="stat-number">{ fmt.Sprintf("%d", finishedData.TotalQuestions) }</div>
-					<div class="stat-label">Total Questions</div>
-				</div>
 				<div class="stat-card">
 					<div class="stat-number">{ fmt.Sprintf("%d", finishedData.AnsweredCount) }</div>
 					<div class="stat-label">Answered</div>
@@ -37,16 +34,16 @@ templ FinishedContent(data *viewmodels.TemplateData) {
 			</div>
 			if len(finishedData.Answers) > 0 {
 				<div class="qa-history">
-					<h2>📝 Question & Answer History</h2>
+					<h2>📝 History</h2>
 					for index, item := range finishedData.Answers {
 						<div class={ "qa-item", templ.KV("skipped", item.ActionType == "skipped") }>
+							<div class="badge badge-sm">
+								{ item.Username }
+							</div>
 							<div class="question-text">
 								Q{ fmt.Sprintf("%d", index+1) }: { item.Question.Text }
 							</div>
 							<div class="answer-section">
-								<div class="user-badge">
-									{ item.Username }
-								</div>
 								<div class={ "answer-text", templ.KV("skipped", item.ActionType == "skipped") }>
 									if item.ActionType == "skipped" {
 										<em>Skipped this question</em>
@@ -109,8 +106,8 @@ templ FinishedStyles() {
 
 		.stats-grid {
 			display: grid;
-			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-			gap: 20px;
+			grid-template-columns: repeat(auto-fit, minmax(40%, 1fr));
+			gap: 10px;
 			margin-bottom: 40px;
 		}
 
@@ -124,25 +121,17 @@ templ FinishedStyles() {
 		}
 
 		.stat-card .stat-number {
-			font-size: 48px;
+			font-size: 2em;
 			font-weight: bold;
 			color: #667eea;
 			margin-bottom: 10px;
 		}
 
 		.stat-card .stat-label {
-			font-size: 16px;
+			font-size: .8em;
 			color: #6c757d;
 			text-transform: uppercase;
 			letter-spacing: 1px;
-		}
-
-		.qa-history {
-			background: white;
-			border: 2px solid #e9ecef;
-			border-radius: 12px;
-			padding: 30px;
-			margin-bottom: 30px;
 		}
 
 		.qa-history h2 {
@@ -160,6 +149,7 @@ templ FinishedStyles() {
 			background: #f8f9fa;
 			border-radius: 8px;
 			transition: all 0.3s;
+			text-align: left;
 		}
 
 		.qa-item:hover {
@@ -173,7 +163,7 @@ templ FinishedStyles() {
 		}
 
 		.question-text {
-			font-size: 18px;
+			font-size: 1rem;
 			font-weight: 600;
 			color: #333;
 			margin-bottom: 15px;
@@ -202,7 +192,7 @@ templ FinishedStyles() {
 			background: white;
 			border-radius: 8px;
 			border: 1px solid #dee2e6;
-			font-size: 16px;
+			font-size: .9em;
 			line-height: 1.6;
 		}
 
@@ -272,7 +262,7 @@ templ FinishedStyles() {
 			}
 
 			.stats-grid {
-				grid-template-columns: 1fr;
+				// grid-template-columns: 1fr;
 			}
 
 			.action-buttons {

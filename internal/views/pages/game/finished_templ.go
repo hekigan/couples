@@ -89,27 +89,27 @@ func FinishedContent(data *viewmodels.TemplateData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</p></div><div class=\"stats-grid\"><div class=\"stat-card\"><div class=\"stat-number\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</p></div><h3>Questions: ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", finishedData.TotalQuestions))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/finished.templ`, Line: 26, Col: 78}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/finished.templ`, Line: 24, Col: 66}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</div><div class=\"stat-label\">Total Questions</div></div><div class=\"stat-card\"><div class=\"stat-number\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</h3><div class=\"stats-grid\"><div class=\"stat-card\"><div class=\"stat-number\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", finishedData.AnsweredCount))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/finished.templ`, Line: 30, Col: 77}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/finished.templ`, Line: 27, Col: 77}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -122,7 +122,7 @@ func FinishedContent(data *viewmodels.TemplateData) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", finishedData.SkippedCount))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/finished.templ`, Line: 34, Col: 76}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/finished.templ`, Line: 31, Col: 76}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -133,7 +133,7 @@ func FinishedContent(data *viewmodels.TemplateData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if len(finishedData.Answers) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<div class=\"qa-history\"><h2>📝 Question & Answer History</h2>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<div class=\"qa-history\"><h2>📝 History</h2>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -156,46 +156,46 @@ func FinishedContent(data *viewmodels.TemplateData) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\"><div class=\"question-text\">Q")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\"><div class=\"badge badge-sm\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var9 string
-					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", index+1))
+					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(item.Username)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/finished.templ`, Line: 44, Col: 37}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/finished.templ`, Line: 41, Col: 23}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, ": ")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</div><div class=\"question-text\">Q")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var10 string
-					templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(item.Question.Text)
+					templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", index+1))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/finished.templ`, Line: 44, Col: 61}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/finished.templ`, Line: 44, Col: 37}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div><div class=\"answer-section\"><div class=\"user-badge\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, ": ")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var11 string
-					templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(item.Username)
+					templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(item.Question.Text)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/finished.templ`, Line: 48, Col: 24}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/finished.templ`, Line: 44, Col: 61}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</div>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</div><div class=\"answer-section\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -231,7 +231,7 @@ func FinishedContent(data *viewmodels.TemplateData) templ.Component {
 							var templ_7745c5c3_Var14 string
 							templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(item.Answer.AnswerText)
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/finished.templ`, Line: 55, Col: 35}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/game/finished.templ`, Line: 52, Col: 35}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 							if templ_7745c5c3_Err != nil {
@@ -294,7 +294,7 @@ func FinishedStyles() templ.Component {
 			templ_7745c5c3_Var15 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<style>\n\t\t.finished-container {\n\t\t\tmax-width: 1000px;\n\t\t\tmargin: 0 auto;\n\t\t\tpadding: 20px;\n\t\t}\n\n\t\t.finished-header {\n\t\t\ttext-align: center;\n\t\t\tpadding: 40px 20px;\n\t\t\tbackground: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n\t\t\tcolor: white;\n\t\t\tborder-radius: 12px;\n\t\t\tmargin-bottom: 30px;\n\t\t}\n\n\t\t.finished-header h1 {\n\t\t\tmargin: 0 0 10px 0;\n\t\t\tfont-size: 48px;\n\t\t}\n\n\t\t.finished-header p {\n\t\t\tmargin: 0;\n\t\t\tfont-size: 18px;\n\t\t\topacity: 0.9;\n\t\t}\n\n\t\t.stats-grid {\n\t\t\tdisplay: grid;\n\t\t\tgrid-template-columns: repeat(auto-fit, minmax(200px, 1fr));\n\t\t\tgap: 20px;\n\t\t\tmargin-bottom: 40px;\n\t\t}\n\n\t\t.stat-card {\n\t\t\tbackground: white;\n\t\t\tborder: 2px solid #e9ecef;\n\t\t\tborder-radius: 12px;\n\t\t\tpadding: 30px;\n\t\t\ttext-align: center;\n\t\t\tbox-shadow: 0 2px 4px rgba(0,0,0,0.1);\n\t\t}\n\n\t\t.stat-card .stat-number {\n\t\t\tfont-size: 48px;\n\t\t\tfont-weight: bold;\n\t\t\tcolor: #667eea;\n\t\t\tmargin-bottom: 10px;\n\t\t}\n\n\t\t.stat-card .stat-label {\n\t\t\tfont-size: 16px;\n\t\t\tcolor: #6c757d;\n\t\t\ttext-transform: uppercase;\n\t\t\tletter-spacing: 1px;\n\t\t}\n\n\t\t.qa-history {\n\t\t\tbackground: white;\n\t\t\tborder: 2px solid #e9ecef;\n\t\t\tborder-radius: 12px;\n\t\t\tpadding: 30px;\n\t\t\tmargin-bottom: 30px;\n\t\t}\n\n\t\t.qa-history h2 {\n\t\t\tmargin-top: 0;\n\t\t\tcolor: #333;\n\t\t\tborder-bottom: 3px solid #667eea;\n\t\t\tpadding-bottom: 15px;\n\t\t\tmargin-bottom: 25px;\n\t\t}\n\n\t\t.qa-item {\n\t\t\tborder-left: 4px solid #667eea;\n\t\t\tpadding: 20px;\n\t\t\tmargin-bottom: 25px;\n\t\t\tbackground: #f8f9fa;\n\t\t\tborder-radius: 8px;\n\t\t\ttransition: all 0.3s;\n\t\t}\n\n\t\t.qa-item:hover {\n\t\t\tbox-shadow: 0 4px 8px rgba(0,0,0,0.1);\n\t\t\ttransform: translateY(-2px);\n\t\t}\n\n\t\t.qa-item.skipped {\n\t\t\tborder-left-color: #ffc107;\n\t\t\tbackground: #fff3cd;\n\t\t}\n\n\t\t.question-text {\n\t\t\tfont-size: 18px;\n\t\t\tfont-weight: 600;\n\t\t\tcolor: #333;\n\t\t\tmargin-bottom: 15px;\n\t\t}\n\n\t\t.answer-section {\n\t\t\tdisplay: flex;\n\t\t\talign-items: start;\n\t\t\tgap: 15px;\n\t\t\tmargin-top: 15px;\n\t\t}\n\n\t\t.user-badge {\n\t\t\tbackground: #667eea;\n\t\t\tcolor: white;\n\t\t\tpadding: 5px 15px;\n\t\t\tborder-radius: 20px;\n\t\t\tfont-size: 14px;\n\t\t\tfont-weight: bold;\n\t\t\twhite-space: nowrap;\n\t\t}\n\n\t\t.answer-text {\n\t\t\tflex: 1;\n\t\t\tpadding: 15px;\n\t\t\tbackground: white;\n\t\t\tborder-radius: 8px;\n\t\t\tborder: 1px solid #dee2e6;\n\t\t\tfont-size: 16px;\n\t\t\tline-height: 1.6;\n\t\t}\n\n\t\t.answer-text.skipped {\n\t\t\tfont-style: italic;\n\t\t\tcolor: #856404;\n\t\t\tbackground: #fff;\n\t\t}\n\n\t\t.action-buttons {\n\t\t\tdisplay: flex;\n\t\t\tgap: 15px;\n\t\t\tjustify-content: center;\n\t\t\tmargin-top: 40px;\n\t\t}\n\n\t\t.btn {\n\t\t\tpadding: 15px 30px;\n\t\t\tborder: none;\n\t\t\tborder-radius: 8px;\n\t\t\tfont-size: 16px;\n\t\t\tfont-weight: bold;\n\t\t\tcursor: pointer;\n\t\t\ttext-decoration: none;\n\t\t\tdisplay: inline-block;\n\t\t\ttransition: all 0.3s;\n\t\t}\n\n\t\t.btn-primary {\n\t\t\tbackground: #667eea;\n\t\t\tcolor: white;\n\t\t}\n\n\t\t.btn-primary:hover {\n\t\t\tbackground: #5568d3;\n\t\t\ttransform: translateY(-2px);\n\t\t\tbox-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);\n\t\t}\n\n\t\t.btn-secondary {\n\t\t\tbackground: #6c757d;\n\t\t\tcolor: white;\n\t\t}\n\n\t\t.btn-secondary:hover {\n\t\t\tbackground: #5a6268;\n\t\t\ttransform: translateY(-2px);\n\t\t\tbox-shadow: 0 4px 8px rgba(108, 117, 125, 0.4);\n\t\t}\n\n\t\t.empty-state {\n\t\t\ttext-align: center;\n\t\t\tpadding: 60px 20px;\n\t\t\tcolor: #6c757d;\n\t\t}\n\n\t\t.empty-state svg {\n\t\t\twidth: 100px;\n\t\t\theight: 100px;\n\t\t\tmargin-bottom: 20px;\n\t\t\topacity: 0.5;\n\t\t}\n\n\t\t@media (max-width: 768px) {\n\t\t\t.finished-header h1 {\n\t\t\t\tfont-size: 32px;\n\t\t\t}\n\n\t\t\t.stats-grid {\n\t\t\t\tgrid-template-columns: 1fr;\n\t\t\t}\n\n\t\t\t.action-buttons {\n\t\t\t\tflex-direction: column;\n\t\t\t}\n\n\t\t\t.btn {\n\t\t\t\twidth: 100%;\n\t\t\t}\n\t\t}\n\t</style>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<style>\n\t\t.finished-container {\n\t\t\tmax-width: 1000px;\n\t\t\tmargin: 0 auto;\n\t\t\tpadding: 20px;\n\t\t}\n\n\t\t.finished-header {\n\t\t\ttext-align: center;\n\t\t\tpadding: 40px 20px;\n\t\t\tbackground: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n\t\t\tcolor: white;\n\t\t\tborder-radius: 12px;\n\t\t\tmargin-bottom: 30px;\n\t\t}\n\n\t\t.finished-header h1 {\n\t\t\tmargin: 0 0 10px 0;\n\t\t\tfont-size: 48px;\n\t\t}\n\n\t\t.finished-header p {\n\t\t\tmargin: 0;\n\t\t\tfont-size: 18px;\n\t\t\topacity: 0.9;\n\t\t}\n\n\t\t.stats-grid {\n\t\t\tdisplay: grid;\n\t\t\tgrid-template-columns: repeat(auto-fit, minmax(40%, 1fr));\n\t\t\tgap: 10px;\n\t\t\tmargin-bottom: 40px;\n\t\t}\n\n\t\t.stat-card {\n\t\t\tbackground: white;\n\t\t\tborder: 2px solid #e9ecef;\n\t\t\tborder-radius: 12px;\n\t\t\tpadding: 30px;\n\t\t\ttext-align: center;\n\t\t\tbox-shadow: 0 2px 4px rgba(0,0,0,0.1);\n\t\t}\n\n\t\t.stat-card .stat-number {\n\t\t\tfont-size: 2em;\n\t\t\tfont-weight: bold;\n\t\t\tcolor: #667eea;\n\t\t\tmargin-bottom: 10px;\n\t\t}\n\n\t\t.stat-card .stat-label {\n\t\t\tfont-size: .8em;\n\t\t\tcolor: #6c757d;\n\t\t\ttext-transform: uppercase;\n\t\t\tletter-spacing: 1px;\n\t\t}\n\n\t\t.qa-history h2 {\n\t\t\tmargin-top: 0;\n\t\t\tcolor: #333;\n\t\t\tborder-bottom: 3px solid #667eea;\n\t\t\tpadding-bottom: 15px;\n\t\t\tmargin-bottom: 25px;\n\t\t}\n\n\t\t.qa-item {\n\t\t\tborder-left: 4px solid #667eea;\n\t\t\tpadding: 20px;\n\t\t\tmargin-bottom: 25px;\n\t\t\tbackground: #f8f9fa;\n\t\t\tborder-radius: 8px;\n\t\t\ttransition: all 0.3s;\n\t\t\ttext-align: left;\n\t\t}\n\n\t\t.qa-item:hover {\n\t\t\tbox-shadow: 0 4px 8px rgba(0,0,0,0.1);\n\t\t\ttransform: translateY(-2px);\n\t\t}\n\n\t\t.qa-item.skipped {\n\t\t\tborder-left-color: #ffc107;\n\t\t\tbackground: #fff3cd;\n\t\t}\n\n\t\t.question-text {\n\t\t\tfont-size: 1rem;\n\t\t\tfont-weight: 600;\n\t\t\tcolor: #333;\n\t\t\tmargin-bottom: 15px;\n\t\t}\n\n\t\t.answer-section {\n\t\t\tdisplay: flex;\n\t\t\talign-items: start;\n\t\t\tgap: 15px;\n\t\t\tmargin-top: 15px;\n\t\t}\n\n\t\t.user-badge {\n\t\t\tbackground: #667eea;\n\t\t\tcolor: white;\n\t\t\tpadding: 5px 15px;\n\t\t\tborder-radius: 20px;\n\t\t\tfont-size: 14px;\n\t\t\tfont-weight: bold;\n\t\t\twhite-space: nowrap;\n\t\t}\n\n\t\t.answer-text {\n\t\t\tflex: 1;\n\t\t\tpadding: 15px;\n\t\t\tbackground: white;\n\t\t\tborder-radius: 8px;\n\t\t\tborder: 1px solid #dee2e6;\n\t\t\tfont-size: .9em;\n\t\t\tline-height: 1.6;\n\t\t}\n\n\t\t.answer-text.skipped {\n\t\t\tfont-style: italic;\n\t\t\tcolor: #856404;\n\t\t\tbackground: #fff;\n\t\t}\n\n\t\t.action-buttons {\n\t\t\tdisplay: flex;\n\t\t\tgap: 15px;\n\t\t\tjustify-content: center;\n\t\t\tmargin-top: 40px;\n\t\t}\n\n\t\t.btn {\n\t\t\tpadding: 15px 30px;\n\t\t\tborder: none;\n\t\t\tborder-radius: 8px;\n\t\t\tfont-size: 16px;\n\t\t\tfont-weight: bold;\n\t\t\tcursor: pointer;\n\t\t\ttext-decoration: none;\n\t\t\tdisplay: inline-block;\n\t\t\ttransition: all 0.3s;\n\t\t}\n\n\t\t.btn-primary {\n\t\t\tbackground: #667eea;\n\t\t\tcolor: white;\n\t\t}\n\n\t\t.btn-primary:hover {\n\t\t\tbackground: #5568d3;\n\t\t\ttransform: translateY(-2px);\n\t\t\tbox-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);\n\t\t}\n\n\t\t.btn-secondary {\n\t\t\tbackground: #6c757d;\n\t\t\tcolor: white;\n\t\t}\n\n\t\t.btn-secondary:hover {\n\t\t\tbackground: #5a6268;\n\t\t\ttransform: translateY(-2px);\n\t\t\tbox-shadow: 0 4px 8px rgba(108, 117, 125, 0.4);\n\t\t}\n\n\t\t.empty-state {\n\t\t\ttext-align: center;\n\t\t\tpadding: 60px 20px;\n\t\t\tcolor: #6c757d;\n\t\t}\n\n\t\t.empty-state svg {\n\t\t\twidth: 100px;\n\t\t\theight: 100px;\n\t\t\tmargin-bottom: 20px;\n\t\t\topacity: 0.5;\n\t\t}\n\n\t\t@media (max-width: 768px) {\n\t\t\t.finished-header h1 {\n\t\t\t\tfont-size: 32px;\n\t\t\t}\n\n\t\t\t.stats-grid {\n\t\t\t\t// grid-template-columns: 1fr;\n\t\t\t}\n\n\t\t\t.action-buttons {\n\t\t\t\tflex-direction: column;\n\t\t\t}\n\n\t\t\t.btn {\n\t\t\t\twidth: 100%;\n\t\t\t}\n\t\t}\n\t</style>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
