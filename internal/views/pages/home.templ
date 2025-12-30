@@ -42,8 +42,18 @@ templ HomeContent(data *viewmodels.TemplateData) {
 			</section>
 			<nav class="home-actions">
 				if data.User != nil {
-					<a href="/game/create-room" role="button" data-testid="create-room-link">Create Room</a>
-					<a href="/game/join-room" role="button" class="secondary" data-testid="join-room-link">Join Room</a>
+					<a
+						href="/game/create-room"
+						role="button"
+						class="primary"
+						data-testid="create-room-link"
+					><i class="icon-new-room"></i> New Room</a>
+					<a
+						href="/game/join-room"
+						role="button"
+						class="primary"
+						data-testid="join-room-link"
+					><i class="icon-join-room"></i> Join Room</a>
 				} else {
 					<a href="/login" role="button" data-testid="login-link" class="success">Login/Signup to Play</a>
 					<form action="/auth/anonymous" method="POST" class="d-inline-block">

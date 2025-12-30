@@ -70,7 +70,7 @@ func HomeContent(data *viewmodels.TemplateData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if data.User != nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<a href=\"/game/create-room\" role=\"button\" data-testid=\"create-room-link\">Create Room</a> <a href=\"/game/join-room\" role=\"button\" class=\"secondary\" data-testid=\"join-room-link\">Join Room</a>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<a href=\"/game/create-room\" role=\"button\" class=\"primary\" data-testid=\"create-room-link\"><i class=\"icon-new-room\"></i> New Room</a> <a href=\"/game/join-room\" role=\"button\" class=\"primary\" data-testid=\"join-room-link\"><i class=\"icon-join-room\"></i> Join Room</a>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -87,7 +87,7 @@ func HomeContent(data *viewmodels.TemplateData) templ.Component {
 				var templ_7745c5c3_Var3 string
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(data.CSRFToken)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/home.templ`, Line: 51, Col: 62}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/home.templ`, Line: 61, Col: 62}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {

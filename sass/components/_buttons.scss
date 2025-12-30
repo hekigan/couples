@@ -27,4 +27,10 @@ button, [type=submit], [type=reset], [type=button], [role=button] {
     color: $text-contrast;
     border-color: var(--pico-warning);
   }
+
+  &.primary {
+    background-color: $primary-color;
+    color: $text-contrast;
+    border-color: var(--pico-warning);
+  }
 }

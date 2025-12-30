@@ -68,7 +68,7 @@ func RoomsContent(data *viewmodels.TemplateData) templ.Component {
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"container\" hx-ext=\"sse\" sse-connect=\"/api/v1/stream/user/events\"><div class=\"page-header\"><h1>My Rooms</h1><span class=\"button-group flex\"><a href=\"/game/join-room\" role=\"button\">Join Room</a> <a href=\"/game/create-room\" role=\"button\">New Room</a></span></div><div id=\"rooms-container\" hx-get=\"/game/rooms\" hx-trigger=\"sse:my_request_accepted from:body\" hx-swap=\"innerHTML\" hx-select=\"#rooms-container\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"container\" hx-ext=\"sse\" sse-connect=\"/api/v1/stream/user/events\"><div class=\"page-header\"><h1>My Rooms</h1><span class=\"button-group\"><a href=\"/game/join-room\" role=\"button\" class=\"primary\"><i class=\"icon-join-room\"></i> Join Room</a> <a href=\"/game/create-room\" role=\"button\" class=\"primary\"><i class=\"icon-new-room\"></i> New Room</a></span></div><div id=\"rooms-container\" hx-get=\"/game/rooms\" hx-trigger=\"sse:my_request_accepted from:body\" hx-swap=\"innerHTML\" hx-select=\"#rooms-container\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
