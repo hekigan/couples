@@ -67,7 +67,7 @@ func ListContent(data *viewmodels.TemplateData) templ.Component {
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"container\"><div class=\"page-header\"><h1>👫 Friends</h1><a href=\"/friends/add\" role=\"button\">+ Add Friend</a></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"container\"><div class=\"page-header\"><h1><i class=\"icon-users\"></i> Friends</h1><a href=\"/friends/add\" role=\"button\" title=\"Add Friend\"><i class=\"icon-person_add\"></i></a></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -182,7 +182,7 @@ func ListContent(data *viewmodels.TemplateData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if friends, ok := dataMap["Friends"].([]models.FriendWithUserInfo); ok {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<section><h2>✅ My Friends</h2>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<section><h2>My Friends</h2>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -205,14 +205,14 @@ func ListContent(data *viewmodels.TemplateData) templ.Component {
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "\"><div class=\"friend-info\"><span class=\"friend-username\">👤 ")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "\"><div class=\"friend-info\"><span class=\"friend-username\"><i class=\"icon-user\"></i> ")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var9 string
 						templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(friend.Username)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 62, Col: 62}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 62, Col: 83}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 						if templ_7745c5c3_Err != nil {

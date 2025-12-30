@@ -2,6 +2,7 @@ package friends
 
 import (
 	"github.com/hekigan/couples/internal/viewmodels"
+	friendsFragments "github.com/hekigan/couples/internal/views/fragments/friends"
 	"github.com/hekigan/couples/internal/views/layouts"
 )
 
@@ -14,39 +15,52 @@ templ AddPage(data *viewmodels.TemplateData) {
 templ AddContent(data *viewmodels.TemplateData) {
 	<div class="container">
 		<div class="page-header">
-			<h1>👫 Add Friend</h1>
+			<h1><i class="icon-person_add"></i> Add Friend</h1>
 		</div>
 		if data.Error != "" {
 			<div class="alert alert-error" role="alert">
 				⚠️ { data.Error }
 			</div>
 		}
-		if data.Success != "" {
-			<div class="alert alert-success" role="alert">
-				✅ { data.Success }
-			</div>
-		}
-		<form method="POST" action="/friends/add">
+		<form
+			id="add-friend-form"
+			hx-post="/friends/add"
+			hx-swap="none"
+			hx-on::after-request="
+				// Only show toast for POST requests (form submission), not GET requests (dropdown)
+				if(event.detail.requestConfig.verb === 'post') {
+					if(event.detail.successful) {
+						Toast.success('Friend invitation sent!');
+						document.getElementById('add-friend-form').reset();
+					} else {
+						Toast.error('Failed to send invitation');
+					}
+				}
+			"
+		>
 			if data.CSRFToken != "" {
 				<input type="hidden" name="csrf" value={ data.CSRFToken }/>
 			}
 			<div class="form-group">
-				<label for="friend_identifier">Friend ID (UUID)</label>
-				<input
-					type="text"
-					id="friend_identifier"
-					name="friend_identifier"
-					placeholder="e.g., 123e4567-e89b-12d3-a456-426614174000"
-					required
-					aria-describedby="friend-id-help"
-				/>
-				<small id="friend-id-help" style="color: #6b7280;">
-					Ask your friend to share their User ID from their profile page.
-				</small>
+				<label for="invitation_type">Invitation Method</label>
+				<select
+					id="invitation_type"
+					name="invitation_type"
+					hx-get="/friends/add/input-field"
+					hx-target="#friend-identifier-container"
+					hx-swap="innerHTML"
+					hx-trigger="change"
+				>
+					<option value="email" selected>Email Address</option>
+					<option value="uuid">User ID (UUID)</option>
+				</select>
 			</div>
-			<div class="form-actions">
-				<button type="submit" class="btn-primary">Send Friend Request</button>
+			<div id="friend-identifier-container">
+				@friendsFragments.FriendIdentifierInput("email", "")
+			</div>
+			<div class="button-group">
 				<a href="/friends" role="button" class="secondary">Cancel</a>
+				<button type="submit" class="btn-primary">Send Invitation</button>
 			</div>
 		</form>
 	</div>

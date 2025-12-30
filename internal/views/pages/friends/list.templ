@@ -16,8 +16,8 @@ templ ListPage(data *viewmodels.TemplateData) {
 templ ListContent(data *viewmodels.TemplateData) {
 	<div class="container">
 		<div class="page-header">
-			<h1>👫 Friends</h1>
-			<a href="/friends/add" role="button">+ Add Friend</a>
+			<h1><i class="icon-users"></i> Friends</h1>
+			<a href="/friends/add" role="button" title="Add Friend"><i class="icon-person_add"></i></a>
 		</div>
 		if dataMap, ok := data.Data.(map[string]interface{}); ok {
 			// Pending Invitations Section
@@ -53,13 +53,13 @@ templ ListContent(data *viewmodels.TemplateData) {
 			// Friends Section
 			if friends, ok := dataMap["Friends"].([]models.FriendWithUserInfo); ok {
 				<section>
-					<h2>✅ My Friends</h2>
+					<h2>My Friends</h2>
 					if len(friends) > 0 {
 						<div class="friends-list">
 							for _, friend := range friends {
 								<div class="friend-card" id={ fmt.Sprintf("friend-%s", friend.ID.String()) }>
 									<div class="friend-info">
-										<span class="friend-username">👤 { friend.Username }</span>
+										<span class="friend-username"><i class="icon-user"></i> { friend.Username }</span>
 									</div>
 									<div class="friend-actions">
 										<button

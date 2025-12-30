@@ -47,7 +47,8 @@
       "Bash(make clean:*)",
       "Bash(make js-build:*)",
       "Bash(ENV=development ./server:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "mcp__context7__query-docs"
     ],
     "deny": [],
     "ask": []

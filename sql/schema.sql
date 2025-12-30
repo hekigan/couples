@@ -45,6 +45,30 @@ CREATE INDEX IF NOT EXISTS idx_friends_status ON friends(status);
 
 COMMENT ON TABLE friends IS 'User friendships and friend requests';
 
+-- Friend email invitations table
+CREATE TABLE IF NOT EXISTS friend_email_invitations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    recipient_email VARCHAR(255) NOT NULL,
+    token VARCHAR(100) NOT NULL UNIQUE,
+    status VARCHAR(50) NOT NULL CHECK (status IN ('pending', 'accepted', 'expired', 'cancelled')) DEFAULT 'pending',
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    accepted_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT unique_sender_recipient UNIQUE(sender_id, recipient_email)
+);
+
+CREATE INDEX IF NOT EXISTS idx_friend_email_invitations_sender ON friend_email_invitations(sender_id);
+CREATE INDEX IF NOT EXISTS idx_friend_email_invitations_token ON friend_email_invitations(token);
+CREATE INDEX IF NOT EXISTS idx_friend_email_invitations_email ON friend_email_invitations(recipient_email);
+CREATE INDEX IF NOT EXISTS idx_friend_email_invitations_status ON friend_email_invitations(status);
+CREATE INDEX IF NOT EXISTS idx_friend_email_invitations_expires ON friend_email_invitations(expires_at);
+
+COMMENT ON TABLE friend_email_invitations IS 'Email-based friend invitations for users not yet in the system';
+COMMENT ON COLUMN friend_email_invitations.token IS 'Secure token for email invitation acceptance link';
+COMMENT ON COLUMN friend_email_invitations.expires_at IS 'Invitation expiration timestamp (7 days default)';
+
 -- Categories table
 CREATE TABLE IF NOT EXISTS categories (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -254,11 +278,15 @@ CREATE TRIGGER update_room_join_requests_updated_at
     BEFORE UPDATE ON room_join_requests
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_room_invitations_updated_at 
+CREATE TRIGGER update_room_invitations_updated_at
     BEFORE UPDATE ON room_invitations
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_translations_updated_at 
+CREATE TRIGGER update_friend_email_invitations_updated_at
+    BEFORE UPDATE ON friend_email_invitations
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_translations_updated_at
     BEFORE UPDATE ON translations
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -281,6 +309,7 @@ ALTER TABLE rooms DISABLE ROW LEVEL SECURITY;
 ALTER TABLE room_join_requests DISABLE ROW LEVEL SECURITY;
 ALTER TABLE room_invitations DISABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications DISABLE ROW LEVEL SECURITY;
+ALTER TABLE friend_email_invitations DISABLE ROW LEVEL SECURITY;
 
 -- Enable RLS on tables with appropriate policies
 ALTER TABLE friends ENABLE ROW LEVEL SECURITY;
@@ -350,6 +379,7 @@ BEGIN
     RAISE NOTICE 'Tables Created:';
     RAISE NOTICE '  ✓ users (with username support)';
     RAISE NOTICE '  ✓ friends';
+    RAISE NOTICE '  ✓ friend_email_invitations';
     RAISE NOTICE '  ✓ categories';
     RAISE NOTICE '  ✓ questions (multi-language)';
     RAISE NOTICE '  ✓ rooms';

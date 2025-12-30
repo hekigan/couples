@@ -10,6 +10,7 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"github.com/hekigan/couples/internal/viewmodels"
+	friendsFragments "github.com/hekigan/couples/internal/views/fragments/friends"
 	"github.com/hekigan/couples/internal/views/layouts"
 )
 
@@ -65,7 +66,7 @@ func AddContent(data *viewmodels.TemplateData) templ.Component {
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"container\"><div class=\"page-header\"><h1>👫 Add Friend</h1></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"container\"><div class=\"page-header\"><h1><i class=\"icon-person_add\"></i> Add Friend</h1></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -77,7 +78,7 @@ func AddContent(data *viewmodels.TemplateData) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(data.Error)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/add.templ`, Line: 21, Col: 23}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/add.templ`, Line: 22, Col: 23}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -88,49 +89,38 @@ func AddContent(data *viewmodels.TemplateData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		if data.Success != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"alert alert-success\" role=\"alert\">✅ ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<form id=\"add-friend-form\" hx-post=\"/friends/add\" hx-swap=\"none\" hx-on::after-request=\"\n\t\t\t\t// Only show toast for POST requests (form submission), not GET requests (dropdown)\n\t\t\t\tif(event.detail.requestConfig.verb === 'post') {\n\t\t\t\t\tif(event.detail.successful) {\n\t\t\t\t\t\tToast.success('Friend invitation sent!');\n\t\t\t\t\t\tdocument.getElementById('add-friend-form').reset();\n\t\t\t\t\t} else {\n\t\t\t\t\t\tToast.error('Failed to send invitation');\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if data.CSRFToken != "" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<input type=\"hidden\" name=\"csrf\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var4 string
-			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(data.Success)
+			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(data.CSRFToken)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/add.templ`, Line: 26, Col: 22}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/add.templ`, Line: 42, Col: 59}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<form method=\"POST\" action=\"/friends/add\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<div class=\"form-group\"><label for=\"invitation_type\">Invitation Method</label> <select id=\"invitation_type\" name=\"invitation_type\" hx-get=\"/friends/add/input-field\" hx-target=\"#friend-identifier-container\" hx-swap=\"innerHTML\" hx-trigger=\"change\"><option value=\"email\" selected>Email Address</option> <option value=\"uuid\">User ID (UUID)</option></select></div><div id=\"friend-identifier-container\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if data.CSRFToken != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<input type=\"hidden\" name=\"csrf\" value=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var5 string
-			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(data.CSRFToken)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/add.templ`, Line: 31, Col: 59}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
+		templ_7745c5c3_Err = friendsFragments.FriendIdentifierInput("email", "").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<div class=\"form-group\"><label for=\"friend_identifier\">Friend ID (UUID)</label> <input type=\"text\" id=\"friend_identifier\" name=\"friend_identifier\" placeholder=\"e.g., 123e4567-e89b-12d3-a456-426614174000\" required aria-describedby=\"friend-id-help\"> <small id=\"friend-id-help\" style=\"color: #6b7280;\">Ask your friend to share their User ID from their profile page.</small></div><div class=\"form-actions\"><button type=\"submit\" class=\"btn-primary\">Send Friend Request</button> <a href=\"/friends\" role=\"button\" class=\"secondary\">Cancel</a></div></form></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div><div class=\"button-group\"><a href=\"/friends\" role=\"button\" class=\"secondary\">Cancel</a> <button type=\"submit\" class=\"btn-primary\">Send Invitation</button></div></form></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

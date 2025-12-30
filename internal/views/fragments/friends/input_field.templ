@@ -1,0 +1,36 @@
+package friends
+
+// FriendIdentifierInput renders the dynamic input field based on invitation type
+templ FriendIdentifierInput(inputType string, value string) {
+	<div class="form-group">
+		if inputType == "email" {
+			<label for="friend_identifier">Friend's Email Address</label>
+			<input
+				type="email"
+				id="friend_identifier"
+				name="friend_identifier"
+				placeholder="friend@example.com"
+				value={ value }
+				required
+				aria-describedby="friend-email-help"
+			/>
+			<small id="friend-email-help" style="color: #6b7280;">
+				Enter your friend's email. They'll receive an invitation to join or connect.
+			</small>
+		} else {
+			<label for="friend_identifier">Friend's User ID (UUID)</label>
+			<input
+				type="text"
+				id="friend_identifier"
+				name="friend_identifier"
+				placeholder="e.g., 123e4567-e89b-12d3-a456-426614174000"
+				value={ value }
+				required
+				aria-describedby="friend-id-help"
+			/>
+			<small id="friend-id-help" style="color: #6b7280;">
+				Ask your friend to share their User ID from their profile page.
+			</small>
+		}
+	</div>
+}

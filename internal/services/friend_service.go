@@ -2,8 +2,11 @@ package services
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/supabase-community/supabase-go"
@@ -272,4 +275,132 @@ func (s *FriendService) checkExistingFriendship(ctx context.Context, userID1, us
 	}
 
 	return nil, fmt.Errorf("not found")
+}
+
+// GetUserByEmail fetches user by email
+func (s *FriendService) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	var users []models.User
+	if err := s.BaseService.GetRecords(ctx, "users", map[string]interface{}{
+		"email": email,
+	}, &users); err != nil {
+		return nil, err
+	}
+
+	if len(users) == 0 {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	return &users[0], nil
+}
+
+// CreateFriendRequestByEmail creates friend request via email
+// Security: Always returns success to prevent email enumeration
+func (s *FriendService) CreateFriendRequestByEmail(
+	ctx context.Context,
+	senderID uuid.UUID,
+	senderUsername string,
+	recipientEmail string,
+	emailService *EmailService,
+	notificationService *NotificationService,
+) error {
+	// 1. Check if user exists with this email
+	user, err := s.GetUserByEmail(ctx, recipientEmail)
+
+	// 2a. User exists → create friend request + send email + create notification
+	if err == nil && user != nil {
+		// Check for existing friendship
+		existing, _ := s.checkExistingFriendship(ctx, senderID, user.ID)
+		if existing != nil {
+			// Already friends or pending - silently succeed
+			return nil
+		}
+
+		// Create friend request
+		if err := s.CreateFriendRequest(ctx, senderID, user.ID); err != nil {
+			return err
+		}
+
+		// Send email notification (async) - use background context to avoid cancellation
+		go emailService.SendFriendInvitationToExistingUser(context.Background(), recipientEmail, senderUsername)
+
+		// Create in-app notification
+		notification := &models.Notification{
+			UserID:  user.ID,
+			Type:    "friend_request",
+			Title:   "New Friend Request",
+			Message: fmt.Sprintf("%s sent you a friend request", senderUsername),
+			Link:    "/friends",
+			Read:    false,
+		}
+		notificationService.CreateNotification(ctx, notification)
+
+		return nil
+	}
+
+	// 2b. User doesn't exist → create email invitation + send join email
+	token := generateSecureToken()
+	expiresAt := time.Now().Add(7 * 24 * time.Hour)
+
+	invitation := map[string]interface{}{
+		"id":              uuid.New().String(),
+		"sender_id":       senderID.String(),
+		"recipient_email": recipientEmail,
+		"token":           token,
+		"status":          "pending",
+		"expires_at":      expiresAt,
+	}
+
+	if err := s.BaseService.InsertRecord(ctx, "friend_email_invitations", invitation); err != nil {
+		// Duplicate invitation - silently succeed (security)
+		return nil
+	}
+
+	// Send join invitation email (async) - use background context to avoid cancellation
+	go emailService.SendFriendInvitationToNewUser(context.Background(), recipientEmail, senderUsername, token)
+
+	return nil
+}
+
+// AcceptEmailInvitation accepts email invitation and creates friendship
+func (s *FriendService) AcceptEmailInvitation(ctx context.Context, token string, newUserID uuid.UUID) error {
+	// Find invitation by token
+	var invitations []models.FriendEmailInvitation
+	if err := s.BaseService.GetRecords(ctx, "friend_email_invitations", map[string]interface{}{
+		"token":  token,
+		"status": "pending",
+	}, &invitations); err != nil || len(invitations) == 0 {
+		return fmt.Errorf("invalid or expired invitation")
+	}
+
+	invitation := invitations[0]
+
+	// Check expiration
+	if time.Now().After(invitation.ExpiresAt) {
+		// Mark as expired
+		s.BaseService.UpdateRecord(ctx, "friend_email_invitations", invitation.ID, map[string]interface{}{
+			"status": "expired",
+		})
+		return fmt.Errorf("invitation has expired")
+	}
+
+	// Create friendship
+	if err := s.CreateFriendRequest(ctx, invitation.SenderID, newUserID); err != nil {
+		return err
+	}
+
+	// Mark invitation as accepted
+	now := time.Now()
+	s.BaseService.UpdateRecord(ctx, "friend_email_invitations", invitation.ID, map[string]interface{}{
+		"status":      "accepted",
+		"accepted_at": now,
+	})
+
+	return nil
+}
+
+// generateSecureToken generates cryptographically secure token
+func generateSecureToken() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return base64.URLEncoding.EncodeToString(b)
 }

@@ -24,8 +24,9 @@ type Handler struct {
 	FriendService       *services.FriendService
 	I18nService         *services.I18nService
 	NotificationService *services.NotificationService
-	AdminService        *services.AdminService // For admin operations
-	echo                *echo.Echo             // Echo instance for route introspection
+	AdminService        *services.AdminService  // For admin operations
+	EmailService        *services.EmailService  // For sending emails
+	echo                *echo.Echo              // Echo instance for route introspection
 }
 
 // NewHandler creates a new handler with all dependencies
@@ -40,6 +41,7 @@ func NewHandler(
 	i18nService *services.I18nService,
 	notificationService *services.NotificationService,
 	adminService *services.AdminService,
+	emailService *services.EmailService,
 	e *echo.Echo,
 ) *Handler {
 	return &Handler{
@@ -53,6 +55,7 @@ func NewHandler(
 		I18nService:         i18nService,
 		NotificationService: notificationService,
 		AdminService:        adminService,
+		EmailService:        emailService,
 		echo:                e,
 	}
 }

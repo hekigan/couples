@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"regexp"
 
 	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/middleware"
@@ -97,7 +98,9 @@ func (h *Handler) AddFriendHandler(c echo.Context) error {
 	}
 
 	// Handle POST request
+	invitationType := c.FormValue("invitation_type") // "uuid" or "email"
 	friendIdentifier := c.FormValue("friend_identifier")
+
 	if friendIdentifier == "" {
 		data := NewTemplateData(c)
 		data.Title = "Add Friend"
@@ -107,39 +110,58 @@ func (h *Handler) AddFriendHandler(c echo.Context) error {
 		return h.RenderTemplComponent(c, friendsPages.AddPage(data))
 	}
 
-	// Parse user IDs
+	// Parse current user ID
 	currentUserID, err := uuid.Parse(userID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid current user ID")
 	}
 
-	friendID, err := uuid.Parse(friendIdentifier)
-	if err != nil {
-		data := NewTemplateData(c)
-		data.Title = "Add Friend"
-		data.User = currentUser
-		data.Error = "Invalid friend ID format. Please use UUID format."
-		data.Data = map[string]interface{}{"CurrentUserID": userID}
-		return h.RenderTemplComponent(c, friendsPages.AddPage(data))
-	}
+	// Route based on invitation type
+	if invitationType == "email" {
+		// Validate email format
+		if !isValidEmail(friendIdentifier) {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid email format")
+		}
 
-	// Create friend request
-	err = h.FriendService.CreateFriendRequest(c.Request().Context(), currentUserID, friendID)
-	if err != nil {
-		data := NewTemplateData(c)
-		data.Title = "Add Friend"
-		data.User = currentUser
-		data.Error = "Failed to send friend request"
-		data.Data = map[string]interface{}{"CurrentUserID": userID}
-		return h.RenderTemplComponent(c, friendsPages.AddPage(data))
-	}
+		// Prevent self-invitation
+		if currentUser.Email != nil && *currentUser.Email == friendIdentifier {
+			return echo.NewHTTPError(http.StatusBadRequest, "You cannot send a friend request to yourself")
+		}
 
-	data := NewTemplateData(c)
-	data.Title = "Add Friend"
-	data.User = currentUser
-	data.Success = "Friend invitation sent!"
-	data.Data = map[string]interface{}{"CurrentUserID": userID}
-	return h.RenderTemplComponent(c, friendsPages.AddPage(data))
+		// Create email-based invitation (always succeeds to prevent enumeration)
+		err = h.FriendService.CreateFriendRequestByEmail(
+			c.Request().Context(),
+			currentUserID,
+			currentUser.Username,
+			friendIdentifier,
+			h.EmailService,
+			h.NotificationService,
+		)
+
+		if err != nil {
+			log.Printf("Error sending email invitation: %v", err)
+			// Still show success to user for security
+		}
+
+		// Return success (204 No Content)
+		return c.NoContent(http.StatusNoContent)
+
+	} else {
+		// Existing UUID logic
+		friendID, err := uuid.Parse(friendIdentifier)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid friend ID format. Please use UUID format.")
+		}
+
+		// Create friend request
+		err = h.FriendService.CreateFriendRequest(c.Request().Context(), currentUserID, friendID)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Failed to send friend request")
+		}
+
+		// Return success (204 No Content)
+		return c.NoContent(http.StatusNoContent)
+	}
 }
 
 // AcceptFriendHandler accepts a friend invitation
@@ -292,4 +314,47 @@ func (h *Handler) GetFriendsHTMLHandler(c echo.Context) error {
 	}
 
 	return c.HTML(http.StatusOK, html)
+}
+
+// GetFriendInputFieldHandler returns the appropriate input field HTML for HTMX
+func (h *Handler) GetFriendInputFieldHandler(c echo.Context) error {
+	inputType := c.QueryParam("invitation_type")
+	if inputType == "" {
+		inputType = "uuid"
+	}
+
+	html, err := h.RenderTemplFragment(c, friendsFragments.FriendIdentifierInput(inputType, ""))
+	if err != nil {
+		return c.HTML(http.StatusOK, `<p>Error loading field</p>`)
+	}
+
+	return c.HTML(http.StatusOK, html)
+}
+
+// AcceptEmailInvitationHandler handles email invitation token acceptance
+func (h *Handler) AcceptEmailInvitationHandler(c echo.Context) error {
+	token := c.Param("token")
+
+	// Get user from session
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		// Redirect to signup with token
+		return c.Redirect(http.StatusSeeOther, "/auth/signup?friend_invitation="+token)
+	}
+
+	// Accept invitation
+	err := h.FriendService.AcceptEmailInvitation(c.Request().Context(), token, userID)
+	if err != nil {
+		// Handle errors (expired, invalid, etc.)
+		return c.Redirect(http.StatusSeeOther, "/friends?error=invalid_invitation")
+	}
+
+	return c.Redirect(http.StatusSeeOther, "/friends?success=invitation_accepted")
+}
+
+// isValidEmail validates email format
+func isValidEmail(email string) bool {
+	// Simple regex validation
+	re := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	return re.MatchString(email)
 }
