@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/a-h/templ"
+	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/services"
 	"github.com/hekigan/couples/internal/viewmodels"
@@ -143,6 +144,28 @@ func NewTemplateData(c echo.Context) *TemplateData {
 		CSRFToken: GetCSRFToken(c),
 		Env:       os.Getenv("ENV"),
 	}
+}
+
+// PopulateNotificationCount fetches and sets the notification count for the header badge.
+// This includes unread notifications + pending friend requests.
+// Should be called for pages that display the header.
+func (h *Handler) PopulateNotificationCount(c echo.Context, data *TemplateData) {
+	sessionUser := GetSessionUser(c)
+	if sessionUser == nil || sessionUser.ID == "" {
+		return
+	}
+
+	userID, err := uuid.Parse(sessionUser.ID)
+	if err != nil {
+		return
+	}
+
+	count, err := h.NotificationService.GetNotificationBadgeCount(c.Request().Context(), userID)
+	if err != nil {
+		return // Silently fail, badge will show 0
+	}
+
+	data.NotificationCount = count
 }
 
 // RenderTemplComponent renders a templ component to the response

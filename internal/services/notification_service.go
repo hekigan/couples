@@ -151,3 +151,65 @@ func (s *NotificationService) CancelRoomInvitation(ctx context.Context, roomID, 
 
 	return s.BaseService.DeleteRecordsWithFilter(ctx, "room_invitations", filters)
 }
+
+// CreateAndBroadcastNotification creates a notification in DB and broadcasts it via SSE
+// This is the hybrid approach: persistence + instant delivery to online users
+func (s *NotificationService) CreateAndBroadcastNotification(
+	ctx context.Context,
+	notification *models.Notification,
+	realtimeService *RealtimeService,
+) error {
+	// Create notification record in DB for persistence
+	if err := s.CreateNotification(ctx, notification); err != nil {
+		return err
+	}
+
+	// Broadcast via SSE for instant delivery (non-blocking)
+	go realtimeService.BroadcastToUser(notification.UserID, RealtimeEvent{
+		Type: "notification",
+		Data: notification,
+	})
+
+	return nil
+}
+
+// GetNotificationBadgeCount returns the count for the notification badge
+// This counts unread notifications (friend requests create notifications in the table)
+func (s *NotificationService) GetNotificationBadgeCount(
+	ctx context.Context,
+	userID uuid.UUID,
+) (int, error) {
+	return s.GetUnreadCount(ctx, userID)
+}
+
+// MarkFriendRequestNotificationAsRead marks friend_request notification as read
+// Called when user accepts/declines a friend request
+func (s *NotificationService) MarkFriendRequestNotificationAsRead(
+	ctx context.Context,
+	userID uuid.UUID,
+	senderID uuid.UUID,
+) error {
+	// Find unread friend_request notifications for this user
+	data, _, err := s.client.From("notifications").
+		Select("*", "", false).
+		Eq("user_id", userID.String()).
+		Eq("type", models.NotificationTypeFriendRequest).
+		Eq("read", "false").
+		Execute()
+
+	if err != nil {
+		return err
+	}
+
+	var notifications []models.Notification
+	if err := json.Unmarshal(data, &notifications); err != nil {
+		return err
+	}
+
+	// Mark all matching notifications as read
+	for _, notif := range notifications {
+		s.MarkAsRead(ctx, notif.ID)
+	}
+
+	return nil
+}

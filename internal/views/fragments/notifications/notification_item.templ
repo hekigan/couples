@@ -7,13 +7,13 @@ templ NotificationItem(data *services.NotificationData) {
 	<div class={ "notification-item", data.Type } id={ "notification-" + data.ID } data-notification-id={ data.ID }>
 		<div class="notification-icon">
 			if data.Type == "room_invitation" {
-				🎮
+				<i class="icon-join-room"></i>
 			}
 			if data.Type == "friend_request" {
-				👥
+				<i class="icon-people_alt"></i>
 			}
 			if data.Type == "game_start" {
-				🎯
+				<i class="icon-sports_esports"></i>
 			}
 		</div>
 		<div class="notification-content">

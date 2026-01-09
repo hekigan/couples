@@ -8,7 +8,54 @@ package layouts
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-import "github.com/hekigan/couples/internal/viewmodels"
+import (
+	"github.com/hekigan/couples/internal/viewmodels"
+	"reflect"
+)
+
+// getUserID extracts the user ID from the User interface using reflection
+func getUserID(user interface{}) string {
+	if user == nil {
+		return ""
+	}
+
+	v := reflect.ValueOf(user)
+
+	// If it's a pointer, get the element it points to
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return ""
+		}
+		v = v.Elem()
+	}
+
+	// If it's a struct, try to get the ID field
+	if v.Kind() == reflect.Struct {
+		idField := v.FieldByName("ID")
+		if !idField.IsValid() {
+			return ""
+		}
+
+		// Handle string ID (SessionUser)
+		if idField.Kind() == reflect.String {
+			return idField.String()
+		}
+
+		// Handle uuid.UUID type (models.User) - UUID has a String() method
+		if idField.Type().Name() == "UUID" {
+			// Call the String() method on uuid.UUID
+			stringMethod := idField.MethodByName("String")
+			if stringMethod.IsValid() {
+				result := stringMethod.Call(nil)
+				if len(result) > 0 {
+					return result[0].String()
+				}
+			}
+		}
+	}
+
+	return ""
+}
 
 // HeadCommon renders common <head> elements including CSS and conditional JS loading
 func HeadCommon(data *viewmodels.TemplateData) templ.Component {
@@ -44,7 +91,7 @@ func HeadCommon(data *viewmodels.TemplateData) templ.Component {
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(data.CSRFToken)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/head_common.templ`, Line: 10, Col: 50}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/head_common.templ`, Line: 57, Col: 50}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {
@@ -55,42 +102,61 @@ func HeadCommon(data *viewmodels.TemplateData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<title>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		if data.Title != "" {
-			var templ_7745c5c3_Var3 string
-			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(data.Title)
+		if data.User != nil && getUserID(data.User) != "" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<meta name=\"user-id\" content=\"")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/head_common.templ`, Line: 14, Col: 15}
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var3 string
+			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(getUserID(data.User))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/head_common.templ`, Line: 60, Col: 53}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "Couple Card Game")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</title><!-- CSS - Pico CSS with custom pastel theme --><link rel=\"stylesheet\" href=\"/static/css/main.css\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<title>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if data.Title != "" {
+			var templ_7745c5c3_Var4 string
+			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(data.Title)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/head_common.templ`, Line: 64, Col: 15}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "Couple Card Game")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</title><!-- CSS - Pico CSS with custom pastel theme --><link rel=\"stylesheet\" href=\"/static/css/main.css\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if data.Env == "production" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<!-- Production: Load bundled and minified JavaScript --> <script src=\"/static/dist/app.bundle.js\"></script>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<!-- Production: Load bundled and minified JavaScript --> <script src=\"/static/dist/app.bundle.js\"></script>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<!-- Development: Load individual files for easier debugging --> <script src=\"/static/js/htmx.min.js\"></script> <script src=\"/static/js/sse.js\"></script> <script src=\"/static/js/ui-utils.js\"></script> <script src=\"/static/js/notifications-realtime.js\" defer></script> <script src=\"/static/js/modal.js\" defer></script>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<!-- Development: Load individual files for easier debugging --> <script src=\"/static/js/htmx.min.js\"></script> <script src=\"/static/js/sse.js\"></script> <script src=\"/static/js/ui-utils.js\"></script> <script src=\"/static/js/notifications.js\" defer></script> <script src=\"/static/js/modal.js\" defer></script>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<link rel=\"icon\" type=\"image/svg+xml\" href=\"/static/favicon.svg\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<link rel=\"icon\" type=\"image/svg+xml\" href=\"/static/favicon.svg\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

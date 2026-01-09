@@ -1,6 +1,53 @@
 package layouts
 
-import "github.com/hekigan/couples/internal/viewmodels"
+import (
+	"github.com/hekigan/couples/internal/viewmodels"
+	"reflect"
+)
+
+// getUserID extracts the user ID from the User interface using reflection
+func getUserID(user interface{}) string {
+	if user == nil {
+		return ""
+	}
+
+	v := reflect.ValueOf(user)
+
+	// If it's a pointer, get the element it points to
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return ""
+		}
+		v = v.Elem()
+	}
+
+	// If it's a struct, try to get the ID field
+	if v.Kind() == reflect.Struct {
+		idField := v.FieldByName("ID")
+		if !idField.IsValid() {
+			return ""
+		}
+
+		// Handle string ID (SessionUser)
+		if idField.Kind() == reflect.String {
+			return idField.String()
+		}
+
+		// Handle uuid.UUID type (models.User) - UUID has a String() method
+		if idField.Type().Name() == "UUID" {
+			// Call the String() method on uuid.UUID
+			stringMethod := idField.MethodByName("String")
+			if stringMethod.IsValid() {
+				result := stringMethod.Call(nil)
+				if len(result) > 0 {
+					return result[0].String()
+				}
+			}
+		}
+	}
+
+	return ""
+}
 
 // HeadCommon renders common <head> elements including CSS and conditional JS loading
 templ HeadCommon(data *viewmodels.TemplateData) {
@@ -8,6 +55,9 @@ templ HeadCommon(data *viewmodels.TemplateData) {
 	<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 	if data.CSRFToken != "" {
 		<meta name="csrf-token" content={ data.CSRFToken }/>
+	}
+	if data.User != nil && getUserID(data.User) != "" {
+		<meta name="user-id" content={ getUserID(data.User) }/>
 	}
 	<title>
 		if data.Title != "" {
@@ -26,7 +76,7 @@ templ HeadCommon(data *viewmodels.TemplateData) {
 		<script src="/static/js/htmx.min.js"></script>
 		<script src="/static/js/sse.js"></script>
 		<script src="/static/js/ui-utils.js"></script>
-		<script src="/static/js/notifications-realtime.js" defer></script>
+		<script src="/static/js/notifications.js" defer></script>
 		<script src="/static/js/modal.js" defer></script>
 	}
 	<link rel="icon" type="image/svg+xml" href="/static/favicon.svg"/>

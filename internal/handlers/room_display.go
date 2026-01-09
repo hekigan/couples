@@ -74,6 +74,7 @@ func (h *Handler) ListRoomsHandler(c echo.Context) error {
 	}
 
 	data := NewTemplateData(c)
+	h.PopulateNotificationCount(c, data)
 	data.Title = "My Rooms"
 	data.User = currentUser
 	data.Data = enrichedRooms
@@ -146,6 +147,7 @@ func (h *Handler) RoomHandler(c echo.Context) error {
 	}
 
 	data := NewTemplateData(c)
+	h.PopulateNotificationCount(c, data)
 	data.Title = "Room - " + roomWithPlayers.Name
 	data.User = currentUser
 	// Pass room as map for step-based template
@@ -273,6 +275,7 @@ func (h *Handler) PlayHandler(c echo.Context) error {
 	}
 
 	data := NewTemplateData(c)
+	h.PopulateNotificationCount(c, data)
 	data.Title = "Play - " + room.Name
 	data.User = currentUser
 	data.Data = playData
@@ -359,6 +362,7 @@ func (h *Handler) GameFinishedHandler(c echo.Context) error {
 	}
 
 	data := NewTemplateData(c)
+	h.PopulateNotificationCount(c, data)
 	data.Title = "Game Finished"
 	data.User = currentUser
 	data.Data = finishedData

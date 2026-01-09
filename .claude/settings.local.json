@@ -48,7 +48,11 @@
       "Bash(make js-build:*)",
       "Bash(ENV=development ./server:*)",
       "Bash(wc:*)",
-      "mcp__context7__query-docs"
+      "mcp__context7__query-docs",
+      "Bash(xargs ls:*)",
+      "mcp__playwright__*",
+      "mcp__chrome-devtools__*",
+      "mcp__chrome-devtools__take_snapshot"
     ],
     "deny": [],
     "ask": []

@@ -177,7 +177,7 @@ eventSource.onerror = (error) => {
 - `cmd/server/main.go` - Route registration
 
 ### Frontend
-- `static/js/notifications-realtime.js` - Client implementation
+- `static/js/notifications.js` - Client implementation
 - `static/css/notifications.css` - Toast animations
 
 ### Database

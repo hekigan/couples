@@ -8,7 +8,60 @@ package layouts
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-import "github.com/hekigan/couples/internal/viewmodels"
+import (
+	"fmt"
+	"github.com/hekigan/couples/internal/viewmodels"
+	"reflect"
+)
+
+// formatNotificationCount formats the notification count as a string
+func formatNotificationCount(count int) string {
+	return fmt.Sprintf("%d", count)
+}
+
+// getUserIDForHeader extracts the user ID from the User interface using reflection
+func getUserIDForHeader(user interface{}) string {
+	if user == nil {
+		return ""
+	}
+
+	v := reflect.ValueOf(user)
+
+	// If it's a pointer, get the element it points to
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return ""
+		}
+		v = v.Elem()
+	}
+
+	// If it's a struct, try to get the ID field
+	if v.Kind() == reflect.Struct {
+		idField := v.FieldByName("ID")
+		if !idField.IsValid() {
+			return ""
+		}
+
+		// Handle string ID (SessionUser)
+		if idField.Kind() == reflect.String {
+			return idField.String()
+		}
+
+		// Handle uuid.UUID type (models.User) - UUID has a String() method
+		if idField.Type().Name() == "UUID" {
+			// Call the String() method on uuid.UUID
+			stringMethod := idField.MethodByName("String")
+			if stringMethod.IsValid() {
+				result := stringMethod.Call(nil)
+				if len(result) > 0 {
+					return result[0].String()
+				}
+			}
+		}
+	}
+
+	return ""
+}
 
 // Header renders the main header navigation
 func Header(data *viewmodels.TemplateData) templ.Component {
@@ -37,27 +90,70 @@ func Header(data *viewmodels.TemplateData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if data.User != nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<!-- Notification Bell --> <a href=\"#\" class=\"notification-bell\" onclick=\"toggleNotifications()\" id=\"notification-btn\">📧 <span class=\"notification-badge\" id=\"notification-badge\" hidden>0</span></a><div class=\"notification-dropdown\" id=\"notification-dropdown\" hidden><div class=\"notification-header\"><h3>Notifications</h3><button onclick=\"markAllRead()\" class=\"mark-read-btn\">Mark all read</button></div><div class=\"notification-list\" id=\"notification-list\"><p class=\"loading\">Loading...</p></div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<!-- Notification Bell --> <a href=\"#\" role=\"button\" class=\"notification-bell nav-link\" id=\"notification-btn\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			if data.IsAdmin {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<a href=\"/admin\" role=\"button\" class=\"nav-link\">Admin Dashboard</a>")
+			if getUserIDForHeader(data.User) != "" {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, " data-user-id=\"")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var2 string
+				templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(getUserIDForHeader(data.User))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/header.templ`, Line: 79, Col: 52}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, " <a href=\"/friends\" role=\"button\" class=\"nav-link\">Friends</a> <a href=\"/game/rooms\" role=\"button\" class=\"nav-link\">Rooms</a> <a href=\"/profile\" role=\"button\" class=\"nav-link\">Profile</a> <a href=\"#\" role=\"button\" hx-post=\"/auth/logout\" hx-confirm=\"Are you sure you want to logout?\" class=\"nav-link\">Logout</a>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "><i class=\"icon-email text-lg\"></i> <span class=\"notification-badge\" id=\"notification-badge\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			if data.NotificationCount > 0 {
+				var templ_7745c5c3_Var3 string
+				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(formatNotificationCount(data.NotificationCount))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/header.templ`, Line: 85, Col: 58}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			} else {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "0")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</span><div class=\"notification-dropdown\" id=\"notification-dropdown\"><div class=\"notification-header\"><button onclick=\"markAllRead()\" class=\"mark-read-btn success\">Mark all read</button></div><div class=\"notification-list\" id=\"notification-list\"><div class=\"loading\">Loading...</div></div></div></a> ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			if data.IsAdmin {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<a href=\"/admin\" role=\"button\" class=\"nav-link\">Admin Dashboard</a>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, " <a href=\"/friends\" role=\"button\" class=\"nav-link\">Friends</a> <a href=\"/game/rooms\" role=\"button\" class=\"nav-link\">Rooms</a> <a href=\"/profile\" role=\"button\" class=\"nav-link\">Profile</a> <a href=\"#\" role=\"button\" hx-post=\"/auth/logout\" hx-confirm=\"Are you sure you want to logout?\" class=\"nav-link\">Logout</a>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<a href=\"/login\" role=\"button\">Login</a> <a href=\"/signup\" role=\"button\">Signup</a>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<a href=\"/login\" role=\"button\">Login</a> <a href=\"/signup\" role=\"button\">Signup</a>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</nav></div></div></header>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</nav></div></div></header>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

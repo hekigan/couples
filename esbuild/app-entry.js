@@ -22,7 +22,7 @@ import '../static/js/ui-utils.js';
 // Modal handling
 import '../static/js/modal.js';
 
-// Real-time notifications via SSE
-import '../static/js/notifications-realtime.js';
+// Notifications (real-time via SSE)
+import '../static/js/notifications.js';
 
 console.log('✅ App bundle loaded');

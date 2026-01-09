@@ -11,6 +11,7 @@
 // ==================================================
 @use 'base/variables' as *;        // Keep for custom spacing/color variables
 @use 'base/overrides';
+@use 'base/typography';
 
 // ==================================================
 // 3. Utility Classes (Complementary to Pico)
@@ -23,6 +24,7 @@
 // 4. Custom Component Styles
 // ==================================================
 @use 'components/custom';         // Custom styles extracted from inline styles
+@use 'components/notifications';  // Notification badge and dropdown styles
 @use 'components/navigation';     // Keep custom navigation
 @use 'components/buttons';         
 @use 'components/forms';         

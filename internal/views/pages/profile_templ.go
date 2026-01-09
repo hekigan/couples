@@ -245,7 +245,7 @@ func ProfileContent(data *viewmodels.TemplateData) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<div class=\"profile-section\"><h2>Quick Actions</h2><div class=\"actions-grid\"><a href=\"/game/rooms\" class=\"action-card\"><span class=\"action-icon\">🎮</span> <span class=\"action-label\">Rooms</span></a> <a href=\"/friends\" class=\"action-card\"><span class=\"action-icon\">👥</span> <span class=\"action-label\">Friends</span></a> <a href=\"/game/create-room\" class=\"action-card\"><span class=\"action-icon\">➕</span> <span class=\"action-label\">New Room</span></a> <a href=\"/game/join-room\" class=\"action-card\"><span class=\"action-icon\">🚪</span> <span class=\"action-label\">Join Room</span></a></div></div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<div class=\"profile-section\"><h2>Quick Actions</h2><div class=\"actions-grid\"><a href=\"/game/rooms\" class=\"action-card\"><span class=\"action-icon\"><i class=\"icon-join-room\"></i></span> <span class=\"action-label\">Rooms</span></a> <a href=\"/friends\" class=\"action-card\"><span class=\"action-icon\"><i class=\"icon-people_alt\"></i></span> <span class=\"action-label\">Friends</span></a> <a href=\"/game/create-room\" class=\"action-card\"><span class=\"action-icon\"><i class=\"icon-new-room\"></i></span> <span class=\"action-label\">New Room</span></a> <a href=\"/game/join-room\" class=\"action-card\"><span class=\"action-icon\"><i class=\"icon-join-room\"></i></span> <span class=\"action-label\">Join Room</span></a></div></div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

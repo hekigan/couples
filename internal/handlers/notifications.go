@@ -27,7 +27,7 @@ func (h *Handler) GetNotificationsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, notifications)
 }
 
-// GetUnreadCountHandler returns the count of unread notifications
+// GetUnreadCountHandler returns the count of unread notifications + pending friend requests
 func (h *Handler) GetUnreadCountHandler(c echo.Context) error {
 	ctx := context.Background()
 	userID, ok := middleware.GetUserID(c)
@@ -35,7 +35,7 @@ func (h *Handler) GetUnreadCountHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
 	}
 
-	count, err := h.NotificationService.GetUnreadCount(ctx, userID)
+	count, err := h.NotificationService.GetNotificationBadgeCount(ctx, userID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to load notification count")
 	}

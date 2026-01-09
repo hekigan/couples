@@ -81,19 +81,19 @@ func NotificationItem(data *services.NotificationData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if data.Type == "room_invitation" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "🎮 ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<i class=\"icon-join-room\"></i> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
 		if data.Type == "friend_request" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "👥 ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<i class=\"icon-people_alt\"></i> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
 		if data.Type == "game_start" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "🎯")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<i class=\"icon-sports_esports\"></i>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

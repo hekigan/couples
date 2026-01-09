@@ -603,6 +603,7 @@ func (h *Handler) AdminRoutesHandler(c echo.Context) error {
 	}
 
 	data := NewTemplateData(c)
+	h.PopulateNotificationCount(c, data)
 	data.Title = "Route Registry"
 	data.User = currentUser
 	data.Data = routesData

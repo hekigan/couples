@@ -11,24 +11,6 @@
   color: var(--pico-muted-color);
 }
 
-// Notification badge (hidden by default, shown by JavaScript)
-.notification-badge {
-  display: none;
-
-  &.visible {
-    display: inline-block;
-  }
-}
-
-// Notification dropdown (hidden by default, shown by JavaScript)
-.notification-dropdown {
-  display: none;
-
-  &.visible {
-    display: block;
-  }
-}
-
 // Auth callback page
 .auth-callback-container {
   text-align: center;

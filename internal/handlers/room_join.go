@@ -42,6 +42,7 @@ func (h *Handler) ListJoinRequestsHandler(c echo.Context) error {
 	}
 
 	data := NewTemplateData(c)
+	h.PopulateNotificationCount(c, data)
 	data.Title = "Join Requests"
 	data.User = currentUser
 	data.Data = requests

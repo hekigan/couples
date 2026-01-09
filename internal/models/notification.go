@@ -31,10 +31,11 @@ type RoomInvitation struct {
 
 // NotificationType constants
 const (
-	NotificationTypeRoomInvite    = "room_invitation"
-	NotificationTypeFriendRequest = "friend_request"
-	NotificationTypeGameStart     = "game_start"
-	NotificationTypeMessage       = "message"
+	NotificationTypeRoomInvite     = "room_invitation"
+	NotificationTypeFriendRequest  = "friend_request"
+	NotificationTypeFriendAccepted = "friend_accepted"
+	NotificationTypeGameStart      = "game_start"
+	NotificationTypeMessage        = "message"
 )
 
 // InvitationStatus constants

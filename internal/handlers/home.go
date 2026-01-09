@@ -33,6 +33,7 @@ func (h *Handler) HomeHandler(c echo.Context) error {
 	}
 
 	data := NewTemplateData(c)
+	h.PopulateNotificationCount(c, data)
 	data.Title = "Home - Couple Card Game"
 	return h.RenderTemplComponent(c, pages.HomePage(data))
 }
@@ -40,6 +41,7 @@ func (h *Handler) HomeHandler(c echo.Context) error {
 // SetupUsernameHandler shows the username setup page
 func (h *Handler) SetupUsernameHandler(c echo.Context) error {
 	data := NewTemplateData(c)
+	h.PopulateNotificationCount(c, data)
 	data.Title = "Setup Username"
 	return h.RenderTemplComponent(c, pages.SetupUsernamePage(data))
 }

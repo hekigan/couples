@@ -1,6 +1,59 @@
 package layouts
 
-import "github.com/hekigan/couples/internal/viewmodels"
+import (
+	"fmt"
+	"github.com/hekigan/couples/internal/viewmodels"
+	"reflect"
+)
+
+// formatNotificationCount formats the notification count as a string
+func formatNotificationCount(count int) string {
+	return fmt.Sprintf("%d", count)
+}
+
+// getUserIDForHeader extracts the user ID from the User interface using reflection
+func getUserIDForHeader(user interface{}) string {
+	if user == nil {
+		return ""
+	}
+
+	v := reflect.ValueOf(user)
+
+	// If it's a pointer, get the element it points to
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return ""
+		}
+		v = v.Elem()
+	}
+
+	// If it's a struct, try to get the ID field
+	if v.Kind() == reflect.Struct {
+		idField := v.FieldByName("ID")
+		if !idField.IsValid() {
+			return ""
+		}
+
+		// Handle string ID (SessionUser)
+		if idField.Kind() == reflect.String {
+			return idField.String()
+		}
+
+		// Handle uuid.UUID type (models.User) - UUID has a String() method
+		if idField.Type().Name() == "UUID" {
+			// Call the String() method on uuid.UUID
+			stringMethod := idField.MethodByName("String")
+			if stringMethod.IsValid() {
+				result := stringMethod.Call(nil)
+				if len(result) > 0 {
+					return result[0].String()
+				}
+			}
+		}
+	}
+
+	return ""
+}
 
 // Header renders the main header navigation
 templ Header(data *viewmodels.TemplateData) {
@@ -17,19 +70,32 @@ templ Header(data *viewmodels.TemplateData) {
 				<nav class="main-nav">
 					if data.User != nil {
 						<!-- Notification Bell -->
-						<a href="#" class="notification-bell" onclick="toggleNotifications()" id="notification-btn">
-							📧
-							<span class="notification-badge" id="notification-badge" hidden>0</span>
+						<a
+							href="#"
+							role="button"
+							class="notification-bell nav-link"
+							id="notification-btn"
+							if getUserIDForHeader(data.User) != "" {
+								data-user-id={ getUserIDForHeader(data.User) }
+							}
+						>
+							<i class="icon-email text-lg"></i>
+							<span class="notification-badge" id="notification-badge">
+								if data.NotificationCount > 0 {
+									{ formatNotificationCount(data.NotificationCount) }
+								} else {
+									0
+								}
+							</span>
+							<div class="notification-dropdown" id="notification-dropdown">
+								<div class="notification-header">
+									<button onclick="markAllRead()" class="mark-read-btn success">Mark all read</button>
+								</div>
+								<div class="notification-list" id="notification-list">
+									<div class="loading">Loading...</div>
+								</div>
+							</div>
 						</a>
-						<div class="notification-dropdown" id="notification-dropdown" hidden>
-							<div class="notification-header">
-								<h3>Notifications</h3>
-								<button onclick="markAllRead()" class="mark-read-btn">Mark all read</button>
-							</div>
-							<div class="notification-list" id="notification-list">
-								<p class="loading">Loading...</p>
-							</div>
-						</div>
 						if data.IsAdmin {
 							<a href="/admin" role="button" class="nav-link">Admin Dashboard</a>
 						}

@@ -110,7 +110,7 @@ const Toast = {
     }
 };
 
-// Shared showToast function (used by modal.js, notifications-realtime.js, admin.js)
+// Shared showToast function (used by modal.js, notifications.js, admin.js)
 // This provides compatibility with code that calls showToast(message, type)
 function showToast(message, type = 'info') {
     const typeMap = {

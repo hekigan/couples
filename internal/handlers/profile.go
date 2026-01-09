@@ -23,6 +23,7 @@ func (h *Handler) ProfileHandler(c echo.Context) error {
 	}
 
 	data := NewTemplateData(c)
+	h.PopulateNotificationCount(c, data)
 	data.Title = "My Profile"
 	data.User = user
 	data.Data = user

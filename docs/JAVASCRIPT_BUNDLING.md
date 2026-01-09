@@ -46,7 +46,7 @@ couple-game/
     │   ├── sse.js
     │   ├── ui-utils.js
     │   ├── modal.js
-    │   ├── notifications-realtime.js
+    │   ├── notifications.js
     │   └── admin.js
     └── dist/                     # Generated bundles (gitignored)
         ├── app.bundle.js
@@ -76,7 +76,7 @@ Main application bundle loaded on all pages.
 - `sse.js` - HTMX SSE extension
 - `ui-utils.js` - Toast, Loading, MobileMenu utilities
 - `modal.js` - Modal dialog system
-- `notifications-realtime.js` - Real-time notifications
+- `notifications.js` - Real-time notifications
 
 **Size:**
 - Development: 358KB (unminified, inline source maps)
@@ -219,7 +219,7 @@ if data.Env == "production" {
     <script src="/static/js/htmx.min.js"></script>
     <script src="/static/js/sse.js"></script>
     <script src="/static/js/ui-utils.js"></script>
-    <script src="/static/js/notifications-realtime.js" defer></script>
+    <script src="/static/js/notifications.js" defer></script>
     <script src="/static/js/modal.js" defer></script>
 }
 ```
@@ -303,7 +303,7 @@ ENV=production make run
 
 ### showToast() Dependency Fix
 
-**Problem:** `showToast()` was defined in `admin.js` but called by `modal.js` and `notifications-realtime.js`, causing runtime errors on non-admin pages.
+**Problem:** `showToast()` was defined in `admin.js` but called by `modal.js` and `notifications.js`, causing runtime errors on non-admin pages.
 
 **Solution:** Moved `showToast()` to `ui-utils.js` (loaded on all pages):
 

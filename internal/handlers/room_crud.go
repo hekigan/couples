@@ -100,6 +100,7 @@ func (h *Handler) CreateRoomHandler(c echo.Context) error {
 
 	if c.Request().Method == "GET" {
 		data := NewTemplateData(c)
+		h.PopulateNotificationCount(c, data)
 		data.Title = "Create Room"
 		data.User = currentUser
 		return h.RenderTemplComponent(c, gamePages.CreateRoomPage(data))
@@ -142,6 +143,7 @@ func (h *Handler) JoinRoomHandler(c echo.Context) error {
 
 	if c.Request().Method == "GET" {
 		data := NewTemplateData(c)
+		h.PopulateNotificationCount(c, data)
 		data.Title = "Join Room"
 		data.User = currentUser
 		return h.RenderTemplComponent(c, gamePages.JoinRoomPage(data))

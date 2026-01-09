@@ -12,6 +12,7 @@ type TemplateData struct {
 	IsOwner           bool
 	IsAdmin           bool   // Whether current user is admin
 	JoinRequestsCount int    // Number of pending join requests (for badge)
+	NotificationCount int    // Number of unread notifications + pending friend requests (for header badge)
 	Env               string // Environment (development/production) for conditional JS loading
 	CSRFToken         string // CSRF token for forms and HTMX requests
 	CurrentStep       int    // Current room step (1=invite, 2=categories, 3=start) - derived from room state

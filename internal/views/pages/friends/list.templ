@@ -2,10 +2,18 @@ package friends
 
 import (
 	"fmt"
+	"time"
 	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/viewmodels"
 	"github.com/hekigan/couples/internal/views/layouts"
 )
+
+// formatInvitationDate formats a timestamp for tooltip display
+func formatInvitationDate(t time.Time) string {
+	return fmt.Sprintf("Invited on %s at %s",
+		t.Format("January 2, 2006"),
+		t.Format("3:04 PM"))
+}
 
 // ListPage renders the friends list page with layout
 templ ListPage(data *viewmodels.TemplateData) {
@@ -24,26 +32,40 @@ templ ListContent(data *viewmodels.TemplateData) {
 			if pendingInvitations, ok := dataMap["PendingInvitations"].([]models.FriendWithUserInfo); ok && len(pendingInvitations) > 0 {
 				<section>
 					<h2>📨 Pending Invitations</h2>
-					<div class="friends-list">
+					<div class="friends-list" id="pending-invitations-list">
 						for _, request := range pendingInvitations {
-							<div class="friend-card">
+							<div
+								class="friend-card"
+								id={ fmt.Sprintf("pending-%s", request.ID.String()) }
+								data-tooltip={ formatInvitationDate(request.CreatedAt) }
+							>
 								<div class="friend-info">
 									<span class="friend-username">👤 { request.Username }</span>
 									<span class="friend-status">⏳ Pending</span>
 								</div>
 								<div class="friend-actions">
-									<form method="POST" action={ templ.URL(fmt.Sprintf("/friends/accept/%s", request.ID.String())) } style="display: inline;">
-										if data.CSRFToken != "" {
-											<input type="hidden" name="csrf" value={ data.CSRFToken }/>
-										}
-										<button type="submit" class="btn-success">Accept</button>
-									</form>
-									<form method="POST" action={ templ.URL(fmt.Sprintf("/friends/decline/%s", request.ID.String())) } style="display: inline;">
-										if data.CSRFToken != "" {
-											<input type="hidden" name="csrf" value={ data.CSRFToken }/>
-										}
-										<button type="submit" class="btn-danger">Decline</button>
-									</form>
+									<button
+										type="button"
+										class="btn-success"
+										hx-post={ fmt.Sprintf("/friends/accept/%s", request.ID.String()) }
+										hx-target={ fmt.Sprintf("#pending-%s", request.ID.String()) }
+										hx-swap="outerHTML swap:300ms"
+										hx-disabled-elt="this"
+										aria-label="Accept friend request"
+									>
+										Accept
+									</button>
+									<button
+										type="button"
+										class="btn-danger"
+										hx-post={ fmt.Sprintf("/friends/decline/%s", request.ID.String()) }
+										hx-target={ fmt.Sprintf("#pending-%s", request.ID.String()) }
+										hx-swap="outerHTML swap:300ms"
+										hx-disabled-elt="this"
+										aria-label="Decline friend request"
+									>
+										Decline
+									</button>
 								</div>
 							</div>
 						}

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"regexp"
@@ -55,6 +56,7 @@ func (h *Handler) FriendListHandler(c echo.Context) error {
 	}
 
 	data := NewTemplateData(c)
+	h.PopulateNotificationCount(c, data)
 	data.Title = "Friends"
 	data.User = currentUser // Override with DB user for more complete data
 	data.Data = map[string]interface{}{
@@ -89,6 +91,7 @@ func (h *Handler) AddFriendHandler(c echo.Context) error {
 
 	if c.Request().Method == "GET" {
 		data := NewTemplateData(c)
+		h.PopulateNotificationCount(c, data)
 		data.Title = "Add Friend"
 		data.User = currentUser
 		data.Data = map[string]interface{}{
@@ -103,6 +106,7 @@ func (h *Handler) AddFriendHandler(c echo.Context) error {
 
 	if friendIdentifier == "" {
 		data := NewTemplateData(c)
+		h.PopulateNotificationCount(c, data)
 		data.Title = "Add Friend"
 		data.User = currentUser
 		data.Error = "Friend identifier is required"
@@ -156,7 +160,8 @@ func (h *Handler) AddFriendHandler(c echo.Context) error {
 		// Create friend request
 		err = h.FriendService.CreateFriendRequest(c.Request().Context(), currentUserID, friendID)
 		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, "Failed to send friend request")
+			log.Printf("Error creating friend request: %v", err)
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Failed to send friend request: %v", err))
 		}
 
 		// Return success (204 No Content)
@@ -171,13 +176,20 @@ func (h *Handler) AcceptFriendHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request ID")
 	}
 
-	err = h.FriendService.AcceptFriendRequest(c.Request().Context(), requestID)
+	// Get current user ID
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
+
+	_, err = h.FriendService.AcceptFriendRequest(c.Request().Context(), requestID, userID)
 	if err != nil {
 		log.Printf("Error accepting friend request: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to accept friend request")
 	}
 
-	return c.Redirect(http.StatusSeeOther, "/friends")
+	// Return NoContent for HTMX - card will be removed via outerHTML swap
+	return c.NoContent(http.StatusNoContent)
 }
 
 // DeclineFriendHandler declines a friend invitation
@@ -187,14 +199,21 @@ func (h *Handler) DeclineFriendHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request ID")
 	}
 
-	err = h.FriendService.DeclineFriendRequest(c.Request().Context(), requestID)
+	// Get current user ID
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
+
+	err = h.FriendService.DeclineFriendRequest(c.Request().Context(), requestID, userID)
 	if err != nil {
 		log.Printf("Error declining friend request: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to decline friend request")
 	}
 
 	log.Printf("Declined friend request: %s", requestID)
-	return c.Redirect(http.StatusSeeOther, "/friends")
+	// Return NoContent for HTMX - card will be removed via outerHTML swap
+	return c.NoContent(http.StatusNoContent)
 }
 
 // SendFriendRequestHandler sends a friend request

@@ -18,7 +18,7 @@ This is a **Couple Card Game** - a Go-based web application built with HTMX and 
 
 ## Guidelines
 
-- Respect DRY and KISS concepts
+- Respect DRY (don't repeat yourself) and KISS (keep it simple and stupid) concepts
 - Keep separation of concerns (html, js, css, go)
 - Clean architecture
 - No JSON, use HTMX
@@ -586,7 +586,7 @@ couple-game/
 │   │   ├── sse.js           # HTMX SSE extension
 │   │   ├── ui-utils.js      # Shared utilities (Toast, Loading, etc.)
 │   │   ├── modal.js         # Modal system
-│   │   ├── notifications-realtime.js # Real-time notifications
+│   │   ├── notifications.js      # Real-time notifications
 │   │   └── admin.js         # Admin panel utilities
 │   └── i18n/                 # Translation JSON files
 ├── sass/                     # SASS source files
