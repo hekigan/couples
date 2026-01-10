@@ -11,6 +11,7 @@ let notificationEventSource = null;
 let userEventSource = null;
 let notificationReconnectTimeout = null;
 let notificationsLoaded = false;
+let latestNotificationTimestamp = null; // Track most recent notification to avoid duplicate alerts
 
 // =============================================================================
 // Configuration
@@ -41,6 +42,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const notificationList = document.getElementById('notification-list');
     if (notificationList && notificationList.dataset.loaded === 'true') {
         notificationsLoaded = true; // Skip initial load
+
+        // Set initial timestamp to now to prevent showing alerts for existing notifications
+        // This assumes server-rendered notifications are current as of page load
+        latestNotificationTimestamp = new Date();
     }
 
     // Initial badge count load (notifications list is already server-rendered)
@@ -100,18 +105,35 @@ function connectNotificationStream() {
             // Update badge count
             loadNotificationCount();
 
-            // Show browser notification
-            showBrowserNotification(notification);
+            // Only show browser/toast notification if it's newer than what's already displayed
+            const notificationTime = new Date(notification.created_at);
 
-            // Show toast notification
-            if (typeof Toast !== 'undefined') {
-                Toast.show({
-                    type: 'info',
-                    title: notification.title,
-                    message: notification.message,
-                    icon: `<i class="${getNotificationIcon(notification.type)}"></i>`,
-                    duration: TOAST_DURATION
-                });
+            // Defensive check: ensure valid date was parsed
+            if (isNaN(notificationTime.getTime())) {
+                console.error('Invalid notification timestamp:', notification.created_at);
+                return;
+            }
+
+            const isNewerThanDisplayed = !latestNotificationTimestamp ||
+                                         notificationTime > latestNotificationTimestamp;
+
+            if (isNewerThanDisplayed) {
+                // Show browser notification
+                showBrowserNotification(notification);
+
+                // Show toast notification
+                if (typeof Toast !== 'undefined') {
+                    Toast.show({
+                        type: 'info',
+                        title: notification.title,
+                        message: notification.message,
+                        icon: `<i class="${getNotificationIcon(notification.type)}"></i>`,
+                        duration: TOAST_DURATION
+                    });
+                }
+
+                // Update latest timestamp
+                latestNotificationTimestamp = notificationTime;
             }
         } catch (error) {
             console.error('Error processing notification:', error);
@@ -270,6 +292,16 @@ function displayNotifications(notifications) {
     if (!notifications || notifications.length === 0) {
         list.innerHTML = '<div class="empty">No notifications</div>';
         return;
+    }
+
+    // Track the most recent notification timestamp
+    const mostRecent = notifications.reduce((latest, notif) => {
+        const notifTime = new Date(notif.created_at);
+        return !latest || notifTime > latest ? notifTime : latest;
+    }, null);
+
+    if (mostRecent) {
+        latestNotificationTimestamp = mostRecent;
     }
 
     // Aggregate notifications by type
