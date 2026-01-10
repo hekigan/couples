@@ -37,14 +37,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const notificationBtn = document.getElementById('notification-btn');
     if (!notificationBtn) return;
 
-    // Initial load
+    // Check if notifications were already loaded server-side
+    const notificationList = document.getElementById('notification-list');
+    if (notificationList && notificationList.dataset.loaded === 'true') {
+        notificationsLoaded = true; // Skip initial load
+    }
+
+    // Initial badge count load (notifications list is already server-rendered)
     loadNotificationCount();
 
     // Connect to real-time streams
     connectNotificationStream();
     connectUserEventStream();
 
-    // Lazy load notifications on hover/focus
+    // Lazy load notifications on hover/focus (only if not already loaded)
     const loadOnInteraction = () => {
         if (!notificationsLoaded) {
             notificationsLoaded = true;
@@ -208,6 +214,7 @@ async function loadNotifications() {
         if (response.ok && contentType && contentType.includes('application/json')) {
             const notifications = await response.json();
             displayNotifications(notifications);
+            list.dataset.loaded = 'true'; // Mark as loaded after successful fetch
         } else if (response.status === 401 || response.status === 403) {
             list.innerHTML = '<div class="error">Please log in to view notifications</div>';
         } else {

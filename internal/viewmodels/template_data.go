@@ -1,5 +1,7 @@
 package viewmodels
 
+import "github.com/hekigan/couples/internal/models"
+
 // TemplateData represents common data passed to page templates
 type TemplateData struct {
 	Title             string
@@ -10,12 +12,13 @@ type TemplateData struct {
 	OwnerUsername     string
 	GuestUsername     string
 	IsOwner           bool
-	IsAdmin           bool   // Whether current user is admin
-	JoinRequestsCount int    // Number of pending join requests (for badge)
-	NotificationCount int    // Number of unread notifications + pending friend requests (for header badge)
-	Env               string // Environment (development/production) for conditional JS loading
-	CSRFToken         string // CSRF token for forms and HTMX requests
-	CurrentStep       int    // Current room step (1=invite, 2=categories, 3=start) - derived from room state
+	IsAdmin           bool                 // Whether current user is admin
+	JoinRequestsCount int                  // Number of pending join requests (for badge)
+	NotificationCount int                  // Number of unread notifications + pending friend requests (for header badge)
+	Notifications     []*models.Notification // Recent notifications for header dropdown (server-side rendered)
+	Env               string                 // Environment (development/production) for conditional JS loading
+	CSRFToken         string                 // CSRF token for forms and HTMX requests
+	CurrentStep       int                    // Current room step (1=invite, 2=categories, 3=start) - derived from room state
 	// Pre-rendered fragment HTML for SSR (to avoid hx-trigger="load")
 	CategoriesGridHTML string // Categories grid fragment (rendered server-side)
 	FriendsListHTML    string // Friends list fragment (rendered server-side, owner only)

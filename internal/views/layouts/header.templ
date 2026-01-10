@@ -2,13 +2,56 @@ package layouts
 
 import (
 	"fmt"
+	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/viewmodels"
 	"reflect"
+	"time"
 )
 
-// formatNotificationCount formats the notification count as a string
+// formatNotificationCount formats the notification count as a string, showing 99+ for counts > 99
 func formatNotificationCount(count int) string {
+	if count > 99 {
+		return "99+"
+	}
 	return fmt.Sprintf("%d", count)
+}
+
+// getNotificationIcon returns the icon class for a notification type
+func getNotificationIcon(notifType string) string {
+	icons := map[string]string{
+		models.NotificationTypeRoomInvite:     "icon-join-room",
+		models.NotificationTypeFriendRequest:  "icon-people_alt",
+		models.NotificationTypeFriendAccepted: "icon-sentiment_very_satisfied",
+		models.NotificationTypeGameStart:      "icon-sports_esports",
+		models.NotificationTypeMessage:        "icon-comments",
+	}
+	if icon, ok := icons[notifType]; ok {
+		return icon
+	}
+	return "icon-notifications"
+}
+
+// formatNotificationTime formats a timestamp into a relative time string
+func formatNotificationTime(t time.Time) string {
+	now := time.Now()
+	diff := now.Sub(t)
+
+	if diff < time.Minute {
+		return "Just now"
+	}
+	if diff < time.Hour {
+		mins := int(diff.Minutes())
+		return fmt.Sprintf("%dm ago", mins)
+	}
+	if diff < 24*time.Hour {
+		hours := int(diff.Hours())
+		return fmt.Sprintf("%dh ago", hours)
+	}
+	if diff < 7*24*time.Hour {
+		days := int(diff.Hours() / 24)
+		return fmt.Sprintf("%dd ago", days)
+	}
+	return t.Format("Jan 2")
 }
 
 // getUserIDForHeader extracts the user ID from the User interface using reflection
@@ -80,19 +123,46 @@ templ Header(data *viewmodels.TemplateData) {
 							}
 						>
 							<i class="icon-email text-lg"></i>
-							<span class="notification-badge" id="notification-badge">
+							<span
+								id="notification-badge"
 								if data.NotificationCount > 0 {
-									{ formatNotificationCount(data.NotificationCount) }
+									class="notification-badge visible"
 								} else {
-									0
+									class="notification-badge"
+									hidden
 								}
+							>
+								{ formatNotificationCount(data.NotificationCount) }
 							</span>
 							<div class="notification-dropdown" id="notification-dropdown">
 								<div class="notification-header">
 									<button onclick="markAllRead()" class="mark-read-btn success">Mark all read</button>
 								</div>
-								<div class="notification-list" id="notification-list">
-									<div class="loading">Loading...</div>
+								<div class="notification-list" id="notification-list" data-loaded="true">
+									if len(data.Notifications) == 0 {
+										<div class="empty">No notifications</div>
+									} else {
+										for _, notification := range data.Notifications {
+											<div
+												class={ "notification-item", templ.KV("read", notification.Read), templ.KV("unread", !notification.Read) }
+												onclick={ templ.ComponentScript{Call: fmt.Sprintf("handleNotificationClick('%s', '%s')", notification.ID.String(), notification.Link)} }
+											>
+												<div class="notification-icon">
+													<i class={ getNotificationIcon(notification.Type) }></i>
+												</div>
+												<div class="notification-content">
+													<div class="notification-title">{ notification.Title }</div>
+													if notification.Message != "" {
+														<div class="notification-message">{ notification.Message }</div>
+													}
+													<div class="notification-time">{ formatNotificationTime(notification.CreatedAt) }</div>
+												</div>
+												if !notification.Read {
+													<div class="unread-dot"></div>
+												}
+											</div>
+										}
+									}
 								</div>
 							</div>
 						</a>

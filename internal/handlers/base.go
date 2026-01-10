@@ -8,6 +8,7 @@ import (
 
 	"github.com/a-h/templ"
 	"github.com/google/uuid"
+	"github.com/hekigan/couples/internal/models"
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/services"
 	"github.com/hekigan/couples/internal/viewmodels"
@@ -148,6 +149,7 @@ func NewTemplateData(c echo.Context) *TemplateData {
 
 // PopulateNotificationCount fetches and sets the notification count for the header badge.
 // This includes unread notifications + pending friend requests.
+// Also fetches recent notifications for server-side rendering in the header dropdown.
 // Should be called for pages that display the header.
 func (h *Handler) PopulateNotificationCount(c echo.Context, data *TemplateData) {
 	sessionUser := GetSessionUser(c)
@@ -160,12 +162,24 @@ func (h *Handler) PopulateNotificationCount(c echo.Context, data *TemplateData) 
 		return
 	}
 
+	// Get notification count for badge
 	count, err := h.NotificationService.GetNotificationBadgeCount(c.Request().Context(), userID)
 	if err != nil {
 		return // Silently fail, badge will show 0
 	}
-
 	data.NotificationCount = count
+
+	// Get recent notifications for dropdown (limit to 10)
+	notifications, err := h.NotificationService.GetUserNotifications(c.Request().Context(), userID, 10)
+	if err != nil {
+		return // Silently fail, dropdown will show empty
+	}
+
+	// Convert []models.Notification to []*models.Notification for template
+	data.Notifications = make([]*models.Notification, len(notifications))
+	for i := range notifications {
+		data.Notifications[i] = &notifications[i]
+	}
 }
 
 // RenderTemplComponent renders a templ component to the response

@@ -1,0 +1,71 @@
+@use '../base/variables' as *;
+
+// ==================================================
+// Notification Components
+// ==================================================
+// Styles for notification badge, dropdown, and related elements
+
+.notification-bell {
+  position: relative;
+
+  &:hover {
+    .notification-dropdown {
+      display: flex;
+    }
+  }
+}
+
+// Notification badge (hidden by default, shown by JavaScript)
+.notification-badge {
+  display: none;
+  position: absolute;
+  top: -2px;
+  right: 4px;
+  background-color: #e74c3c;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+  font-weight: bold;
+  justify-content: center;
+  align-items: center;
+  line-height: 1;
+  padding: 2px;
+  box-sizing: border-box;
+  min-width: 20px;
+  text-align: center;
+
+  &.visible {
+    display: inline-flex !important;
+  }
+}
+
+.notification-dropdown {
+  display: none;
+  position: absolute;
+  flex-direction: column;
+  top: 38px;
+  left: 0;
+  background-color: #fff;
+  border-top-right-radius: 10px;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.notification-header {
+  white-space: nowrap;
+}
+
+.notification-list {
+  color: $text-primary;
+  white-space: nowrap;
+}
+
+.notification-item {
+  display: flex;
+  flex-direction: row;
+}
