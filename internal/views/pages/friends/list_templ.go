@@ -75,7 +75,7 @@ func ListContent(data *viewmodels.TemplateData) templ.Component {
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"container\"><div class=\"page-header\"><h1><i class=\"icon-users\"></i> Friends</h1><a href=\"/friends/add\" role=\"button\" title=\"Add Friend\"><i class=\"icon-person_add\"></i></a></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"container\"><div class=\"page-header\"><h1><i class=\"icon-users\"></i> Friends</h1><a href=\"/friends/add\" role=\"button\" title=\"Add Friend\" class=\"success\"><i class=\"icon-person_add\"></i></a></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -85,7 +85,7 @@ func ListContent(data *viewmodels.TemplateData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if pendingInvitations, ok := dataMap["PendingInvitations"].([]models.FriendWithUserInfo); ok && len(pendingInvitations) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<section><h2>📨 Pending Invitations</h2><div class=\"friends-list\" id=\"pending-invitations-list\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<section><h2>Pending Invitations</h2><div class=\"friends-list\" id=\"pending-invitations-list\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -103,40 +103,40 @@ func ListContent(data *viewmodels.TemplateData) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" data-tooltip=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\"><div class=\"friend-info\"><h4 class=\"friend-username\"><i class=\"icon-user\"></i> ")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var4 string
-					templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(formatInvitationDate(request.CreatedAt))
+					templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(request.Username)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 40, Col: 62}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 42, Col: 81}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\"><div class=\"friend-info\"><span class=\"friend-username\">👤 ")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</h4><small class=\"request-date text-muted\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var5 string
-					templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(request.Username)
+					templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(formatInvitationDate(request.CreatedAt))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 43, Col: 62}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 43, Col: 89}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</span> <span class=\"friend-status\">⏳ Pending</span></div><div class=\"friend-actions\"><button type=\"button\" class=\"btn-success\" hx-post=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</small></div><div class=\"friend-actions\"><button type=\"button\" class=\"success\" hx-post=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var6 string
 					templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/friends/accept/%s", request.ID.String()))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 50, Col: 74}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 49, Col: 74}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 					if templ_7745c5c3_Err != nil {
@@ -149,7 +149,7 @@ func ListContent(data *viewmodels.TemplateData) templ.Component {
 					var templ_7745c5c3_Var7 string
 					templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("#pending-%s", request.ID.String()))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 51, Col: 69}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 50, Col: 69}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 					if templ_7745c5c3_Err != nil {
@@ -162,7 +162,7 @@ func ListContent(data *viewmodels.TemplateData) templ.Component {
 					var templ_7745c5c3_Var8 string
 					templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/friends/decline/%s", request.ID.String()))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 61, Col: 75}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 60, Col: 75}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 					if templ_7745c5c3_Err != nil {
@@ -175,7 +175,7 @@ func ListContent(data *viewmodels.TemplateData) templ.Component {
 					var templ_7745c5c3_Var9 string
 					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("#pending-%s", request.ID.String()))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 62, Col: 69}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 61, Col: 69}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 					if templ_7745c5c3_Err != nil {
@@ -213,7 +213,7 @@ func ListContent(data *viewmodels.TemplateData) templ.Component {
 						var templ_7745c5c3_Var10 string
 						templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("friend-%s", friend.ID.String()))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 82, Col: 82}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 81, Col: 82}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 						if templ_7745c5c3_Err != nil {
@@ -226,7 +226,7 @@ func ListContent(data *viewmodels.TemplateData) templ.Component {
 						var templ_7745c5c3_Var11 string
 						templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(friend.Username)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 84, Col: 83}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 83, Col: 83}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 						if templ_7745c5c3_Err != nil {
@@ -239,7 +239,7 @@ func ListContent(data *viewmodels.TemplateData) templ.Component {
 						var templ_7745c5c3_Var12 string
 						templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/friends/%s", friend.ID.String()))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 90, Col: 69}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 89, Col: 69}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 						if templ_7745c5c3_Err != nil {
@@ -252,7 +252,7 @@ func ListContent(data *viewmodels.TemplateData) templ.Component {
 						var templ_7745c5c3_Var13 string
 						templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("#friend-%s", friend.ID.String()))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 92, Col: 68}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pages/friends/list.templ`, Line: 91, Col: 68}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 						if templ_7745c5c3_Err != nil {
