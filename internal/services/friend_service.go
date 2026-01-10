@@ -356,7 +356,7 @@ func (s *FriendService) SearchUsersByUsername(ctx context.Context, query string)
 func (s *FriendService) getUserInfo(ctx context.Context, userID uuid.UUID) (*models.User, error) {
 	// Custom query - only selecting specific fields, not all (*)
 	data, _, err := s.client.From("users").
-		Select("id,username,name", "", false).
+		Select("id,username", "", false).
 		Eq("id", userID.String()).
 		Single().
 		Execute()
