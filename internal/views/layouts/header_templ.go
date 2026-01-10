@@ -62,6 +62,80 @@ func formatNotificationTime(t time.Time) string {
 	return t.Format("Jan 2")
 }
 
+// AggregatedNotification represents notifications grouped by type
+type AggregatedNotification struct {
+	Type      string
+	Count     int
+	Icon      string
+	Label     string
+	HasUnread bool
+	Link      string
+}
+
+// aggregateNotifications groups notifications by type
+func aggregateNotifications(notifications []*models.Notification) []AggregatedNotification {
+	typeMap := make(map[string]*AggregatedNotification)
+
+	typeLabels := map[string]string{
+		models.NotificationTypeRoomInvite:     "Room invitation",
+		models.NotificationTypeFriendRequest:  "Friend request",
+		models.NotificationTypeFriendAccepted: "Friend accepted",
+		models.NotificationTypeGameStart:      "Game started",
+		models.NotificationTypeMessage:        "Message",
+	}
+
+	typeLinks := map[string]string{
+		models.NotificationTypeRoomInvite:     "/game/rooms",
+		models.NotificationTypeFriendRequest:  "/friends",
+		models.NotificationTypeFriendAccepted: "/friends",
+		models.NotificationTypeGameStart:      "/game/rooms",
+		models.NotificationTypeMessage:        "/",
+	}
+
+	for _, notif := range notifications {
+		if agg, exists := typeMap[notif.Type]; exists {
+			agg.Count++
+			if !notif.Read {
+				agg.HasUnread = true
+			}
+		} else {
+			label := typeLabels[notif.Type]
+			if label == "" {
+				label = "Notification"
+			}
+			link := typeLinks[notif.Type]
+			if link == "" {
+				link = "/"
+			}
+
+			typeMap[notif.Type] = &AggregatedNotification{
+				Type:      notif.Type,
+				Count:     1,
+				Icon:      getNotificationIcon(notif.Type),
+				Label:     label,
+				HasUnread: !notif.Read,
+				Link:      link,
+			}
+		}
+	}
+
+	// Convert map to slice
+	result := make([]AggregatedNotification, 0, len(typeMap))
+	for _, agg := range typeMap {
+		result = append(result, *agg)
+	}
+
+	return result
+}
+
+// pluralizeLabel adds (s) if count > 1
+func pluralizeLabel(label string, count int) string {
+	if count > 1 {
+		return label + "(s)"
+	}
+	return label
+}
+
 // getUserIDForHeader extracts the user ID from the User interface using reflection
 func getUserIDForHeader(user interface{}) string {
 	if user == nil {
@@ -133,7 +207,7 @@ func Header(data *viewmodels.TemplateData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if data.User != nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<!-- Notification Bell --> <a href=\"#\" role=\"button\" class=\"notification-bell nav-link\" id=\"notification-btn\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<!-- Notification Bell --> <span role=\"button\" class=\"notification-bell nav-link\" id=\"notification-btn\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -145,7 +219,7 @@ func Header(data *viewmodels.TemplateData) templ.Component {
 				var templ_7745c5c3_Var2 string
 				templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(getUserIDForHeader(data.User))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/header.templ`, Line: 122, Col: 52}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/header.templ`, Line: 195, Col: 52}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 				if templ_7745c5c3_Err != nil {
@@ -178,13 +252,13 @@ func Header(data *viewmodels.TemplateData) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(formatNotificationCount(data.NotificationCount))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/header.templ`, Line: 135, Col: 57}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/header.templ`, Line: 208, Col: 57}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</span><div class=\"notification-dropdown\" id=\"notification-dropdown\"><div class=\"notification-header\"><button onclick=\"markAllRead()\" class=\"mark-read-btn success\">Mark all read</button></div><div class=\"notification-list\" id=\"notification-list\" data-loaded=\"true\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</span><div class=\"notification-dropdown\" id=\"notification-dropdown\"><div class=\"notification-header\"><button onclick=\"markAllRead()\" class=\"mark-read-btn\">Mark all read</button></div><div class=\"notification-list\" id=\"notification-list\" data-loaded=\"true\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -194,35 +268,35 @@ func Header(data *viewmodels.TemplateData) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			} else {
-				for _, notification := range data.Notifications {
-					var templ_7745c5c3_Var4 = []any{"notification-item", templ.KV("read", notification.Read), templ.KV("unread", !notification.Read)}
+				for _, agg := range aggregateNotifications(data.Notifications) {
+					var templ_7745c5c3_Var4 = []any{"notification-item", templ.KV("unread", agg.HasUnread)}
 					templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var4...)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templ.RenderScriptItems(ctx, templ_7745c5c3_Buffer, templ.ComponentScript{Call: fmt.Sprintf("handleNotificationClick('%s', '%s')", notification.ID.String(), notification.Link)})
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<a href=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<div class=\"")
+					var templ_7745c5c3_Var5 templ.SafeURL
+					templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(agg.Link))
 					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					var templ_7745c5c3_Var5 string
-					templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var4).String())
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/header.templ`, Line: 1, Col: 0}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/header.templ`, Line: 220, Col: 38}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\" onclick=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\" class=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var6 templ.ComponentScript = templ.ComponentScript{Call: fmt.Sprintf("handleNotificationClick('%s', '%s')", notification.ID.String(), notification.Link)}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6.Call)
+					var templ_7745c5c3_Var6 string
+					templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var4).String())
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/header.templ`, Line: 1, Col: 0}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -230,7 +304,7 @@ func Header(data *viewmodels.TemplateData) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var7 = []any{getNotificationIcon(notification.Type)}
+					var templ_7745c5c3_Var7 = []any{agg.Icon}
 					templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var7...)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
@@ -248,92 +322,69 @@ func Header(data *viewmodels.TemplateData) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\"></i></div><div class=\"notification-content\"><div class=\"notification-title\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\"></i></div><div class=\"notification-content\"><div class=\"notification-title\"><span class=\"notification-count-badge\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var9 string
-					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(notification.Title)
+					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", agg.Count))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/header.templ`, Line: 154, Col: 65}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/header.templ`, Line: 228, Col: 83}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</div>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</span> ")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					if notification.Message != "" {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<div class=\"notification-message\">")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						var templ_7745c5c3_Var10 string
-						templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(notification.Message)
-						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/header.templ`, Line: 156, Col: 70}
-						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</div>")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
+					var templ_7745c5c3_Var10 string
+					templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(pluralizeLabel(agg.Label, agg.Count))
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/header.templ`, Line: 229, Col: 52}
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<div class=\"notification-time\">")
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var11 string
-					templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(formatNotificationTime(notification.CreatedAt))
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layouts/header.templ`, Line: 158, Col: 92}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</div></div>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</div></div>")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					if !notification.Read {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div class=\"unread-dot\"></div>")
+					if agg.HasUnread {
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<div class=\"unread-dot\"></div>")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</div>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</a>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</div></div></a> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</div></div></span> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if data.IsAdmin {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<a href=\"/admin\" role=\"button\" class=\"nav-link\">Admin Dashboard</a>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<a href=\"/admin\" role=\"button\" class=\"nav-link\">Admin Dashboard</a>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, " <a href=\"/friends\" role=\"button\" class=\"nav-link\">Friends</a> <a href=\"/game/rooms\" role=\"button\" class=\"nav-link\">Rooms</a> <a href=\"/profile\" role=\"button\" class=\"nav-link\">Profile</a> <a href=\"#\" role=\"button\" hx-post=\"/auth/logout\" hx-confirm=\"Are you sure you want to logout?\" class=\"nav-link\">Logout</a>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, " <a href=\"/friends\" role=\"button\" class=\"nav-link\">Friends</a> <a href=\"/game/rooms\" role=\"button\" class=\"nav-link\">Rooms</a> <a href=\"/profile\" role=\"button\" class=\"nav-link\">Profile</a> <a href=\"#\" role=\"button\" hx-post=\"/auth/logout\" hx-confirm=\"Are you sure you want to logout?\" class=\"nav-link\">Logout</a>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<a href=\"/login\" role=\"button\">Login</a> <a href=\"/signup\" role=\"button\">Signup</a>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<a href=\"/login\" role=\"button\">Login</a> <a href=\"/signup\" role=\"button\">Signup</a>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</nav></div></div></header>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</nav></div></div></header>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

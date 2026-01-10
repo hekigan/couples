@@ -226,24 +226,7 @@ async function loadNotifications() {
     }
 }
 
-async function handleNotificationClick(notificationId, link) {
-    try {
-        await fetch(`${API_BASE}/notifications/${notificationId}/read`, {
-            method: 'POST'
-        });
-
-        // Update UI
-        await loadNotificationCount();
-        await loadNotifications();
-
-        // Navigate if link provided
-        if (link) {
-            window.location.href = link;
-        }
-    } catch (error) {
-        console.error('Failed to mark notification as read:', error);
-    }
-}
+// Removed handleNotificationClick - notifications now use direct links
 
 async function markAllRead() {
     try {
@@ -289,22 +272,69 @@ function displayNotifications(notifications) {
         return;
     }
 
-    const html = notifications.map(notification => `
-        <div class="notification-item ${notification.read ? 'read' : 'unread'}" 
-             onclick="handleNotificationClick('${notification.id}', '${notification.link || ''}')">
+    // Aggregate notifications by type
+    const aggregated = aggregateNotificationsByType(notifications);
+
+    const html = aggregated.map(agg => `
+        <a href="${agg.link}" class="notification-item ${agg.hasUnread ? 'unread' : ''}">
             <div class="notification-icon">
-                <i class="${getNotificationIcon(notification.type)}"></i>
+                <i class="${agg.icon}"></i>
             </div>
             <div class="notification-content">
-                <div class="notification-title">${notification.title}</div>
-                ${notification.message ? `<div class="notification-message">${notification.message}</div>` : ''}
-                <div class="notification-time">${formatTime(notification.created_at)}</div>
+                <div class="notification-title">
+                    <span class="notification-count-badge">${agg.count}</span>
+                    ${pluralizeLabel(agg.label, agg.count)}
+                </div>
             </div>
-            ${!notification.read ? '<div class="unread-dot"></div>' : ''}
-        </div>
+            ${agg.hasUnread ? '<div class="unread-dot"></div>' : ''}
+        </a>
     `).join('');
 
     list.innerHTML = html;
+}
+
+function aggregateNotificationsByType(notifications) {
+    const typeMap = {};
+
+    const typeLabels = {
+        'room_invitation': 'Room invitation',
+        'friend_request': 'Friend request',
+        'friend_accepted': 'Friend accepted',
+        'game_start': 'Game started',
+        'message': 'Message'
+    };
+
+    const typeLinks = {
+        'room_invitation': '/game/rooms',
+        'friend_request': '/friends',
+        'friend_accepted': '/friends',
+        'game_start': '/game/rooms',
+        'message': '/'
+    };
+
+    notifications.forEach(notif => {
+        if (typeMap[notif.type]) {
+            typeMap[notif.type].count++;
+            if (!notif.read) {
+                typeMap[notif.type].hasUnread = true;
+            }
+        } else {
+            typeMap[notif.type] = {
+                type: notif.type,
+                count: 1,
+                icon: getNotificationIcon(notif.type),
+                label: typeLabels[notif.type] || 'Notification',
+                hasUnread: !notif.read,
+                link: typeLinks[notif.type] || '/'
+            };
+        }
+    });
+
+    return Object.values(typeMap);
+}
+
+function pluralizeLabel(label, count) {
+    return count > 1 ? label + '(s)' : label;
 }
 
 // =============================================================================

@@ -54,6 +54,80 @@ func formatNotificationTime(t time.Time) string {
 	return t.Format("Jan 2")
 }
 
+// AggregatedNotification represents notifications grouped by type
+type AggregatedNotification struct {
+	Type      string
+	Count     int
+	Icon      string
+	Label     string
+	HasUnread bool
+	Link      string
+}
+
+// aggregateNotifications groups notifications by type
+func aggregateNotifications(notifications []*models.Notification) []AggregatedNotification {
+	typeMap := make(map[string]*AggregatedNotification)
+
+	typeLabels := map[string]string{
+		models.NotificationTypeRoomInvite:     "Room invitation",
+		models.NotificationTypeFriendRequest:  "Friend request",
+		models.NotificationTypeFriendAccepted: "Friend accepted",
+		models.NotificationTypeGameStart:      "Game started",
+		models.NotificationTypeMessage:        "Message",
+	}
+
+	typeLinks := map[string]string{
+		models.NotificationTypeRoomInvite:     "/game/rooms",
+		models.NotificationTypeFriendRequest:  "/friends",
+		models.NotificationTypeFriendAccepted: "/friends",
+		models.NotificationTypeGameStart:      "/game/rooms",
+		models.NotificationTypeMessage:        "/",
+	}
+
+	for _, notif := range notifications {
+		if agg, exists := typeMap[notif.Type]; exists {
+			agg.Count++
+			if !notif.Read {
+				agg.HasUnread = true
+			}
+		} else {
+			label := typeLabels[notif.Type]
+			if label == "" {
+				label = "Notification"
+			}
+			link := typeLinks[notif.Type]
+			if link == "" {
+				link = "/"
+			}
+
+			typeMap[notif.Type] = &AggregatedNotification{
+				Type:      notif.Type,
+				Count:     1,
+				Icon:      getNotificationIcon(notif.Type),
+				Label:     label,
+				HasUnread: !notif.Read,
+				Link:      link,
+			}
+		}
+	}
+
+	// Convert map to slice
+	result := make([]AggregatedNotification, 0, len(typeMap))
+	for _, agg := range typeMap {
+		result = append(result, *agg)
+	}
+
+	return result
+}
+
+// pluralizeLabel adds (s) if count > 1
+func pluralizeLabel(label string, count int) string {
+	if count > 1 {
+		return label + "(s)"
+	}
+	return label
+}
+
 // getUserIDForHeader extracts the user ID from the User interface using reflection
 func getUserIDForHeader(user interface{}) string {
 	if user == nil {
@@ -113,8 +187,7 @@ templ Header(data *viewmodels.TemplateData) {
 				<nav class="main-nav">
 					if data.User != nil {
 						<!-- Notification Bell -->
-						<a
-							href="#"
+						<span
 							role="button"
 							class="notification-bell nav-link"
 							id="notification-btn"
@@ -136,36 +209,35 @@ templ Header(data *viewmodels.TemplateData) {
 							</span>
 							<div class="notification-dropdown" id="notification-dropdown">
 								<div class="notification-header">
-									<button onclick="markAllRead()" class="mark-read-btn success">Mark all read</button>
+									<button onclick="markAllRead()" class="mark-read-btn">Mark all read</button>
 								</div>
 								<div class="notification-list" id="notification-list" data-loaded="true">
 									if len(data.Notifications) == 0 {
 										<div class="empty">No notifications</div>
 									} else {
-										for _, notification := range data.Notifications {
-											<div
-												class={ "notification-item", templ.KV("read", notification.Read), templ.KV("unread", !notification.Read) }
-												onclick={ templ.ComponentScript{Call: fmt.Sprintf("handleNotificationClick('%s', '%s')", notification.ID.String(), notification.Link)} }
+										for _, agg := range aggregateNotifications(data.Notifications) {
+											<a
+												href={ templ.URL(agg.Link) }
+												class={ "notification-item", templ.KV("unread", agg.HasUnread) }
 											>
 												<div class="notification-icon">
-													<i class={ getNotificationIcon(notification.Type) }></i>
+													<i class={ agg.Icon }></i>
 												</div>
 												<div class="notification-content">
-													<div class="notification-title">{ notification.Title }</div>
-													if notification.Message != "" {
-														<div class="notification-message">{ notification.Message }</div>
-													}
-													<div class="notification-time">{ formatNotificationTime(notification.CreatedAt) }</div>
+													<div class="notification-title">
+														<span class="notification-count-badge">{ fmt.Sprintf("%d", agg.Count) }</span>
+														{ pluralizeLabel(agg.Label, agg.Count) }
+													</div>
 												</div>
-												if !notification.Read {
+												if agg.HasUnread {
 													<div class="unread-dot"></div>
 												}
-											</div>
+											</a>
 										}
 									}
 								</div>
 							</div>
-						</a>
+						</span>
 						if data.IsAdmin {
 							<a href="/admin" role="button" class="nav-link">Admin Dashboard</a>
 						}
