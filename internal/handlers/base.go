@@ -162,15 +162,16 @@ func (h *Handler) PopulateNotificationCount(c echo.Context, data *TemplateData) 
 		return
 	}
 
-	// Get notification count for badge
+	// Get notification count for badge (includes pending friend requests)
 	count, err := h.NotificationService.GetNotificationBadgeCount(c.Request().Context(), userID)
 	if err != nil {
 		return // Silently fail, badge will show 0
 	}
 	data.NotificationCount = count
 
-	// Get recent notifications for dropdown (limit to 10)
-	notifications, err := h.NotificationService.GetUserNotifications(c.Request().Context(), userID, 10)
+	// Get recent notifications for dropdown including synthetic friend request notifications
+	// This ensures pending friend requests show up even if notification records weren't created
+	notifications, err := h.NotificationService.GetNotificationsForDisplay(c.Request().Context(), userID, 10)
 	if err != nil {
 		return // Silently fail, dropdown will show empty
 	}
