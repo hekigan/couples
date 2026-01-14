@@ -19,7 +19,6 @@ go.work
 /dist/
 couple-card-game
 couple-game
-server
 main
 
 # Dependency directories

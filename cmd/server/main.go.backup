@@ -1,0 +1,336 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/gorilla/mux"
+	"github.com/hekigan/couples/internal/handlers"
+	"github.com/hekigan/couples/internal/handlers/admin"
+	"github.com/hekigan/couples/internal/handlers/admin/api"
+	"github.com/hekigan/couples/internal/middleware"
+	"github.com/hekigan/couples/internal/services"
+	"github.com/joho/godotenv"
+)
+
+func main() {
+	// Load environment variables
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, using environment variables")
+	}
+
+	// Initialize session store
+	middleware.InitSessionStore()
+
+	// Initialize Supabase client
+	supabaseClient, err := services.NewSupabaseClient()
+	if err != nil {
+		log.Fatalf("Failed to initialize Supabase client: %v", err)
+	}
+
+	// Initialize template service for SSE HTML fragments (before game service)
+	templateService, err := services.NewTemplateService("./templates")
+	if err != nil {
+		log.Fatalf("Failed to initialize template service: %v", err)
+	}
+
+	// Initialize services
+	realtimeService := services.NewRealtimeService()
+	userService := services.NewUserService(supabaseClient)
+	roomService := services.NewRoomService(supabaseClient, realtimeService)
+	questionService := services.NewQuestionService(supabaseClient)
+	categoryService := services.NewCategoryService(supabaseClient)
+	answerService := services.NewAnswerService(supabaseClient)
+	gameService := services.NewGameService(supabaseClient, roomService, questionService, categoryService, answerService, realtimeService, templateService)
+	friendService := services.NewFriendService(supabaseClient)
+	i18nService := services.NewI18nService(supabaseClient, "./static/i18n")
+	notificationService := services.NewNotificationService(supabaseClient)
+	adminService := services.NewAdminService(supabaseClient)
+
+	// Show development mode hot-reload instructions
+	if os.Getenv("ENV") == "development" {
+		log.Println("")
+		log.Println("\033[1;33m╔═══════════════════════════════════════════════════════════════════════════╗\033[0m")
+		log.Println("\033[1;33m║\033[0m \033[1;36m⚠️  IMPORTANT: For full hot-reload experience, run these commands:        \033[0m \033[1;33m║\033[0m")
+		log.Println("\033[1;33m║\033[0m                                                                           \033[1;33m║\033[0m")
+		log.Println("\033[1;33m║\033[0m   \033[1;32m📂 Terminal 2:\033[0m  \033[1;97mmake sass-watch\033[0m  \033[90m(auto-compile CSS)\033[0m                     \033[1;33m║\033[0m")
+		log.Println("\033[1;33m║\033[0m   \033[1;32m📂 Terminal 3:\033[0m  \033[1;97mmake js-watch\033[0m    \033[90m(auto-compile JS bundles)\033[0m              \033[1;33m║\033[0m")
+		log.Println("\033[1;33m╚═══════════════════════════════════════════════════════════════════════════╝\033[0m")
+		log.Println("")
+	}
+
+	// Log service initialization
+	log.Println("Services initialized successfully")
+
+	// Create handler with all services
+	h := handlers.NewHandler(
+		userService,
+		roomService,
+		gameService,
+		questionService,
+		categoryService,
+		answerService,
+		friendService,
+		i18nService,
+		notificationService,
+		templateService,
+		adminService,
+	)
+
+	// Create router
+	router := mux.NewRouter()
+
+	// Apply global middleware
+	router.Use(middleware.SecurityHeadersMiddleware)
+	router.Use(middleware.CORSMiddleware)
+	router.Use(middleware.AuthMiddleware)
+	router.Use(middleware.I18nMiddleware)
+	router.Use(middleware.AnonymousSessionMiddleware)
+
+	// Static files
+	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+
+	// Public routes
+	router.HandleFunc("/", h.HomeHandler).Methods("GET")
+	router.HandleFunc("/health", h.HealthHandler).Methods("GET")
+
+	// Username setup routes (requires auth)
+	setupRouter := router.PathPrefix("/setup-username").Subrouter()
+	setupRouter.Use(middleware.AuthMiddleware)
+	setupRouter.Use(middleware.RequireAuth)
+	setupRouter.HandleFunc("", h.SetupUsernameHandler).Methods("GET")
+	setupRouter.HandleFunc("", h.SetupUsernamePostHandler).Methods("POST")
+
+	// Auth routes
+	authRouter := router.PathPrefix("/auth").Subrouter()
+	authRouter.HandleFunc("/login", h.LoginHandler).Methods("GET")
+	authRouter.HandleFunc("/login", h.LoginPostHandler).Methods("POST")
+	authRouter.HandleFunc("/signup", h.SignupHandler).Methods("GET")
+	authRouter.HandleFunc("/signup", h.SignupPostHandler).Methods("POST")
+	authRouter.HandleFunc("/logout", h.LogoutHandler).Methods("POST")
+	authRouter.HandleFunc("/anonymous", h.CreateAnonymousHandler).Methods("POST")
+	authRouter.HandleFunc("/dev-login-admin", h.DevLoginAsAdminHandler).Methods("GET") // Development only
+
+	// OAuth routes
+	authRouter.HandleFunc("/oauth/google", h.OAuthGoogleHandler).Methods("GET")
+	authRouter.HandleFunc("/oauth/facebook", h.OAuthFacebookHandler).Methods("GET")
+	authRouter.HandleFunc("/oauth/github", h.OAuthGithubHandler).Methods("GET")
+	authRouter.HandleFunc("/oauth/callback", h.OAuthCallbackHandler).Methods("GET")
+	authRouter.HandleFunc("/oauth/token", h.OAuthTokenHandler).Methods("POST")
+
+	// Game routes (require auth)
+	gameRouter := router.PathPrefix("/game").Subrouter()
+	gameRouter.Use(middleware.AuthMiddleware)
+	gameRouter.Use(middleware.RequireAuth)
+	gameRouter.HandleFunc("/rooms", h.ListRoomsHandler).Methods("GET")
+	gameRouter.HandleFunc("/create-room", h.CreateRoomHandler).Methods("GET", "POST")
+	gameRouter.HandleFunc("/join-room", h.JoinRoomHandler).Methods("GET", "POST")
+	gameRouter.HandleFunc("/room/{id}", h.RoomHandler).Methods("GET")
+	gameRouter.HandleFunc("/room/{id}/delete", h.DeleteRoomHandler).Methods("POST", "DELETE")
+	gameRouter.HandleFunc("/room/{id}/join-requests", h.ListJoinRequestsHandler).Methods("GET")
+	gameRouter.HandleFunc("/play/{id}", h.PlayHandler).Methods("GET")
+	gameRouter.HandleFunc("/finished/{id}", h.GameFinishedHandler).Methods("GET")
+
+	// Profile routes (require auth)
+	profileRouter := router.PathPrefix("/profile").Subrouter()
+	profileRouter.Use(middleware.AuthMiddleware)
+	profileRouter.Use(middleware.RequireAuth)
+	profileRouter.HandleFunc("", h.ProfileHandler).Methods("GET")
+	profileRouter.HandleFunc("/update", h.UpdateProfileHandler).Methods("POST")
+
+	// Friend routes (require auth)
+	friendRouter := router.PathPrefix("/friends").Subrouter()
+	friendRouter.Use(middleware.AuthMiddleware)
+	friendRouter.Use(middleware.RequireAuth)
+	friendRouter.HandleFunc("", h.FriendListHandler).Methods("GET")
+	friendRouter.HandleFunc("/add", h.AddFriendHandler).Methods("GET", "POST")
+	friendRouter.HandleFunc("/{id}/accept", h.AcceptFriendHandler).Methods("POST")
+	friendRouter.HandleFunc("/{id}/decline", h.DeclineFriendHandler).Methods("POST")
+	friendRouter.HandleFunc("/{id}", h.RemoveFriendHandler).Methods("DELETE")
+
+	// API routes for HTMX
+	apiRouter := router.PathPrefix("/api").Subrouter()
+	apiRouter.Use(middleware.AuthMiddleware)
+	apiRouter.Use(middleware.RequireAuth)
+	apiRouter.HandleFunc("/rooms/{id}", h.DeleteRoomAPIHandler).Methods("DELETE")
+	apiRouter.HandleFunc("/rooms/{id}/leave", h.LeaveRoomHandler).Methods("POST")
+
+	// Game partials routes
+	gameRouter.HandleFunc("/partials/empty-rooms-state", h.EmptyRoomsStateHandler).Methods("GET")
+	apiRouter.HandleFunc("/rooms/{id}/start", h.StartGameAPIHandler).Methods("POST")
+	apiRouter.HandleFunc("/rooms/{id}/guest-ready", h.SetGuestReadyAPIHandler).Methods("POST")
+	apiRouter.HandleFunc("/rooms/{id}/typing", h.PlayerTypingAPIHandler).Methods("POST")
+	apiRouter.HandleFunc("/rooms/{id}/draw", h.DrawQuestionAPIHandler).Methods("POST")
+	apiRouter.HandleFunc("/rooms/{id}/answer", h.SubmitAnswerAPIHandler).Methods("POST")
+	// Note: /rooms/{id}/next-question is now handled by NextQuestionHTMLHandler (below) for HTMX
+	apiRouter.HandleFunc("/rooms/{id}/finish", h.FinishGameAPIHandler).Methods("POST")
+	apiRouter.HandleFunc("/categories", h.GetCategoriesAPIHandler).Methods("GET")
+	// Categories endpoints - GET returns HTML fragment (HTMX), POST updates (legacy bulk update)
+	apiRouter.HandleFunc("/rooms/{id}/categories", h.GetRoomCategoriesHTMLHandler).Methods("GET")     // HTML fragment for HTMX
+	apiRouter.HandleFunc("/rooms/{id}/categories", h.UpdateCategoriesAPIHandler).Methods("POST")      // Legacy bulk update
+	apiRouter.HandleFunc("/rooms/{id}/categories/toggle", h.ToggleCategoryAPIHandler).Methods("POST") // Toggle single category (HTMX)
+
+	// Button state endpoints (HTMX)
+	apiRouter.HandleFunc("/rooms/{id}/start-button", h.GetStartGameButtonHTMLHandler).Methods("GET")  // Start game button HTML
+	apiRouter.HandleFunc("/rooms/{id}/ready-button", h.GetGuestReadyButtonHTMLHandler).Methods("GET") // Guest ready button HTML
+	apiRouter.HandleFunc("/rooms/{id}/status-badge", h.RoomStatusBadgeAPIHandler).Methods("GET")      // Room status badge HTML
+
+	// Play page HTMX endpoints
+	apiRouter.HandleFunc("/rooms/{id}/turn-indicator", h.GetTurnIndicatorHandler).Methods("GET")     // Turn indicator HTML
+	apiRouter.HandleFunc("/rooms/{id}/question-card", h.GetQuestionCardHandler).Methods("GET")       // Question card HTML
+	apiRouter.HandleFunc("/rooms/{id}/game-forms", h.GetGameFormsHandler).Methods("GET")             // Game forms HTML
+	apiRouter.HandleFunc("/rooms/{id}/game-content", h.GetGameContentHandler).Methods("GET")         // Full game content (question card + forms)
+	apiRouter.HandleFunc("/rooms/{id}/progress-counter", h.GetProgressCounterHandler).Methods("GET") // Progress counter HTML
+	apiRouter.HandleFunc("/rooms/{id}/next-question", h.NextQuestionHTMLHandler).Methods("POST")     // Draw next question (HTMX)
+
+	// Friend API routes
+	apiRouter.HandleFunc("/friends/list", h.GetFriendsAPIHandler).Methods("GET")       // JSON (legacy)
+	apiRouter.HandleFunc("/friends/list-html", h.GetFriendsHTMLHandler).Methods("GET") // HTML fragment (HTMX)
+
+	// Room join request API routes
+	apiRouter.HandleFunc("/rooms/join-request", h.CreateJoinRequestHandler).Methods("POST")
+	apiRouter.HandleFunc("/rooms/{id}/join-requests", h.ListJoinRequestsHandler).Methods("GET")
+	apiRouter.HandleFunc("/rooms/{id}/join-requests-json", h.GetJoinRequestsJSONHandler).Methods("GET")
+	apiRouter.HandleFunc("/rooms/{id}/join-requests-count", h.GetJoinRequestsCountHandler).Methods("GET")
+	apiRouter.HandleFunc("/rooms/{id}/my-join-request", h.CheckMyJoinRequestHandler).Methods("GET")
+	apiRouter.HandleFunc("/rooms/{id}/cancel-my-request", h.CancelMyJoinRequestHTMLHandler).Methods("POST") // HTMX version
+	apiRouter.HandleFunc("/rooms/my-accepted-requests", h.GetMyAcceptedRequestsHandler).Methods("GET")
+	apiRouter.HandleFunc("/rooms/my-join-requests", h.GetMyJoinRequestsHTMLHandler).Methods("GET") // HTMX version
+	apiRouter.HandleFunc("/rooms/join-request/{request_id}/accept", h.AcceptJoinRequestHandler).Methods("POST")
+	apiRouter.HandleFunc("/rooms/join-request/{request_id}/reject", h.RejectJoinRequestHandler).Methods("POST")
+
+	// Room invitation API routes
+	apiRouter.HandleFunc("/rooms/invitations", h.SendRoomInvitationHandler).Methods("POST")
+	apiRouter.HandleFunc("/rooms/invitations/{room_id}/{invitee_id}", h.CancelRoomInvitationHandler).Methods("DELETE")
+
+	// Notification API routes
+	apiRouter.HandleFunc("/notifications", h.GetNotificationsHandler).Methods("GET")
+	apiRouter.HandleFunc("/notifications/unread-count", h.GetUnreadCountHandler).Methods("GET")
+	apiRouter.HandleFunc("/notifications/stream", h.NotificationStreamHandler).Methods("GET")
+	apiRouter.HandleFunc("/notifications/{id}/read", h.MarkNotificationReadHandler).Methods("POST")
+	apiRouter.HandleFunc("/notifications/read-all", h.MarkAllNotificationsReadHandler).Methods("POST")
+
+	// Real-time SSE endpoints
+	realtimeHandler := handlers.NewRealtimeHandler(h, realtimeService)
+	apiRouter.HandleFunc("/rooms/{id}/events", realtimeHandler.StreamRoomEvents).Methods("GET")
+	apiRouter.HandleFunc("/rooms/{id}/players", realtimeHandler.GetRoomPlayers).Methods("GET")
+	apiRouter.HandleFunc("/rooms/{id}/state", realtimeHandler.GetRoomState).Methods("GET")
+	apiRouter.HandleFunc("/user/events", realtimeHandler.StreamUserNotifications).Methods("GET")
+
+	// Admin routes
+	adminRouter := router.PathPrefix("/admin").Subrouter()
+	adminRouter.Use(middleware.RequireAdmin)
+
+	// Admin page routes
+	adminRouter.HandleFunc("", h.AdminDashboardHandler).Methods("GET")
+	adminRouter.HandleFunc("/users", h.AdminUsersHandler).Methods("GET")
+	adminRouter.HandleFunc("/questions", h.AdminQuestionsHandler).Methods("GET")
+	adminRouter.HandleFunc("/categories", h.AdminCategoriesHandler).Methods("GET")
+	adminRouter.HandleFunc("/rooms", h.AdminRoomsHandler).Methods("GET")
+	adminRouter.HandleFunc("/translations", h.AdminTranslationsHandler).Methods("GET")
+
+	// Admin API handler
+	adminAPIHandler := admin.NewAdminAPIHandler(h, adminService, questionService, categoryService)
+
+	// Admin API routes for users
+	adminRouter.HandleFunc("/api/users/list", adminAPIHandler.ListUsersHandler).Methods("GET")
+	adminRouter.HandleFunc("/api/users/new", adminAPIHandler.GetUserCreateFormHandler).Methods("GET")
+	adminRouter.HandleFunc("/api/users", adminAPIHandler.CreateUserHandler).Methods("POST")
+	adminRouter.HandleFunc("/api/users/{id}/edit-form", adminAPIHandler.GetUserEditFormHandler).Methods("GET")
+	adminRouter.HandleFunc("/api/users/{id}", adminAPIHandler.UpdateUserHandler).Methods("PUT")
+	adminRouter.HandleFunc("/api/users/{id}/toggle-admin", adminAPIHandler.ToggleUserAdminHandler).Methods("POST")
+	adminRouter.HandleFunc("/api/users/{id}", adminAPIHandler.DeleteUserHandler).Methods("DELETE")
+	adminRouter.HandleFunc("/api/users/bulk-delete", adminAPIHandler.BulkDeleteUsersHandler).Methods("POST")
+
+	// Admin API routes for questions
+	adminRouter.HandleFunc("/api/questions/list", adminAPIHandler.ListQuestionsHandler).Methods("GET")
+	adminRouter.HandleFunc("/api/questions/new", adminAPIHandler.GetQuestionCreateFormHandler).Methods("GET")
+	adminRouter.HandleFunc("/api/questions", adminAPIHandler.CreateQuestionHandler).Methods("POST")
+	adminRouter.HandleFunc("/api/questions/{id}/edit-form", adminAPIHandler.GetQuestionEditFormHandler).Methods("GET")
+	adminRouter.HandleFunc("/api/questions/{id}", adminAPIHandler.UpdateQuestionHandler).Methods("PUT")
+	adminRouter.HandleFunc("/api/questions/{id}", adminAPIHandler.DeleteQuestionHandler).Methods("DELETE")
+	adminRouter.HandleFunc("/api/questions/bulk-delete", adminAPIHandler.BulkDeleteQuestionsHandler).Methods("POST")
+
+	// Admin API routes for categories
+	adminRouter.HandleFunc("/api/categories/list", adminAPIHandler.ListCategoriesHandler).Methods("GET")
+	adminRouter.HandleFunc("/api/categories/new", adminAPIHandler.GetCategoryCreateFormHandler).Methods("GET")
+	adminRouter.HandleFunc("/api/categories", adminAPIHandler.CreateCategoryHandler).Methods("POST")
+	adminRouter.HandleFunc("/api/categories/{id}/edit-form", adminAPIHandler.GetCategoryEditFormHandler).Methods("GET")
+	adminRouter.HandleFunc("/api/categories/{id}", adminAPIHandler.UpdateCategoryHandler).Methods("PUT")
+	adminRouter.HandleFunc("/api/categories/{id}", adminAPIHandler.DeleteCategoryHandler).Methods("DELETE")
+	adminRouter.HandleFunc("/api/categories/bulk-delete", adminAPIHandler.BulkDeleteCategoriesHandler).Methods("POST")
+
+	// Admin API routes for rooms
+	adminRouter.HandleFunc("/api/rooms/list", adminAPIHandler.ListRoomsHandler).Methods("GET")
+	adminRouter.HandleFunc("/api/rooms/{id}/details", adminAPIHandler.GetRoomDetailsHandler).Methods("GET")
+	adminRouter.HandleFunc("/api/rooms/{id}/close", adminAPIHandler.CloseRoomHandler).Methods("POST")
+	adminRouter.HandleFunc("/api/rooms/bulk-close", adminAPIHandler.BulkCloseRoomsHandler).Methods("POST")
+
+	// Admin API routes for dashboard stats
+	adminRouter.HandleFunc("/api/dashboard/stats", adminAPIHandler.GetDashboardStatsHandler).Methods("GET")
+
+	// Admin API routes for CSV import/export
+	csvHandler := api.NewCSVHandler(questionService, categoryService)
+	adminRouter.HandleFunc("/api/questions/export-csv", csvHandler.ExportQuestionsCSV).Methods("GET")
+	adminRouter.HandleFunc("/api/questions/import-csv", csvHandler.ImportQuestionsCSV).Methods("POST")
+	adminRouter.HandleFunc("/api/questions/template-csv", csvHandler.GetImportTemplate).Methods("GET")
+	adminRouter.HandleFunc("/api/categories/export-csv", csvHandler.ExportCategoriesCSV).Methods("GET")
+
+	// Admin API routes for translation management
+	translationHandler := admin.NewTranslationHandler(h)
+	adminRouter.HandleFunc("/api/translations/languages", translationHandler.ListLanguagesHandler).Methods("GET")
+	adminRouter.HandleFunc("/api/translations/{lang_code}", translationHandler.GetTranslationsHandler).Methods("GET")
+	adminRouter.HandleFunc("/api/translations/{lang_code}", translationHandler.UpdateTranslationHandler).Methods("PUT")
+	adminRouter.HandleFunc("/api/translations", translationHandler.CreateTranslationHandler).Methods("POST")
+	adminRouter.HandleFunc("/api/translations/{lang_code}", translationHandler.DeleteTranslationHandler).Methods("DELETE")
+	adminRouter.HandleFunc("/api/translations/{lang_code}/export", translationHandler.ExportTranslationsHandler).Methods("GET")
+	adminRouter.HandleFunc("/api/translations/{lang_code}/import", translationHandler.ImportTranslationsHandler).Methods("POST")
+	adminRouter.HandleFunc("/api/translations/validate", translationHandler.ValidateMissingKeysHandler).Methods("GET")
+	adminRouter.HandleFunc("/api/translations/language/add", translationHandler.AddLanguageHandler).Methods("POST")
+
+	// Get port from environment
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	// Create server
+	srv := &http.Server{
+		Addr:         fmt.Sprintf(":%s", port),
+		Handler:      router,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 0, // Disable for SSE long-lived connections
+		IdleTimeout:  60 * time.Second,
+	}
+
+	// Start server in a goroutine
+	go func() {
+		log.Printf("🚀 Server starting on port %s", port)
+		log.Printf("🌐 Visit http://localhost:%s", port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed to start: %v", err)
+		}
+	}()
+
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("🛑 Server shutting down...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+
+	log.Println("✅ Server stopped gracefully")
+}
