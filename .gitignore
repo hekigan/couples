@@ -31,8 +31,6 @@ node_modules/
 .env.local
 
 # IDE specific files
-.claude/config.json
-.vscode/
 .idea/
 *.swp
 *.swo
