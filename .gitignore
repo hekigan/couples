@@ -23,7 +23,7 @@ couple-game
 main
 
 # Dependency directories
-vendor/
+/vendor/
 node_modules/
 
 # Environment variables
