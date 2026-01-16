@@ -24,6 +24,8 @@ This is a **Couple Card Game** - a Go-based web application built with HTMX and 
 - No JSON, use HTMX
 - pages first loaded or on page refresh should use SSR. Then use HTMX for following interactions
 - Use PicoCSS guidelines for CSS and HTML implementation and use semantic HTML
+- Toast notifications: Use the existing `Toast` utility in `static/js/ui-utils.js` (e.g., `Toast.success()`, `Toast.error()`)
+- Tooltips: The tooltips library is already included - check existing usage patterns before adding new tooltip functionality
 - Always use context7 when I need code generation, setup or configuration steps, or
 library/API documentation. This means you should automatically use the Context7 MCP
 tools to resolve library id and get library docs without me having to explicitly ask.
