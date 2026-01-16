@@ -1,6 +1,10 @@
 -- Database Views for Query Optimization
 -- These views eliminate N+1 query problems and simplify complex joins
 -- Run this after schema.sql: psql -h <host> -U <user> -d <database> -f views.sql
+--
+-- SECURITY NOTE: All views use security_invoker = true (SECURITY INVOKER)
+-- This means queries run with the permissions of the querying user, not the view creator.
+-- This is the recommended approach for Supabase applications using RLS.
 
 -- ============================================================================
 -- View 1: Rooms with Player Information
@@ -9,7 +13,10 @@
 -- Usage: SELECT * FROM rooms_with_players WHERE id = $1
 -- Performance: Eliminates 2 separate user queries per room fetch
 
-CREATE OR REPLACE VIEW rooms_with_players AS
+DROP VIEW IF EXISTS rooms_with_players;
+CREATE VIEW rooms_with_players
+WITH (security_invoker = true)
+AS
 SELECT
     -- Room fields
     r.id,
@@ -54,7 +61,10 @@ WHERE owner.deleted_at IS NULL
 -- Usage: SELECT * FROM join_requests_with_users WHERE room_id = $1 AND status = 'pending'
 -- Performance: Eliminates N queries for user info (one per request)
 
-CREATE OR REPLACE VIEW join_requests_with_users AS
+DROP VIEW IF EXISTS join_requests_with_users;
+CREATE VIEW join_requests_with_users
+WITH (security_invoker = true)
+AS
 SELECT
     -- Join request fields
     jr.id,
@@ -84,7 +94,10 @@ WHERE u.deleted_at IS NULL;
 -- Usage: SELECT * FROM active_games WHERE id = $1
 -- Performance: Combines room, users, question, and category in one query
 
-CREATE OR REPLACE VIEW active_games AS
+DROP VIEW IF EXISTS active_games;
+CREATE VIEW active_games
+WITH (security_invoker = true)
+AS
 SELECT
     -- Room fields
     r.id,
@@ -134,7 +147,10 @@ WHERE r.status IN ('playing', 'paused')
 -- Usage: SELECT * FROM invitations_with_details WHERE invitee_id = $1 AND status = 'pending'
 -- Performance: Eliminates 3 separate queries (inviter, invitee, room)
 
-CREATE OR REPLACE VIEW invitations_with_details AS
+DROP VIEW IF EXISTS invitations_with_details;
+CREATE VIEW invitations_with_details
+WITH (security_invoker = true)
+AS
 SELECT
     -- Invitation fields
     inv.id,
@@ -173,7 +189,10 @@ WHERE inviter.deleted_at IS NULL
 -- Usage: SELECT * FROM friends_with_details WHERE user_id = $1
 -- Performance: Eliminates separate query for friend user details
 
-CREATE OR REPLACE VIEW friends_with_details AS
+DROP VIEW IF EXISTS friends_with_details;
+CREATE VIEW friends_with_details
+WITH (security_invoker = true)
+AS
 SELECT
     -- Friendship fields
     f.id,
@@ -202,7 +221,10 @@ WHERE u.deleted_at IS NULL
 -- Usage: SELECT * FROM game_history WHERE owner_id = $1 OR guest_id = $1 ORDER BY finished_at DESC
 -- Performance: Single query for game history instead of multiple joins
 
-CREATE OR REPLACE VIEW game_history AS
+DROP VIEW IF EXISTS game_history;
+CREATE VIEW game_history
+WITH (security_invoker = true)
+AS
 SELECT
     -- Room/Game fields
     r.id,
@@ -241,6 +263,7 @@ ORDER BY r.updated_at DESC;
 -- 3. Views are created with OR REPLACE to allow updates
 -- 4. No materialization - views are computed on query (real-time data)
 -- 5. Indexes on base tables (rooms, users, etc.) are still used
+-- 6. All views use security_invoker = true for proper RLS enforcement
 --
 -- Query Performance Comparison:
 -- - Before: GetRoomWithPlayers = 3 queries (room + owner + guest)

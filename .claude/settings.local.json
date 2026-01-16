@@ -52,9 +52,14 @@
       "Bash(xargs ls:*)",
       "mcp__playwright__*",
       "mcp__chrome-devtools__*",
-      "mcp__chrome-devtools__take_snapshot"
+      "mcp__chrome-devtools__take_snapshot",
+      "mcp__supabase__*"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ],
+  "enableAllProjectMcpServers": true
 }

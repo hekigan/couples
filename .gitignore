@@ -67,5 +67,10 @@ temp/
 /playwright/.cache/
 /.auth/
 
+# Claude Code configuration (contains sensitive tokens)
+.claude/
+
+# MCP configuration (may contain project-specific settings)
+.mcp.json
 
 
