@@ -134,6 +134,11 @@ function connectNotificationStream() {
 
                 // Update latest timestamp
                 latestNotificationTimestamp = notificationTime;
+
+                // Trigger HTMX refresh for friend requests when on /friends page
+                if (notification.type === 'friend_request' && window.location.pathname === '/friends') {
+                    document.body.dispatchEvent(new CustomEvent('refreshPendingInvitations'));
+                }
             }
         } catch (error) {
             console.error('Error processing notification:', error);
@@ -252,8 +257,15 @@ async function loadNotifications() {
 
 async function markAllRead() {
     try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const headers = {};
+        if (csrfToken) {
+            headers['X-CSRF-Token'] = csrfToken;
+        }
+        
         const response = await fetch(`${API_BASE}/notifications/read-all`, {
-            method: 'POST'
+            method: 'POST',
+            headers: headers
         });
 
         if (response.ok) {
@@ -307,8 +319,16 @@ function displayNotifications(notifications) {
     // Aggregate notifications by type
     const aggregated = aggregateNotificationsByType(notifications);
 
-    const html = aggregated.map(agg => `
-        <a href="${agg.link}" class="notification-item ${agg.hasUnread ? 'unread' : ''}">
+    // Only show notifications that have unread items
+    const unreadOnly = aggregated.filter(agg => agg.hasUnread);
+    
+    if (unreadOnly.length === 0) {
+        list.innerHTML = '<div class="empty">No new notifications</div>';
+        return;
+    }
+
+    const html = unreadOnly.map(agg => `
+        <a href="${agg.link}" class="notification-item unread">
             <div class="notification-icon">
                 <i class="${agg.icon}"></i>
             </div>
@@ -318,7 +338,7 @@ function displayNotifications(notifications) {
                     ${pluralizeLabel(agg.label, agg.count)}
                 </div>
             </div>
-            ${agg.hasUnread ? '<div class="unread-dot"></div>' : ''}
+            <div class="unread-dot"></div>
         </a>
     `).join('');
 
@@ -344,19 +364,17 @@ function aggregateNotificationsByType(notifications) {
         'message': '/'
     };
 
-    notifications.forEach(notif => {
+    // Only count unread notifications
+    notifications.filter(n => !n.read).forEach(notif => {
         if (typeMap[notif.type]) {
             typeMap[notif.type].count++;
-            if (!notif.read) {
-                typeMap[notif.type].hasUnread = true;
-            }
         } else {
             typeMap[notif.type] = {
                 type: notif.type,
                 count: 1,
                 icon: getNotificationIcon(notif.type),
                 label: typeLabels[notif.type] || 'Notification',
-                hasUnread: !notif.read,
+                hasUnread: true,
                 link: typeLinks[notif.type] || '/'
             };
         }

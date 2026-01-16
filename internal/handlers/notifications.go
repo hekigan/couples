@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hekigan/couples/internal/middleware"
 	"github.com/hekigan/couples/internal/models"
+	"github.com/hekigan/couples/internal/views/layouts"
 	"github.com/labstack/echo/v4"
 )
 
@@ -58,7 +59,7 @@ func (h *Handler) MarkNotificationReadHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"status": "success"})
 }
 
-// MarkAllNotificationsReadHandler marks all notifications as read
+// MarkAllNotificationsReadHandler marks all notifications as read (JSON response)
 func (h *Handler) MarkAllNotificationsReadHandler(c echo.Context) error {
 	ctx := context.Background()
 	userID, ok := middleware.GetUserID(c)
@@ -71,6 +72,50 @@ func (h *Handler) MarkAllNotificationsReadHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"status": "success"})
+}
+
+// MarkAllNotificationsReadHTMXHandler marks all notifications as read (HTMX response)
+func (h *Handler) MarkAllNotificationsReadHTMXHandler(c echo.Context) error {
+	ctx := context.Background()
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Not authenticated")
+	}
+
+	if err := h.NotificationService.MarkAllAsRead(ctx, userID); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to mark all as read")
+	}
+
+	// Get updated notifications (will all be read now)
+	notifications, _ := h.NotificationService.GetUserNotifications(ctx, userID, 50)
+
+	// Convert to pointer slice for template
+	notifPtrs := make([]*models.Notification, len(notifications))
+	for i := range notifications {
+		notifPtrs[i] = &notifications[i]
+	}
+
+	// Trigger badge update via HX-Trigger
+	c.Response().Header().Set("HX-Trigger", "refreshNotificationBadge")
+
+	// Return HTML fragment
+	return h.RenderTemplComponent(c, layouts.NotificationListContent(notifPtrs))
+}
+
+// GetNotificationBadgeHTMLHandler returns the notification badge HTML (for HTMX)
+func (h *Handler) GetNotificationBadgeHTMLHandler(c echo.Context) error {
+	ctx := context.Background()
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return c.HTML(http.StatusOK, `<span id="notification-badge" class="notification-badge" hidden>0</span>`)
+	}
+
+	count, err := h.NotificationService.GetNotificationBadgeCount(ctx, userID)
+	if err != nil {
+		count = 0
+	}
+
+	return h.RenderTemplComponent(c, layouts.NotificationBadgeContent(count))
 }
 
 // SendRoomInvitationHandler sends a room invitation

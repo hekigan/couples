@@ -68,6 +68,8 @@ func registerPublicRoutes(e *echo.Echo, h *handlers.Handler) {
 	friends.Use(middleware.EchoRateLimit())
 	friends.Use(middleware.EchoCSRF())
 	friends.GET("", h.FriendListHandler)
+	friends.GET("/pending", h.GetPendingInvitationsHandler)      // HTMX endpoint for real-time updates
+	friends.GET("/list-content", h.GetFriendsListContentHandler) // HTMX endpoint for real-time updates
 	friends.GET("/add", h.AddFriendHandler)
 	friends.POST("/add", h.AddFriendHandler)
 	friends.GET("/add/input-field", h.GetFriendInputFieldHandler) // HTMX endpoint

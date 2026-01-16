@@ -93,7 +93,9 @@ func registerAPIv1Routes(e *echo.Echo, h *handlers.Handler, realtimeService *ser
 	notifications.GET("", h.GetNotificationsHandler)                 // List notifications
 	notifications.GET("/unread-count", h.GetUnreadCountHandler)      // Unread count
 	notifications.POST("/:id/read", h.MarkNotificationReadHandler)   // Mark as read
-	notifications.POST("/read-all", h.MarkAllNotificationsReadHandler) // Mark all read
+	notifications.POST("/read-all", h.MarkAllNotificationsReadHandler)           // Mark all read (JSON)
+	notifications.POST("/mark-all-read", h.MarkAllNotificationsReadHTMXHandler) // Mark all read (HTMX)
+	notifications.GET("/badge", h.GetNotificationBadgeHTMLHandler)              // Badge HTML (HTMX)
 
 	// ============================================================================
 	// Server-Sent Events (SSE) - Real-time updates (NO rate limiting, NO CSRF)

@@ -20,6 +20,42 @@ func (h *Handler) FriendsHandler(c echo.Context) error {
 	return h.FriendListHandler(c)
 }
 
+// GetPendingInvitationsHandler returns pending invitations as HTML fragment (for HTMX refresh)
+func (h *Handler) GetPendingInvitationsHandler(c echo.Context) error {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return c.HTML(http.StatusOK, "")
+	}
+
+	pendingRequests, err := h.FriendService.GetPendingRequests(c.Request().Context(), userID)
+	if err != nil {
+		log.Printf("Error getting pending requests: %v", err)
+		return c.HTML(http.StatusOK, "")
+	}
+
+	if len(pendingRequests) == 0 {
+		return c.HTML(http.StatusOK, "")
+	}
+
+	return h.RenderTemplComponent(c, friendsPages.PendingInvitationsContent(pendingRequests))
+}
+
+// GetFriendsListContentHandler returns friends list as HTML fragment (for HTMX refresh)
+func (h *Handler) GetFriendsListContentHandler(c echo.Context) error {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return c.HTML(http.StatusOK, "")
+	}
+
+	friends, err := h.FriendService.GetFriends(c.Request().Context(), userID)
+	if err != nil {
+		log.Printf("Error getting friends: %v", err)
+		friends = []models.FriendWithUserInfo{}
+	}
+
+	return h.RenderTemplComponent(c, friendsPages.FriendsListContent(friends))
+}
+
 // FriendListHandler shows the user's friends list
 func (h *Handler) FriendListHandler(c echo.Context) error {
 	// Get user from session
@@ -158,13 +194,19 @@ func (h *Handler) AddFriendHandler(c echo.Context) error {
 		}
 
 		// Create friend request
-		err = h.FriendService.CreateFriendRequest(c.Request().Context(), currentUserID, friendID)
+		autoAccepted, err := h.FriendService.CreateFriendRequest(c.Request().Context(), currentUserID, friendID)
 		if err != nil {
 			log.Printf("Error creating friend request: %v", err)
 			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Failed to send friend request: %v", err))
 		}
 
-		// Return success (204 No Content)
+		// If auto-accepted (mutual interest), redirect to friends page
+		if autoAccepted {
+			c.Response().Header().Set("HX-Redirect", "/friends")
+			return c.HTML(http.StatusOK, "")
+		}
+
+		// Return success (204 No Content) for normal invitation
 		return c.NoContent(http.StatusNoContent)
 	}
 }
@@ -188,8 +230,12 @@ func (h *Handler) AcceptFriendHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to accept friend request")
 	}
 
-	// Return NoContent for HTMX - card will be removed via outerHTML swap
-	return c.NoContent(http.StatusNoContent)
+	// Trigger refresh of friends list via HX-Trigger header
+	c.Response().Header().Set("HX-Trigger", "refreshFriendsList")
+
+	// Return empty HTML for HTMX - card will be removed via outerHTML swap
+	// Note: 204 No Content doesn't trigger HTMX swap, so we return 200 with empty body
+	return c.HTML(http.StatusOK, "")
 }
 
 // DeclineFriendHandler declines a friend invitation
@@ -212,8 +258,9 @@ func (h *Handler) DeclineFriendHandler(c echo.Context) error {
 	}
 
 	log.Printf("Declined friend request: %s", requestID)
-	// Return NoContent for HTMX - card will be removed via outerHTML swap
-	return c.NoContent(http.StatusNoContent)
+	// Return empty HTML for HTMX - card will be removed via outerHTML swap
+	// Note: 204 No Content doesn't trigger HTMX swap, so we return 200 with empty body
+	return c.HTML(http.StatusOK, "")
 }
 
 // SendFriendRequestHandler sends a friend request
@@ -246,11 +293,8 @@ func (h *Handler) RemoveFriendHandler(c echo.Context) error {
 
 	log.Printf("Removed friendship: %s", friendshipID)
 
-	// Return success JSON for AJAX requests
-	return c.JSON(http.StatusOK, map[string]string{
-		"status":  "success",
-		"message": "Friend removed",
-	})
+	// Return empty HTML for HTMX - card will be removed via outerHTML swap
+	return c.HTML(http.StatusOK, "")
 }
 
 // GetFriendsAPIHandler returns friends list as JSON (for room invitations)

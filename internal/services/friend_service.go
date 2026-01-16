@@ -154,17 +154,46 @@ func (s *FriendService) GetSentRequests(ctx context.Context, userID uuid.UUID) (
 }
 
 // CreateFriendRequest creates a new friend request
-func (s *FriendService) CreateFriendRequest(ctx context.Context, senderID, receiverID uuid.UUID) error {
+// Returns (autoAccepted, error) - autoAccepted is true if a reverse pending request was auto-accepted
+func (s *FriendService) CreateFriendRequest(ctx context.Context, senderID, receiverID uuid.UUID) (bool, error) {
 	// Check if request already exists (in either direction)
 	existing, err := s.checkExistingFriendship(ctx, senderID, receiverID)
 	if err == nil && existing != nil {
 		if existing.Status == "accepted" {
-			return fmt.Errorf("you are already friends with this user")
+			return false, fmt.Errorf("you are already friends with this user")
 		}
-		return fmt.Errorf("a friend request already exists")
+		if existing.Status == "pending" {
+			// If the other user already sent us a request, auto-accept it (mutual interest!)
+			if existing.UserID == receiverID && existing.FriendID == senderID {
+				data := map[string]interface{}{"status": "accepted"}
+				if err := s.BaseService.UpdateRecord(ctx, "friends", existing.ID, data); err != nil {
+					return false, fmt.Errorf("failed to accept existing request: %w", err)
+				}
+				// Notify the original sender that their request was accepted
+				senderInfo, _ := s.getUserInfo(ctx, senderID)
+				if senderInfo != nil && s.notificationService != nil {
+					notification := &models.Notification{
+						UserID:  receiverID, // Notify original sender
+						Type:    models.NotificationTypeFriendAccepted,
+						Title:   "Friend Request Accepted",
+						Message: fmt.Sprintf("🎉 %s accepted your friend request!", senderInfo.Username),
+						Link:    "/friends",
+						Read:    false,
+					}
+					go func() {
+						s.notificationService.CreateAndBroadcastNotification(context.Background(), notification, s.realtimeService)
+					}()
+				}
+				return true, nil // Success - friendship established via auto-accept
+			}
+			// Same direction pending request already exists
+			return false, fmt.Errorf("a friend request already exists")
+		}
+		// Any other status (shouldn't happen, but handle gracefully)
+		return false, fmt.Errorf("unexpected friendship status: %s", existing.Status)
 	}
 
-	// Create new friend request
+	// Create new friend request (no existing record)
 	friendData := map[string]interface{}{
 		"id":        uuid.New().String(),
 		"user_id":   senderID.String(),
@@ -173,14 +202,14 @@ func (s *FriendService) CreateFriendRequest(ctx context.Context, senderID, recei
 	}
 
 	if err := s.BaseService.InsertRecord(ctx, "friends", friendData); err != nil {
-		return err
+		return false, err
 	}
 
 	// Get sender info for notification
 	senderInfo, err := s.getUserInfo(ctx, senderID)
 	if err != nil {
 		// Don't fail the request if notification fails
-		return nil
+		return false, nil
 	}
 
 	// Create notification synchronously to ensure it's in the database
@@ -199,7 +228,7 @@ func (s *FriendService) CreateFriendRequest(ctx context.Context, senderID, recei
 		// Don't fail the friend request, but log the error
 	}
 
-	return nil
+	return false, nil // Normal invitation sent (not auto-accepted)
 }
 
 // AcceptFriendRequest accepts a friend request and returns the Friend record
@@ -251,15 +280,13 @@ func (s *FriendService) AcceptFriendRequest(
 		}
 	}()
 
-	// Mark friend_request notification as read (async)
+	// Mark friend_request notification as read, THEN broadcast badge update (in sequence)
 	go func() {
+		// First mark notification as read
 		if err := s.notificationService.MarkFriendRequestNotificationAsRead(context.Background(), accepterID, friendRequest.UserID); err != nil {
 			fmt.Printf("⚠️ Failed to mark notification as read: %v\n", err)
 		}
-	}()
-
-	// Broadcast badge update to accepter
-	go func() {
+		// Then broadcast updated badge count (after notification is marked read)
 		count, _ := s.notificationService.GetNotificationBadgeCount(context.Background(), accepterID)
 		s.realtimeService.BroadcastToUser(accepterID, RealtimeEvent{
 			Type: "badge_update",
@@ -270,7 +297,7 @@ func (s *FriendService) AcceptFriendRequest(
 	return friendRequest, nil
 }
 
-// DeclineFriendRequest declines a friend request
+// DeclineFriendRequest declines a friend request by deleting the record
 func (s *FriendService) DeclineFriendRequest(
 	ctx context.Context,
 	requestID uuid.UUID,
@@ -287,24 +314,18 @@ func (s *FriendService) DeclineFriendRequest(
 		return fmt.Errorf("you are not authorized to decline this request")
 	}
 
-	// Update status to declined
-	data := map[string]interface{}{
-		"status": "declined",
-	}
-
-	if err := s.BaseService.UpdateRecord(ctx, "friends", requestID, data); err != nil {
+	// Delete the friend request record (allows sender to invite again in the future)
+	if err := s.BaseService.DeleteRecord(ctx, "friends", requestID); err != nil {
 		return err
 	}
 
-	// Mark friend_request notification as read (async with background context)
+	// Mark friend_request notification as read, THEN broadcast badge update (in sequence)
 	go func() {
+		// First mark notification as read
 		if err := s.notificationService.MarkFriendRequestNotificationAsRead(context.Background(), declinerID, friendRequest.UserID); err != nil {
 			fmt.Printf("⚠️ Failed to mark notification as read: %v\n", err)
 		}
-	}()
-
-	// Broadcast badge update to decliner
-	go func() {
+		// Then broadcast updated badge count (after notification is marked read)
 		count, _ := s.notificationService.GetNotificationBadgeCount(context.Background(), declinerID)
 		s.realtimeService.BroadcastToUser(declinerID, RealtimeEvent{
 			Type: "badge_update",
@@ -448,7 +469,7 @@ func (s *FriendService) CreateFriendRequestByEmail(
 		}
 
 		// Create friend request (this now handles notification creation and broadcasting)
-		if err := s.CreateFriendRequest(ctx, senderID, user.ID); err != nil {
+		if _, err := s.CreateFriendRequest(ctx, senderID, user.ID); err != nil {
 			return err
 		}
 
@@ -505,7 +526,7 @@ func (s *FriendService) AcceptEmailInvitation(ctx context.Context, token string,
 	}
 
 	// Create friendship
-	if err := s.CreateFriendRequest(ctx, invitation.SenderID, newUserID); err != nil {
+	if _, err := s.CreateFriendRequest(ctx, invitation.SenderID, newUserID); err != nil {
 		return err
 	}
 

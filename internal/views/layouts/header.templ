@@ -128,6 +128,55 @@ func pluralizeLabel(label string, count int) string {
 	return label
 }
 
+// filterUnreadNotifications returns only unread notifications
+func filterUnreadNotifications(notifications []*models.Notification) []*models.Notification {
+	var unread []*models.Notification
+	for _, n := range notifications {
+		if !n.Read {
+			unread = append(unread, n)
+		}
+	}
+	return unread
+}
+
+// NotificationBadgeContent renders just the badge (for HTMX updates)
+templ NotificationBadgeContent(count int) {
+	if count > 0 {
+		<span id="notification-badge" class="notification-badge visible" hx-get="/api/v1/notifications/badge" hx-trigger="refreshNotificationBadge from:body" hx-swap="outerHTML">
+			{ formatNotificationCount(count) }
+		</span>
+	} else {
+		<span id="notification-badge" class="notification-badge" hidden hx-get="/api/v1/notifications/badge" hx-trigger="refreshNotificationBadge from:body" hx-swap="outerHTML">
+			0
+		</span>
+	}
+}
+
+// NotificationListContent renders just the notification list content (for HTMX updates)
+templ NotificationListContent(notifications []*models.Notification) {
+	if len(filterUnreadNotifications(notifications)) == 0 {
+		<div class="empty">No new notifications</div>
+	} else {
+		for _, agg := range aggregateNotifications(filterUnreadNotifications(notifications)) {
+			<a
+				href={ templ.URL(agg.Link) }
+				class="notification-item unread"
+			>
+				<div class="notification-icon">
+					<i class={ agg.Icon }></i>
+				</div>
+				<div class="notification-content">
+					<div class="notification-title">
+						<span class="notification-count-badge">{ fmt.Sprintf("%d", agg.Count) }</span>
+						{ pluralizeLabel(agg.Label, agg.Count) }
+					</div>
+				</div>
+				<div class="unread-dot"></div>
+			</a>
+		}
+	}
+}
+
 // getUserIDForHeader extracts the user ID from the User interface using reflection
 func getUserIDForHeader(user interface{}) string {
 	if user == nil {
@@ -196,45 +245,20 @@ templ Header(data *viewmodels.TemplateData) {
 							}
 						>
 							<i class="icon-email text-lg"></i>
-							<span
-								id="notification-badge"
-								if data.NotificationCount > 0 {
-									class="notification-badge visible"
-								} else {
-									class="notification-badge"
-									hidden
-								}
-							>
-								{ formatNotificationCount(data.NotificationCount) }
-							</span>
+							@NotificationBadgeContent(data.NotificationCount)
 							<div class="notification-dropdown" id="notification-dropdown">
 								<div class="notification-header">
-									<button onclick="markAllRead()" class="mark-read-btn">Mark all read</button>
+									<button
+										class="mark-read-btn"
+										hx-post="/api/v1/notifications/mark-all-read"
+										hx-target="#notification-list"
+										hx-swap="innerHTML"
+									>
+										Mark all read
+									</button>
 								</div>
 								<div class="notification-list" id="notification-list" data-loaded="true">
-									if len(data.Notifications) == 0 {
-										<div class="empty">No notifications</div>
-									} else {
-										for _, agg := range aggregateNotifications(data.Notifications) {
-											<a
-												href={ templ.URL(agg.Link) }
-												class={ "notification-item", templ.KV("unread", agg.HasUnread) }
-											>
-												<div class="notification-icon">
-													<i class={ agg.Icon }></i>
-												</div>
-												<div class="notification-content">
-													<div class="notification-title">
-														<span class="notification-count-badge">{ fmt.Sprintf("%d", agg.Count) }</span>
-														{ pluralizeLabel(agg.Label, agg.Count) }
-													</div>
-												</div>
-												if agg.HasUnread {
-													<div class="unread-dot"></div>
-												}
-											</a>
-										}
-									}
+									@NotificationListContent(data.Notifications)
 								</div>
 							</div>
 						</span>

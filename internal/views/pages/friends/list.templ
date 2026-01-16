@@ -20,6 +20,85 @@ templ ListPage(data *viewmodels.TemplateData) {
 	@layouts.Base(data, ListContent(data))
 }
 
+// FriendsListContent renders just the friends list (for HTMX refresh)
+templ FriendsListContent(friends []models.FriendWithUserInfo) {
+	<section>
+		<h2>My Friends</h2>
+		if len(friends) > 0 {
+			<div class="friends-list">
+				for _, friend := range friends {
+					<div class="friend-card" id={ fmt.Sprintf("friend-%s", friend.ID.String()) }>
+						<div class="friend-info">
+							<span class="friend-username"><i class="icon-user"></i> { friend.Username }</span>
+						</div>
+						<div class="friend-actions">
+							<button
+								type="button"
+								class="btn-danger"
+								hx-delete={ fmt.Sprintf("/friends/%s", friend.ID.String()) }
+								hx-confirm="⚠️ Are you sure you want to remove this friend?"
+								hx-target={ fmt.Sprintf("#friend-%s", friend.ID.String()) }
+								hx-swap="outerHTML swap:300ms"
+								hx-disabled-elt="this"
+								hx-on::after-request="if(event.detail.successful) Toast.success('Friend removed successfully')"
+								aria-label="Remove friend"
+							>
+								Remove
+							</button>
+						</div>
+					</div>
+				}
+			</div>
+		} else {
+			<p style="color: #6b7280;">No friends yet. Add your first friend!</p>
+		}
+	</section>
+}
+
+// PendingInvitationsContent renders just the pending invitations (for HTMX refresh)
+templ PendingInvitationsContent(pendingInvitations []models.FriendWithUserInfo) {
+	<section>
+		<h2>Pending Invitations</h2>
+		<div class="friends-list" id="pending-invitations-list">
+			for _, request := range pendingInvitations {
+				<div
+					class="friend-card"
+					id={ fmt.Sprintf("pending-%s", request.ID.String()) }
+				>
+					<div class="friend-info">
+						<h4 class="friend-username"><i class="icon-user"></i> { request.Username }</h4>
+						<small class="request-date text-muted">{ formatInvitationDate(request.CreatedAt) }</small>
+					</div>
+					<div class="friend-actions">
+						<button
+							type="button"
+							class="success"
+							hx-post={ fmt.Sprintf("/friends/%s/accept", request.ID.String()) }
+							hx-target={ fmt.Sprintf("#pending-%s", request.ID.String()) }
+							hx-swap="outerHTML swap:300ms"
+							hx-disabled-elt="this"
+							aria-label="Accept friend request"
+						>
+							Accept
+						</button>
+						<button
+							type="button"
+							class="btn-danger"
+							hx-post={ fmt.Sprintf("/friends/%s/decline", request.ID.String()) }
+							hx-target={ fmt.Sprintf("#pending-%s", request.ID.String()) }
+							hx-swap="outerHTML swap:300ms"
+							hx-disabled-elt="this"
+							aria-label="Decline friend request"
+						>
+							Decline
+						</button>
+					</div>
+				</div>
+			}
+		</div>
+	</section>
+}
+
 // ListContent renders the friends list content
 templ ListContent(data *viewmodels.TemplateData) {
 	<div class="container">
@@ -28,83 +107,18 @@ templ ListContent(data *viewmodels.TemplateData) {
 			<a href="/friends/add" role="button" title="Add Friend" class="success"><i class="icon-person_add"></i></a>
 		</div>
 		if dataMap, ok := data.Data.(map[string]interface{}); ok {
-			// Pending Invitations Section
-			if pendingInvitations, ok := dataMap["PendingInvitations"].([]models.FriendWithUserInfo); ok && len(pendingInvitations) > 0 {
-				<section>
-					<h2>Pending Invitations</h2>
-					<div class="friends-list" id="pending-invitations-list">
-						for _, request := range pendingInvitations {
-							<div
-								class="friend-card"
-								id={ fmt.Sprintf("pending-%s", request.ID.String()) }
-							>
-								<div class="friend-info">
-									<h4 class="friend-username"><i class="icon-user"></i> { request.Username }</h4>
-									<small class="request-date text-muted">{ formatInvitationDate(request.CreatedAt) }</small>
-								</div>
-								<div class="friend-actions">
-									<button
-										type="button"
-										class="success"
-										hx-post={ fmt.Sprintf("/friends/accept/%s", request.ID.String()) }
-										hx-target={ fmt.Sprintf("#pending-%s", request.ID.String()) }
-										hx-swap="outerHTML swap:300ms"
-										hx-disabled-elt="this"
-										aria-label="Accept friend request"
-									>
-										Accept
-									</button>
-									<button
-										type="button"
-										class="btn-danger"
-										hx-post={ fmt.Sprintf("/friends/decline/%s", request.ID.String()) }
-										hx-target={ fmt.Sprintf("#pending-%s", request.ID.String()) }
-										hx-swap="outerHTML swap:300ms"
-										hx-disabled-elt="this"
-										aria-label="Decline friend request"
-									>
-										Decline
-									</button>
-								</div>
-							</div>
-						}
-					</div>
-				</section>
-			}
-			// Friends Section
-			if friends, ok := dataMap["Friends"].([]models.FriendWithUserInfo); ok {
-				<section>
-					<h2>My Friends</h2>
-					if len(friends) > 0 {
-						<div class="friends-list">
-							for _, friend := range friends {
-								<div class="friend-card" id={ fmt.Sprintf("friend-%s", friend.ID.String()) }>
-									<div class="friend-info">
-										<span class="friend-username"><i class="icon-user"></i> { friend.Username }</span>
-									</div>
-									<div class="friend-actions">
-										<button
-											type="button"
-											class="btn-danger"
-											hx-delete={ fmt.Sprintf("/friends/%s", friend.ID.String()) }
-											hx-confirm="⚠️ Are you sure you want to remove this friend?"
-											hx-target={ fmt.Sprintf("#friend-%s", friend.ID.String()) }
-											hx-swap="outerHTML swap:300ms"
-											hx-disabled-elt="this"
-											hx-on::after-request="if(event.detail.successful) Toast.success('Friend removed successfully')"
-											aria-label="Remove friend"
-										>
-											Remove
-										</button>
-									</div>
-								</div>
-							}
-						</div>
-					} else {
-						<p style="color: #6b7280;">No friends yet. Add your first friend!</p>
-					}
-				</section>
-			}
+			// Pending Invitations Section - always render container for HTMX updates
+			<div id="pending-invitations-section" hx-get="/friends/pending" hx-trigger="refreshPendingInvitations from:body" hx-swap="innerHTML">
+				if pendingInvitations, ok := dataMap["PendingInvitations"].([]models.FriendWithUserInfo); ok && len(pendingInvitations) > 0 {
+					@PendingInvitationsContent(pendingInvitations)
+				}
+			</div>
+			// Friends Section - always render container for HTMX updates
+			<div id="friends-list-section" hx-get="/friends/list-content" hx-trigger="refreshFriendsList from:body" hx-swap="innerHTML">
+				if friends, ok := dataMap["Friends"].([]models.FriendWithUserInfo); ok {
+					@FriendsListContent(friends)
+				}
+			</div>
 		}
 	</div>
 }
