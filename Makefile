@@ -65,10 +65,16 @@ build: templ-generate sass js-build
 	@go build -o server ./cmd/server
 	@echo "Build complete: ./server"
 
+# Build the Go binary for Windows
+build-win: templ-generate sass js-build
+	@echo "Building Go binary for Windows..."
+	@go build -o server.exe ./cmd/server
+	@echo "Build complete: ./server.exe"
+
 # Run the server
 run: build
 	@echo "Starting server..."
-	@ENV=production ./server
+	@cmd /C "set ENV=production && ./server" || ENV=production ./server
 
 # Run short tests (unit tests only, no database required)
 test:
@@ -126,19 +132,19 @@ sass-watch:
 # Build JavaScript bundles (production mode)
 js-build:
 	@echo "Building JavaScript bundles (production)..."
-	@ENV=production go run ./cmd/esbuild/main.go build
+	@go run ./cmd/esbuild/main.go build production
 	@echo "✅ JavaScript bundles built"
 
 # Build JavaScript bundles (development mode)
 js-build-dev:
 	@echo "Building JavaScript bundles (development)..."
-	@ENV=development go run ./cmd/esbuild/main.go build
+	@go run ./cmd/esbuild/main.go build development
 	@echo "✅ JavaScript bundles built (dev mode)"
 
 # Watch and rebuild JavaScript bundles
 js-watch:
 	@echo "Watching JavaScript files..."
-	@ENV=development go run ./cmd/esbuild/main.go watch
+	@go run ./cmd/esbuild/main.go watch development
 
 # Clean JavaScript bundles
 js-clean:
@@ -183,7 +189,7 @@ dev: templ-generate sass js-build-dev
 	@echo "   Terminal 2: make sass-watch"
 	@echo "   Terminal 3: make js-watch"
 	@echo "   Terminal 4: make templ-watch"
-	@ENV=development $(shell go env GOPATH)/bin/air
+	@cmd /C "set ENV=development && $(shell go env GOPATH)/bin/air" || ENV=development $(shell go env GOPATH)/bin/air
 
 # Build Docker image
 docker-build:

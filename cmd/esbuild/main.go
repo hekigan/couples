@@ -20,10 +20,17 @@ func main() {
 
 	command := os.Args[1]
 
-	// Determine build mode from ENV environment variable
-	env := os.Getenv("ENV")
+	// Determine build mode
 	mode := build.ModeDevelopment
-	if env == "production" {
+	env := os.Getenv("ENV")
+
+	// Check for second argument override (production/development)
+	if len(os.Args) > 2 {
+		arg := os.Args[2]
+		if arg == "production" {
+			mode = build.ModeProduction
+		}
+	} else if env == "production" {
 		mode = build.ModeProduction
 	}
 
